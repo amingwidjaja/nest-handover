@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 
-function generateToken(length = 8) {
+function generateToken(length = 10) {
   const chars =
     "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
