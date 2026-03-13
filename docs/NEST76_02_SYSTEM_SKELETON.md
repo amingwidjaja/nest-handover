@@ -4,65 +4,123 @@
 
 # Core Flow
 
-Sender
-↓
-Create Handover
-↓
-Generate Link
-↓
-Share Link
-↓
-Receiver Opens Link
-↓
-Receiver Clicks TERIMA
-↓
-Receive Event Saved
+Sender  
+↓  
+Create Handover  
+↓  
+Generate QR / Link  
+↓  
+Delivery  
+↓  
+Receiver scans QR or opens link  
+↓  
+Receive Event Recorded
+
+Public link format
+
+nest76.com/r/{token}
 
 ---
 
 # Sender Flow
 
-Open NEST
-↓
-Create Handover
-↓
-Fill receiver name
-↓
-Add item description
-↓
-Optional photo
-↓
-Generate link
-↓
-Share link
+Open NEST  
+↓  
+Create Handover  
+↓  
+Input receiver information  
+↓  
+Add item description  
+↓  
+Optional item photo  
+↓  
+Generate QR / link  
+↓  
+Delivery
+
+Sender may prepare multiple handover events before delivery.
 
 ---
 
-# Receiver Flow
+# Receiver Flow (Direct)
 
-Open link
-↓
-View handover details
-↓
-Click TERIMA
-↓
-Enter receiver name
-↓
-Confirm receive
+Receiver scans QR  
+or opens link
+
+↓  
+
+View handover details  
+
+↓  
+
+Click TERIMA  
+
+↓  
+
+Receive event recorded
+
+---
+
+# Direct Receive Options
+
+Direct receive can happen in two ways.
+
+Option 1 — QR confirmation
+
+Receiver scans QR  
+Opens receive page  
+Clicks TERIMA
+
+Option 2 — Photo proof
+
+Sender takes a photo of the receiver as proof.
+
+This is used when the receiver cannot scan the QR code.
+
+---
+
+# Proxy Receive Flow
+
+Sometimes the intended receiver is not present.
+
+Sender selects proxy option.
+
+System asks:
+
+Name of proxy receiver  
+Relation to receiver
+
+Example
+
+Budi  
+Satpam
+
+Sender then records proof using one of two methods:
+
+Photo proof  
+Proxy QR scan
 
 ---
 
 # Status Flow
 
-created
-↓
+draft  
+↓  
+created  
+↓  
 received
 
-Optional
+draft
+
+Handover is being prepared.
 
 created
-↓
-proxy_received
+
+Handover is ready and QR / link can be used.
+
+received
+
+Receive event has been recorded.
 
 ---
 
@@ -70,12 +128,20 @@ proxy_received
 
 HOME
 
+List of prepared handover events.
+
 CREATE HANDOVER
 
-LINK GENERATED
+Create new event and add items.
+
+HANDOVER DETAIL
+
+View event and display QR.
 
 RECEIVE PAGE
 
-RECEIVE CONFIRM
+Receiver views items and confirms receive.
 
 RECEIVE RESULT
+
+Receive confirmation and proof recorded.
