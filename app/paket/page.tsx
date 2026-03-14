@@ -28,7 +28,7 @@ export default function HomePage() {
       </Link>
 
       <Link
-        href="/events"
+        href="/dashboard"
         className="mt-6 text-base opacity-60"
       >
         Lihat Logbook
