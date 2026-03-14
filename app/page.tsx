@@ -5,6 +5,7 @@ export default function Home() {
         fontFamily:
           "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",
         background: "#FAFAFA",
+        color: "#111",
         minHeight: "100vh",
         display: "flex",
         justifyContent: "center",
@@ -22,7 +23,7 @@ export default function Home() {
         }}
       >
         <img
-          src="/logo/logo-nest-paket.png"
+          src="/logo-nest-paket.png"
           style={{ width: "96px", marginBottom: "32px" }}
         />
 
@@ -65,7 +66,7 @@ export default function Home() {
         </p>
 
         <a
-          href="#"
+          href="/create"
           style={{
             background: "#1e3a8a",
             color: "white",
