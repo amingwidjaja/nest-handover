@@ -87,12 +87,14 @@ export default function Home() {
             marginTop: "48px",
             width: "100%",
             maxWidth: "320px",
-            textAlign: "center",
+            textAlign: "left",
           }}
         >
-          <div style={{ fontWeight: 600, marginBottom: "12px" }}>
+          <div style={{ fontWeight: 600, marginBottom: "12px", textAlign: "center" }}>
             Mudah banget, cocok buat
           </div>
+
+
 
           <div
             style={{
