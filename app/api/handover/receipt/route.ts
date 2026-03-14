@@ -63,7 +63,7 @@ export async function GET(req: Request) {
 
   await browser.close()
 
-  return new NextResponse(pdf, {
+  return new NextResponse(Buffer.from(pdf), {
     headers: {
       "Content-Type": "application/pdf"
     }
