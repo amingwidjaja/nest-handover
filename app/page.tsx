@@ -15,7 +15,7 @@ export default function Home() {
         style={{
           width: "100%",
           maxWidth: "480px",
-          padding: "80px 24px 60px 24px",
+          padding: "32px 24px 60px 24px",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -24,7 +24,7 @@ export default function Home() {
       >
         <img
           src="/logo-nest-paket.png"
-          style={{ width: "160px", marginBottom: "32px" }}
+          style={{ width: "160px", marginBottom: "10px" }}
         />
 
         <div
