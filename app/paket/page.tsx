@@ -9,10 +9,10 @@ export default function HomePage() {
       <img
         src="/logo-nest-paket.png"
         alt="NEST Paket"
-        className="w-32 mb-4"
+        className="w-42"
       />
 
-      <div className="text-xs tracking-widest mb-8 opacity-60">
+      <div className="text-sm tracking-widest mb-8 opacity-60">
         NEST PAKET
       </div>
 
@@ -29,7 +29,7 @@ export default function HomePage() {
 
       <Link
         href="/events"
-        className="mt-6 text-sm opacity-60"
+        className="mt-6 text-base opacity-60"
       >
         Lihat Logbook
       </Link>
