@@ -1,78 +1,134 @@
-// app/r/[token]/page.tsx
-'use client'
+'use client';
 
-import { Button, Card } from '@/components/ui'
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react';
+import { PackageCheck, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { HandoverLoading } from '@/components/HandoverLoading';
+import HandoverError from './error';
 
-export default function ReceivePage({ params }: { params: { token: string } }) {
+export default function ReceivePage() {
 
-  const [loading, setLoading] = useState(false)
-  const [done, setDone] = useState(false)
+  const [status, setStatus] = useState('loading');
+  const [isReceived, setIsReceived] = useState(false);
 
-  const handleTerima = async () => {
+  useEffect(() => {
 
-    setLoading(true)
+    // simulasi fetch token validation
+    const timer = setTimeout(() => {
+      setStatus('ready');
+    }, 1200);
 
-    const res = await fetch("/api/handover/receive", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        token: params.token
-      })
-    })
+    return () => clearTimeout(timer);
 
-    if (res.ok) {
-      setDone(true)
-    }
+  }, []);
 
-    setLoading(false)
+  if (status === 'loading') return <HandoverLoading />;
+
+  if (status === 'error') {
+    return <HandoverError message="QR Code tidak valid atau sudah digunakan" />;
   }
 
-  if (done) {
+  if (isReceived) {
     return (
-      <div className="max-w-md mx-auto min-h-screen flex items-center justify-center bg-emerald-600 text-white text-center p-6">
-        <div>
-          <h1 className="text-4xl font-bold mb-4">✅ Diterima</h1>
-          <p>Barang sudah berhasil dikonfirmasi.</p>
-        </div>
-      </div>
-    )
-  }
+      <div className="min-h-screen bg-indigo-600 flex flex-col items-center justify-center p-8 text-white">
 
-  return (
-    <div className="max-w-md mx-auto min-h-screen flex flex-col p-6 bg-indigo-600 text-white">
-
-      <div className="flex-1 flex flex-col justify-center">
-
-        <div className="mb-8">
-          <p className="text-indigo-200 font-medium mb-1">Konfirmasi Penerimaan</p>
-          <h1 className="text-4xl font-bold">Konfirmasi Barang</h1>
+        <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6">
+          <CheckCircle2 size={48}/>
         </div>
 
-        <Card className="text-slate-900 mb-8">
-          <p className="font-bold text-lg mb-4">Tekan tombol di bawah jika barang sudah diterima.</p>
-        </Card>
+        <h1 className="text-3xl font-bold mb-2">
+          Selesai!
+        </h1>
 
-      </div>
-
-      <div className="pb-8">
-
-        <Button
-          onClick={handleTerima}
-          disabled={loading}
-          className="bg-white text-indigo-600 hover:bg-slate-50 h-20 text-2xl shadow-2xl"
-        >
-          {loading ? "Memproses..." : "TERIMA SEKARANG"}
-        </Button>
-
-        <p className="text-center mt-4 text-indigo-200 text-sm">
-          Dengan menekan tombol, Anda menyatakan barang telah diterima dalam kondisi baik.
+        <p className="text-indigo-100 text-center max-w-sm">
+          Serah terima berhasil dicatat oleh sistem NEST76.
         </p>
 
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0F172A] text-white flex flex-col">
+
+      <main className="flex-1 p-8 pt-16 max-w-xl mx-auto w-full">
+
+        <header className="mb-12">
+
+          <div className="w-12 h-12 bg-indigo-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+            <PackageCheck size={26}/>
+          </div>
+
+          <h1 className="text-3xl font-bold tracking-tight">
+            Halo, Budi
+          </h1>
+
+          <p className="text-slate-400 mt-2">
+            Konfirmasi penerimaan barang Anda.
+          </p>
+
+        </header>
+
+
+        <section className="space-y-6">
+
+          <div className="bg-slate-800/60 rounded-3xl p-6 border border-slate-700">
+
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-5">
+              Barang yang Anda terima
+            </h2>
+
+            <div className="space-y-4">
+
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-slate-700 rounded-xl flex items-center justify-center">
+                  📦
+                </div>
+                <span className="font-medium">
+                  1x Paket Dokumen A4
+                </span>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-slate-700 rounded-xl flex items-center justify-center">
+                  📦
+                </div>
+                <span className="font-medium">
+                  2x Box Sepatu
+                </span>
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div className="flex items-center gap-3 px-2 text-slate-400">
+            <ShieldCheck size={18} className="text-emerald-500"/>
+            <span className="text-sm">
+              Verifikasi lokasi aktif
+            </span>
+          </div>
+
+        </section>
+
+      </main>
+
+
+      <footer className="p-8 pb-12 max-w-xl mx-auto w-full">
+
+        <button
+          onClick={() => setIsReceived(true)}
+          className="w-full bg-indigo-500 hover:bg-indigo-400 py-6 rounded-2xl font-bold text-xl shadow-lg active:scale-[0.97] transition"
+        >
+          KONFIRMASI TERIMA
+        </button>
+
+        <p className="text-center mt-6 text-slate-500 text-xs px-6">
+          Dengan menekan tombol di atas, Anda menyatakan telah menerima barang tersebut.
+        </p>
+
+      </footer>
 
     </div>
-  )
+  );
 }

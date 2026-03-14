@@ -1,59 +1,99 @@
 // app/handover/[id]/page.tsx
-import { Card, Badge } from '@/components/ui'
-import QRCode from 'react-qr-code'
+'use client';
 
-export default async function HandoverDetail({ params }: { params: { id: string } }) {
+import React from 'react';
+import { ArrowLeft, Share2, Info, Clock } from 'lucide-react';
+import Link from 'next/link';
+import QRCode from 'react-qr-code';
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/handover/${params.id}`, {
-    cache: "no-store"
-  })
+export default function HandoverDetail() {
 
-  const data = await res.json()
+  const data = {
+    receiver_name: "Budi Santoso",
+    items: ["1x Paket Dokumen A4", "2x Box Sepatu"],
+    token: "nst-76-x9y2z",
+    status: "created"
+  };
 
-  const token = data.token
-  const items = data.items || []
+  const shareUrl = `https://nest76.app/r/${data.token}`;
 
   return (
-    <div className="max-w-md mx-auto p-6 text-center">
+    <div className="min-h-screen bg-white text-[#1E293B] antialiased">
 
-      <Badge status={data.status} />
+      {/* Navigation */}
+      <nav className="p-6 flex justify-between items-center">
+        <Link
+          href="/dashboard"
+          className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors"
+        >
+          <ArrowLeft size={20} />
+        </Link>
 
-      <h1 className="text-3xl font-black mt-4 mb-2">
-        Siap Diserahkan
-      </h1>
+        <button className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+          <Share2 size={20} className="text-slate-600" />
+        </button>
+      </nav>
 
-      <p className="text-slate-500 mb-8">
-        Minta penerima untuk scan QR di bawah ini
-      </p>
+      <main className="px-6 pb-12 flex flex-col items-center text-center">
 
-      <div className="bg-white p-8 rounded-[2rem] shadow-2xl border border-slate-100 inline-block mb-8">
-        <QRCode
-          value={`${process.env.NEXT_PUBLIC_BASE_URL}/r/${token}`}
-          size={220}
-          level="H"
-        />
-      </div>
+        {/* Status */}
+        <div className="flex items-center gap-2 bg-amber-50 text-amber-700 text-[11px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full border border-amber-100">
+          <Clock size={14}/>
+          Menunggu Scan
+        </div>
 
-      <Card className="text-left bg-indigo-50 border-none">
+        <h1 className="text-2xl font-bold mt-6">
+          Serahkan ke {data.receiver_name}
+        </h1>
 
-        <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-2">
-          Penerima
+        <p className="text-slate-500 mt-1 mb-10 text-sm">
+          Tunjukkan QR ini kepada penerima
         </p>
 
-        <p className="text-xl font-bold text-indigo-900">
-          {data.receiver_target_name}
+        {/* QR Section */}
+        <div className="relative group">
+          <div className="absolute -inset-4 bg-indigo-500/5 rounded-[40px] blur-xl group-hover:bg-indigo-500/10 transition-all"></div>
+
+          <div className="relative bg-white p-10 rounded-[32px] border border-slate-100 shadow-lg">
+            <QRCode
+              value={shareUrl}
+              size={220}
+              level="H"
+              className="mx-auto"
+            />
+          </div>
+        </div>
+
+        {/* Summary */}
+        <div className="w-full max-w-sm mt-14 bg-slate-50 rounded-3xl p-6 text-left border border-slate-100">
+
+          <div className="flex items-center gap-2 mb-4 text-slate-400">
+            <Info size={16}/>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Ringkasan Barang
+            </span>
+          </div>
+
+          <ul className="space-y-3">
+            {data.items.map((item, i) => (
+              <li
+                key={i}
+                className="flex items-center gap-3 text-slate-700 font-medium"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
+                {item}
+              </li>
+            ))}
+          </ul>
+
+        </div>
+
+        <p className="mt-8 text-xs text-slate-400 leading-relaxed px-8">
+          NEST76 mencatat koordinat dan waktu saat tombol terima ditekan oleh penerima.
         </p>
 
-        <hr className="my-3 border-indigo-100" />
-
-        <ul className="text-indigo-800 space-y-1">
-          {items.map((item: any, i: number) => (
-            <li key={i}>• {item.description}</li>
-          ))}
-        </ul>
-
-      </Card>
+      </main>
 
     </div>
-  )
+  );
 }
