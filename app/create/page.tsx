@@ -6,13 +6,12 @@ import Link from "next/link";
 export default function CreatePage() {
 
   const [senderType, setSenderType] = useState("self");
+  const [receiverName, setReceiverName] = useState("");
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
       <main className="p-8 pt-16 space-y-12">
-
-        {/* Sender Question */}
 
         <section>
           <p className="text-sm font-medium mb-6">
@@ -47,8 +46,6 @@ export default function CreatePage() {
 
           </div>
 
-          {/* Sender Form */}
-
           {senderType === "other" && (
 
             <div className="space-y-4 mb-8">
@@ -69,8 +66,6 @@ export default function CreatePage() {
 
         </section>
 
-        {/* Receiver */}
-
         <section>
 
           <p className="text-sm font-medium mb-6">
@@ -82,6 +77,8 @@ export default function CreatePage() {
             <input
               className="line-input"
               placeholder="Nama penerima"
+              value={receiverName}
+              onChange={(e) => setReceiverName(e.target.value)}
             />
 
             <input
@@ -95,17 +92,21 @@ export default function CreatePage() {
 
       </main>
 
-      {/* Navigation */}
-
       <div className="flex justify-between px-8 pb-8 text-sm">
 
         <Link href="/" className="opacity-60">
           ← Sebelumnya
         </Link>
 
-        <Link href="/package">
-          Lanjut →
-        </Link>
+        {receiverName ? (
+          <Link href="/package">
+            Lanjut →
+          </Link>
+        ) : (
+          <span className="opacity-30">
+            Lanjut →
+          </span>
+        )}
 
       </div>
 
