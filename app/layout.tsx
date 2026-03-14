@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NEST Paket",
-  description: "Serah terima barang lebih tenang",
+  title: "NEST",
+  description: "NEST Ecosystem",
 };
 
 export default function RootLayout({
@@ -24,7 +24,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#e9e6e1] flex justify-center`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#e9e6e1] flex justify-center`}
+      >
         <div className="w-full max-w-[420px] min-h-screen bg-[#FAF9F6]">
           {children}
         </div>

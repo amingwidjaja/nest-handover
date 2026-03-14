@@ -9,10 +9,10 @@ export default function HomePage() {
       <img
         src="/logo-nest-paket.png"
         alt="NEST Paket"
-        className="w-42"
+        className="w-44"
       />
 
-      <div className="text-sm tracking-widest mb-8 opacity-60">
+      <div className="text-base tracking-widest mb-8 opacity-60">
         NEST PAKET
       </div>
 
