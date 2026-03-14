@@ -1,11 +1,12 @@
-// app/create/page.tsx
 'use client';
 
 import React, { useState } from 'react';
 import { ArrowLeft, Package, Camera, Plus, QrCode, X } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function CreateHandover() {
+
+  const router = useRouter();
 
   const [items, setItems] = useState([{ id: 1, description: '' }]);
 
@@ -24,28 +25,29 @@ export default function CreateHandover() {
 
       {/* Header */}
       <header className="sticky top-0 z-10 bg-slate-100/80 backdrop-blur px-6 py-5 flex items-center gap-4">
-        <Link
-          href="/dashboard"
+
+        <button
+          onClick={() => router.back()}
           className="p-2 -ml-2 hover:bg-slate-200 rounded-full transition-colors"
         >
           <ArrowLeft size={20}/>
-        </Link>
+        </button>
 
         <h1 className="text-xl font-semibold tracking-tight">
           Kirim Barang
         </h1>
+
       </header>
 
-
-      <main className="px-6 max-w-xl mx-auto">
+      <main className="px-6 w-full">
 
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
 
-
-          {/* Receiver */}
+          {/* Receiver Section */}
           <section className="p-6 border-b border-slate-100 space-y-6">
 
             <div className="space-y-2">
+
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">
                 Nama Penerima
               </label>
@@ -53,8 +55,10 @@ export default function CreateHandover() {
               <input
                 type="text"
                 placeholder="Budi Santoso"
+                autoComplete="name"
                 className="w-full px-4 py-4 bg-white border border-slate-200 rounded-xl text-base placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none"
               />
+
             </div>
 
 
@@ -73,6 +77,8 @@ export default function CreateHandover() {
                 <input
                   type="tel"
                   placeholder="812345678"
+                  autoComplete="tel"
+                  inputMode="tel"
                   className="w-full pl-14 pr-4 py-4 bg-white border border-slate-200 rounded-xl text-base placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none"
                 />
 
@@ -83,7 +89,7 @@ export default function CreateHandover() {
           </section>
 
 
-          {/* Items */}
+          {/* Items Section */}
           <section className="p-6 bg-slate-50">
 
             <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1 mb-4">
@@ -93,6 +99,7 @@ export default function CreateHandover() {
             <div className="space-y-4">
 
               {items.map((item) => (
+
                 <div
                   key={item.id}
                   className="relative flex items-center gap-3 bg-white p-4 rounded-2xl border border-slate-200"
@@ -125,8 +132,8 @@ export default function CreateHandover() {
                   )}
 
                 </div>
-              ))}
 
+              ))}
 
               <button
                 onClick={addItem}
@@ -146,7 +153,7 @@ export default function CreateHandover() {
 
 
       {/* Bottom Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-200 max-w-xl mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-200">
 
         <button
           className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold text-lg shadow-md flex items-center justify-center gap-3 active:scale-[0.97] transition"

@@ -1,48 +1,56 @@
-// app/dashboard/page.tsx
-import { Card, Badge } from '@/components/ui'
-import Link from 'next/link'
+import { HandoverList } from '@/components/HandoverList';
+import Link from 'next/link';
 
-export default async function Dashboard() {
+export default function Dashboard() {
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/handover/list`, {
-    cache: "no-store"
-  })
-
-  const handovers = await res.json()
+  // mock data dulu
+  const handovers = [
+    {
+      id: "1",
+      receiver_target_name: "Budi Santoso",
+      item_summary: "2x Box Sepatu",
+      status: "received",
+      created_at: "12 Oct · 14:20"
+    },
+    {
+      id: "2",
+      receiver_target_name: "Andre",
+      item_summary: "1x Dokumen",
+      status: "created",
+      created_at: "12 Oct · 15:10"
+    }
+  ];
 
   return (
-    <main className="max-w-md mx-auto min-h-screen bg-slate-50 p-4 pb-24">
-      <header className="flex justify-between items-center mb-8 pt-4">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">NEST76</h1>
-        <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold">JD</div>
+    <div className="min-h-screen bg-slate-100 pb-28">
+
+      <header className="px-6 pt-10 pb-6">
+        <h1 className="text-2xl font-bold text-slate-900">
+          Dashboard
+        </h1>
+        <p className="text-slate-500 text-sm mt-1">
+          Riwayat serah terima barang Anda
+        </p>
       </header>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-slate-500 ml-1">Riwayat Serah Terima</h2>
+      <main className="px-6">
 
-        {handovers.map((item: any) => (
-          <Link href={`/handover/${item.id}`} key={item.id}>
-            <Card className="flex justify-between items-center active:scale-[0.98] transition-transform mb-3">
-              <div>
-                <p className="font-semibold text-slate-900">{item.receiver_target_name}</p>
-                <p className="text-xs text-slate-400 mt-1">
-                  {new Date(item.created_at).toLocaleTimeString()} • Hari ini
-                </p>
-              </div>
-              <Badge status={item.status} />
-            </Card>
-          </Link>
-        ))}
+        <HandoverList handovers={handovers} />
 
-      </section>
+      </main>
 
-      <div className="fixed bottom-6 left-0 right-0 px-4 max-w-md mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-200">
+
         <Link href="/create">
-          <button className="w-full bg-slate-900 text-white py-4 rounded-2xl shadow-xl font-bold flex items-center justify-center gap-2">
-            <span>+</span> Buat Serah Terima
+
+          <button className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg shadow-md active:scale-[0.97] transition">
+            Kirim Barang
           </button>
+
         </Link>
+
       </div>
-    </main>
-  )
+
+    </div>
+  );
 }
