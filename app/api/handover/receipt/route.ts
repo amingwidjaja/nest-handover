@@ -39,7 +39,7 @@ export async function GET(req: Request) {
 
     <h3>Isi Paket</h3>
     <ul>
-      ${data.handover_items.map(i => `<li>${i.description}</li>`).join("")}
+      ${data.handover_items.map((i:any) => `<li>${i.description}</li>`).join("")}
     </ul>
 
     <hr/>
