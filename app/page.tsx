@@ -24,7 +24,7 @@ export default function Home() {
       >
         <img
           src="/logo-nest-paket.png"
-          style={{ width: "160px", marginBottom: "5px" }}
+          style={{ width: "160px", marginBottom: "0px" }}
         />
 
         <div
