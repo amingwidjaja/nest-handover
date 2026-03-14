@@ -26,13 +26,13 @@ export default function PackagePage() {
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
-      <main className="p-8 pt-8">
+      <main className="p-8 pt-10">
 
         <h2 className="text-xs font-medium uppercase tracking-[0.2em] mb-12 opacity-60">
           tulis rincian paket kamu di sini
         </h2>
 
-        <div className="space-y-0 mb-16">
+        <div className="space-y-0 mb-10">
 
           <input
             className="line-input"
