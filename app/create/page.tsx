@@ -1,169 +1,103 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowLeft, Package, Camera, Plus, QrCode, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { ArrowLeft, Package, Camera, Plus, QrCode, X, ChevronLeft } from 'lucide-react';
 
-export default function CreateHandover() {
-
-  const router = useRouter();
-
-  const [items, setItems] = useState([{ id: 1, description: '' }]);
-
-  const addItem = () => {
-    setItems([...items, { id: Date.now(), description: '' }]);
-  };
-
-  const removeItem = (id: number) => {
-    if (items.length > 1) {
-      setItems(items.filter(item => item.id !== id));
-    }
-  };
+export default function CreateHandoverPage() {
+  const [items, setItems] = useState([{ id: Date.now(), description: '' }]);
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 antialiased pb-32">
-
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-slate-100/80 backdrop-blur px-6 py-5 flex items-center gap-4">
-
-        <button
-          onClick={() => router.back()}
-          className="p-2 -ml-2 hover:bg-slate-200 rounded-full transition-colors"
-        >
-          <ArrowLeft size={20}/>
-        </button>
-
-        <h1 className="text-xl font-semibold tracking-tight">
-          Kirim Barang
-        </h1>
-
-      </header>
-
-      <main className="px-6 w-full">
-
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-
-          {/* Receiver Section */}
-          <section className="p-6 border-b border-slate-100 space-y-6">
-
-            <div className="space-y-2">
-
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">
-                Nama Penerima
-              </label>
-
-              <input
-                type="text"
-                placeholder="Budi Santoso"
-                autoComplete="name"
-                className="w-full px-4 py-4 bg-white border border-slate-200 rounded-xl text-base placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-
-            </div>
-
-
-            <div className="space-y-2">
-
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">
-                Nomor WhatsApp
-              </label>
-
-              <div className="relative">
-
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
-                  +62
-                </span>
-
-                <input
-                  type="tel"
-                  placeholder="812345678"
-                  autoComplete="tel"
-                  inputMode="tel"
-                  className="w-full pl-14 pr-4 py-4 bg-white border border-slate-200 rounded-xl text-base placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
-
-              </div>
-
-            </div>
-
-          </section>
-
-
-          {/* Items Section */}
-          <section className="p-6 bg-slate-50">
-
-            <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1 mb-4">
-              Daftar Barang
-            </h2>
-
-            <div className="space-y-4">
-
-              {items.map((item) => (
-
-                <div
-                  key={item.id}
-                  className="relative flex items-center gap-3 bg-white p-4 rounded-2xl border border-slate-200"
-                >
-
-                  <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500">
-                    <Package size={20}/>
-                  </div>
-
-                  <input
-                    type="text"
-                    placeholder="Deskripsi barang"
-                    className="flex-1 bg-transparent border-none focus:ring-0 text-slate-700 placeholder:text-slate-400"
-                  />
-
-                  <button
-                    type="button"
-                    className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition"
-                  >
-                    <Camera size={20}/>
-                  </button>
-
-                  {items.length > 1 && (
-                    <button
-                      onClick={() => removeItem(item.id)}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-red-500"
-                    >
-                      <X size={14}/>
-                    </button>
-                  )}
-
-                </div>
-
-              ))}
-
-              <button
-                onClick={addItem}
-                className="w-full py-4 border-2 border-dashed border-slate-300 rounded-2xl flex items-center justify-center gap-2 text-slate-500 font-medium hover:border-indigo-400 hover:text-indigo-600 transition"
-              >
-                <Plus size={18}/>
-                Tambah Barang
-              </button>
-
-            </div>
-
-          </section>
-
-        </div>
-
-      </main>
-
-
-      {/* Bottom Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-200">
-
-        <button
-          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold text-lg shadow-md flex items-center justify-center gap-3 active:scale-[0.97] transition"
-        >
-          <QrCode size={22}/>
-          Buat QR Serah Terima
-        </button>
-
+    <div className="min-h-screen bg-[#0A0A0B] text-white selection:bg-indigo-500/30">
+      {/* Background Gradient Effect */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[20%] -left-[10%] w-[500px] h-[500px] bg-indigo-900/20 blur-[120px] rounded-full" />
+        <div className="absolute top-[40%] -right-[10%] w-[400px] h-[400px] bg-blue-900/10 blur-[100px] rounded-full" />
       </div>
 
+      <header className="relative px-6 py-6 flex items-center justify-between z-10">
+        <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+          <ChevronLeft size={20} />
+        </button>
+        <h1 className="text-lg font-medium tracking-tight">Kirim Barang</h1>
+        <div className="w-10" /> 
+      </header>
+
+      <main className="relative px-6 pb-32 z-10 max-w-lg mx-auto">
+        <div className="space-y-8">
+          
+          {/* Receiver Glass Card */}
+          <section className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl rounded-[32px] p-6 shadow-2xl">
+            <div className="space-y-5">
+              <div>
+                <label className="text-[11px] font-semibold text-indigo-300 uppercase tracking-widest ml-1 mb-2 block">
+                  Nama Penerima
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="Contoh: Budi Santoso"
+                  className="w-full bg-transparent border-b border-white/10 py-3 text-lg placeholder:text-white/20 focus:outline-none focus:border-indigo-500 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-indigo-300 uppercase tracking-widest ml-1 mb-2 block">
+                  Nomor WhatsApp
+                </label>
+                <input 
+                  type="tel" 
+                  placeholder="+62 812..."
+                  className="w-full bg-transparent border-b border-white/10 py-3 text-lg placeholder:text-white/20 focus:outline-none focus:border-indigo-500 transition-colors"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Items Glass Card */}
+          <section className="space-y-4">
+            <h2 className="text-[11px] font-semibold text-indigo-300 uppercase tracking-widest ml-2">
+              Detail Barang
+            </h2>
+            
+            <div className="space-y-3">
+              {items.map((item, idx) => (
+                <div key={item.id} className="group relative bg-white/[0.05] border border-white/[0.05] rounded-2xl p-4 flex items-center gap-4 hover:border-white/10 transition-all">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-300">
+                    <Package size={20} />
+                  </div>
+                  <input 
+                    className="flex-1 bg-transparent border-none focus:outline-none text-white/90 placeholder:text-white/20"
+                    placeholder="Deskripsi barang..."
+                  />
+                  <button className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors">
+                    <Camera size={18} />
+                  </button>
+                  <button 
+                    onClick={() => setItems(items.filter((_, i) => i !== idx))}
+                    className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-red-500/10 text-white/30 hover:text-red-400 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button 
+              onClick={() => setItems([...items, { id: Date.now(), description: '' }])}
+              className="w-full py-4 rounded-2xl border border-dashed border-white/10 text-indigo-300 font-medium hover:bg-white/5 transition-all flex items-center justify-center gap-2"
+            >
+              <Plus size={18} />
+              Tambah Barang
+            </button>
+          </section>
+        </div>
+      </main>
+
+      {/* Sticky Bottom CTA */}
+      <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-[#0A0A0B] via-[#0A0A0B] to-transparent z-20">
+        <button className="w-full py-5 rounded-[20px] bg-white text-[#0A0A0B] font-bold text-lg flex items-center justify-center gap-3 shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-transform">
+          <QrCode size={22} />
+          Buat QR Serah Terima
+        </button>
+      </div>
     </div>
   );
 }
