@@ -1,4 +1,4 @@
-import { HandoverList } from '@/components/HandoverList';
+import { HandoverList } from '../../components/HandoverList';
 import Link from 'next/link';
 
 export default function Dashboard() {
