@@ -1,56 +1,92 @@
-import { HandoverList } from '../../components/HandoverList';
-import Link from 'next/link';
+'use client'
 
-export default function Dashboard() {
+import { useEffect, useState } from "react"
+import Link from "next/link"
 
-  // mock data dulu
-  const handovers = [
-    {
-      id: "1",
-      receiver_target_name: "Budi Santoso",
-      item_summary: "2x Box Sepatu",
-      status: "received",
-      created_at: "12 Oct · 14:20"
-    },
-    {
-      id: "2",
-      receiver_target_name: "Andre",
-      item_summary: "1x Dokumen",
-      status: "created",
-      created_at: "12 Oct · 15:10"
+export default function DashboardPage(){
+
+  const [handovers,setHandovers] = useState<any[]>([])
+
+  useEffect(()=>{
+
+    async function load(){
+
+      const res = await fetch("/api/handover/list")
+      const data = await res.json()
+
+      setHandovers(data.handovers || [])
+
     }
-  ];
 
-  return (
-    <div className="min-h-screen bg-slate-100 pb-28">
+    load()
 
-      <header className="px-6 pt-10 pb-6">
-        <h1 className="text-2xl font-bold text-slate-900">
-          Dashboard
+  },[])
+
+
+  return(
+
+    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723]">
+
+      <main className="p-8 pt-16">
+
+        <h1 className="text-xl mb-10">
+          Logbook Paket
         </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Riwayat serah terima barang Anda
-        </p>
-      </header>
 
-      <main className="px-6">
+        <div className="space-y-6">
 
-        <HandoverList handovers={handovers} />
+          {handovers.map(h=>{
+
+            return(
+
+              <Link
+                key={h.id}
+                href={`/receipt/${h.share_token}`}
+                className="block border-b border-[#E0DED7] pb-4"
+              >
+
+                <div className="text-sm">
+
+                  <div>
+                    {h.sender_name || "-"} → {h.receiver_target_name}
+                  </div>
+
+                  <div className="text-xs">
+
+  {h.status === "received" && (
+    <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
+      Diterima
+    </span>
+  )}
+
+  {h.status === "created" && (
+    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded">
+      Menunggu
+    </span>
+  )}
+
+  {h.status === "draft" && (
+    <span className="px-2 py-1 bg-gray-200 text-gray-600 rounded">
+      Draft
+    </span>
+  )}
+
+</div>
+
+                </div>
+
+              </Link>
+
+            )
+
+          })}
+
+        </div>
 
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-200">
-
-        <Link href="/create">
-
-          <button className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg shadow-md active:scale-[0.97] transition">
-            Kirim Barang
-          </button>
-
-        </Link>
-
-      </div>
-
     </div>
-  );
+
+  )
+
 }

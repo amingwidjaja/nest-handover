@@ -1,0 +1,204 @@
+'use client'
+
+import { useEffect, useState } from "react"
+import { useParams } from "next/navigation"
+import Link from "next/link"
+
+function formatTanggalIndonesia(dateString: string) {
+  if (!dateString) return "-"
+
+  const date = new Date(dateString)
+
+  return (
+    new Intl.DateTimeFormat("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Jakarta"
+    }).format(date) + " WIB"
+  )
+}
+
+function formatMetode(method: string) {
+  switch (method) {
+    case "direct_qr":
+      return "QR Code"
+    case "direct_photo":
+      return "Foto Serah Terima"
+    case "proxy_qr":
+      return "QR Code (Diwakilkan)"
+    case "proxy_photo":
+      return "Foto Serah Terima (Diwakilkan)"
+    default:
+      return "-"
+  }
+}
+
+function formatStatus(status: string) {
+  switch (status) {
+    case "draft":
+      return "Draft"
+    case "created":
+      return "Dibuat"
+    case "received":
+      return "Diterima"
+    default:
+      return status || "-"
+  }
+}
+
+export default function ReceiptPage() {
+  const params = useParams()
+  const token = params.token as string
+
+  const [handover, setHandover] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      const res = await fetch(`/api/handover/by-token?token=${token}`)
+      const data = await res.json()
+
+      setHandover(data)
+      setLoading(false)
+    }
+
+    load()
+  }, [token])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
+        Memuat...
+      </div>
+    )
+  }
+
+  if (!handover) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
+        Data serah terima tidak ditemukan
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
+      <main className="p-8 pt-16 max-w-md mx-auto w-full space-y-10">
+        <div className="text-center space-y-2">
+          <h1 className="text-xl font-light">
+            Bukti Serah Terima Paket
+          </h1>
+
+          <div className="text-xs opacity-60">
+            NEST Paket
+          </div>
+        </div>
+
+        <div className="border-t border-[#E0DED7]"></div>
+
+        <div className="space-y-4 text-sm">
+          <div className="flex justify-between">
+            <span className="opacity-60">Pengirim</span>
+            <span>{handover.sender_name || "-"}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="opacity-60">Penerima</span>
+            <span>{handover.receiver_target_name}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="opacity-60">Status</span>
+            <span>{formatStatus(handover.status)}</span>
+          </div>
+        </div>
+
+        <div className="border-t border-[#E0DED7]"></div>
+
+        <div className="space-y-4">
+          <div className="text-xs uppercase tracking-widest opacity-60">
+            Rincian Paket
+          </div>
+
+          <div className="space-y-2 text-sm">
+            {handover.handover_items?.map((item: any) => (
+              <div key={item.id}>
+                • {item.description}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t border-[#E0DED7]"></div>
+
+        <div className="space-y-4 text-sm">
+          <div className="text-xs uppercase tracking-widest opacity-60">
+            Detail Penerimaan
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="opacity-60">Metode</span>
+              <span>{formatMetode(handover.receive_event?.receive_method)}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="opacity-60">Waktu</span>
+              <span>{formatTanggalIndonesia(handover.receive_event?.timestamp)}</span>
+            </div>
+
+            {handover.receive_event?.receiver_name && (
+              <div className="flex justify-between">
+                <span className="opacity-60">Diterima oleh</span>
+                <span>{handover.receive_event.receiver_name}</span>
+              </div>
+            )}
+
+            {handover.receive_event?.receiver_relation && (
+              <div className="flex justify-between">
+                <span className="opacity-60">Hubungan</span>
+                <span>{handover.receive_event.receiver_relation}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="border-t border-[#E0DED7]"></div>
+
+        <div className="text-center space-y-3">
+
+  <div className="text-xs opacity-60">
+    Verifikasi Serah Terima
+  </div>
+
+  <img
+    src={`/api/handover/qr?token=${token}&path=/verify/${token}`}
+    className="mx-auto w-28"
+  />
+
+  <div className="text-xs opacity-60">
+    Scan QR ini untuk memverifikasi bukti serah terima
+  </div>
+
+</div>
+      </main>
+
+      <div className="flex justify-between px-8 pb-8 text-sm">
+        <Link href="/" className="opacity-60">
+          Kembali ke Beranda
+        </Link>
+
+        <a
+          href={`/api/handover/receipt?token=${token}`}
+          target="_blank"
+          className="font-medium"
+        >
+          Unduh PDF
+        </a>
+      </div>
+    </div>
+  )
+}

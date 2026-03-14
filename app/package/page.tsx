@@ -1,70 +1,84 @@
-'use client';
+'use client'
 
-import { useState, useRef } from "react";
-import Link from "next/link";
-import { Camera } from "lucide-react";
+import { useState } from "react"
+import Link from "next/link"
+import { Camera } from "lucide-react"
 
 export default function PackagePage() {
 
-  const [item1, setItem1] = useState("");
-  const [item2, setItem2] = useState("");
-  const [item3, setItem3] = useState("");
-  const [item4, setItem4] = useState("");
+  const [items,setItems] = useState([
+    "",
+    "",
+    "",
+    ""
+  ])
 
-  const fileInput = useRef<HTMLInputElement>(null);
 
-  const openCamera = () => {
-    fileInput.current?.click();
-  };
+  function updateItem(index:number,value:string){
 
-  const canContinue =
-    item1.trim() !== "" ||
-    item2.trim() !== "" ||
-    item3.trim() !== "" ||
-    item4.trim() !== "";
+    const copy = [...items]
+    copy[index] = value
+    setItems(copy)
+
+  }
+
+
+  async function next(){
+
+    const handover_id = localStorage.getItem("handover_id")
+
+    const cleanItems = items
+      .filter(i => i.trim()!=="")
+      .map(i => ({
+        description:i,
+        photo_url:null
+      }))
+
+
+    await fetch("/api/handover/create",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        handover_id,
+        items:cleanItems
+      })
+    })
+
+
+    window.location.href="/events"
+
+  }
+
 
   return (
+
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
-      <main className="p-8 pt-10">
+      <main className="p-8 pt-16">
 
         <h2 className="text-xs font-medium uppercase tracking-[0.2em] mb-12 opacity-60">
           tulis rincian paket kamu di sini
         </h2>
 
-        <div className="space-y-0 mb-10">
 
-          <input
-            className="line-input"
-            placeholder="1. Nama barang..."
-            value={item1}
-            onChange={(e)=>setItem1(e.target.value)}
-          />
+        <div className="space-y-0 mb-16">
 
-          <input
-            className="line-input"
-            value={item2}
-            onChange={(e)=>setItem2(e.target.value)}
-          />
-
-          <input
-            className="line-input"
-            value={item3}
-            onChange={(e)=>setItem3(e.target.value)}
-          />
-
-          <input
-            className="line-input"
-            value={item4}
-            onChange={(e)=>setItem4(e.target.value)}
-          />
+          {items.map((item,i)=>(
+            <input
+              key={i}
+              className="line-input"
+              placeholder={i===0?"1. Nama barang...":""}
+              value={item}
+              onChange={(e)=>updateItem(i,e.target.value)}
+            />
+          ))}
 
         </div>
 
-        <div
-          onClick={openCamera}
-          className="w-full aspect-[4/3] border border-dashed border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED] transition-colors cursor-pointer"
-        >
+
+        <div className="w-full aspect-[4/3] border border-dashed border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED] transition-colors">
 
           <Camera
             className="text-[#A1887F] mb-2"
@@ -78,15 +92,8 @@ export default function PackagePage() {
 
         </div>
 
-        <input
-          ref={fileInput}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-        />
-
       </main>
+
 
       <div className="flex justify-between px-8 pb-8 text-sm">
 
@@ -94,18 +101,17 @@ export default function PackagePage() {
           ← Sebelumnya
         </Link>
 
-        {canContinue ? (
-          <Link href="/events">
-            Lanjut →
-          </Link>
-        ) : (
-          <span className="opacity-30">
-            Lanjut →
-          </span>
-        )}
+        <button
+          onClick={next}
+          className="font-medium"
+        >
+          Lanjut →
+        </button>
 
       </div>
 
     </div>
-  );
+
+  )
+
 }

@@ -1,24 +1,14 @@
 import { NextResponse } from "next/server"
-
-function generateToken(length = 10) {
-  const chars =
-    "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-
-  let token = ""
-
-  for (let i = 0; i < length; i++) {
-    token += chars.charAt(
-      Math.floor(Math.random() * chars.length)
-    )
-  }
-
-  return token
-}
+import crypto from "crypto"
 
 export async function GET() {
-  const token = generateToken()
+
+  const token = crypto
+    .randomBytes(16)
+    .toString("hex")
 
   return NextResponse.json({
     token
   })
+
 }

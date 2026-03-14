@@ -1,124 +1,117 @@
-'use client';
+'use client'
 
-import { useState } from "react";
-import Link from "next/link";
-import { Camera, QrCode } from "lucide-react";
+import { useState } from "react"
+import Link from "next/link"
+import { Camera } from "lucide-react"
 
-export default function HandoverPage() {
+export default function PackagePage() {
 
-  const [mode, setMode] = useState("direct");
+  const [items,setItems] = useState([
+    "",
+    "",
+    "",
+    ""
+  ])
+
+
+  function updateItem(index:number,value:string){
+
+    const copy = [...items]
+    copy[index] = value
+    setItems(copy)
+
+  }
+
+
+  async function next(){
+
+    const handover_id = localStorage.getItem("handover_id")
+
+    const cleanItems = items
+      .filter(i => i.trim()!=="")
+      .map(i => ({
+        description:i,
+        photo_url:null
+      }))
+
+
+    await fetch("/api/handover/create",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        handover_id,
+        items:cleanItems
+      })
+    })
+
+
+    window.location.href="/events"
+
+  }
+
 
   return (
+
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
       <main className="p-8 pt-16">
 
-        {/* Title */}
-
-        <h2 className="text-xl font-light mb-12">
-          Paket untuk <span className="font-medium">Budi Santoso</span>
+        <h2 className="text-xs font-medium uppercase tracking-[0.2em] mb-12 opacity-60">
+          tulis rincian paket kamu di sini
         </h2>
 
-        {/* Tabs */}
 
-        <div className="flex gap-8 mb-12 border-b border-[#E0DED7] pb-4">
+        <div className="space-y-0 mb-16">
 
-          <button
-            onClick={() => setMode("direct")}
-            className={`text-sm pb-4 -mb-[18px] ${
-              mode === "direct"
-                ? "font-bold border-b-2 border-[#3E2723]"
-                : "opacity-40"
-            }`}
-          >
-            Penerima langsung
-          </button>
-
-          <button
-            onClick={() => setMode("delegate")}
-            className={`text-sm pb-4 -mb-[18px] ${
-              mode === "delegate"
-                ? "font-bold border-b-2 border-[#3E2723]"
-                : "opacity-40"
-            }`}
-          >
-            Diwakilkan
-          </button>
+          {items.map((item,i)=>(
+            <input
+              key={i}
+              className="line-input"
+              placeholder={i===0?"1. Nama barang...":""}
+              value={item}
+              onChange={(e)=>updateItem(i,e.target.value)}
+            />
+          ))}
 
         </div>
 
-        {/* Delegate Fields */}
 
-        {mode === "delegate" && (
+        <div className="w-full aspect-[4/3] border border-dashed border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED] transition-colors">
 
-          <div className="space-y-4 mb-12">
+          <Camera
+            className="text-[#A1887F] mb-2"
+            size={24}
+            strokeWidth={1.5}
+          />
 
-            <input
-              className="line-input"
-              placeholder="Nama"
-            />
-
-            <input
-              className="line-input"
-              placeholder="Hubungan dengan penerima"
-            />
-
-          </div>
-
-        )}
-
-        {/* Proof Options */}
-
-        <div className="grid grid-cols-2 gap-4">
-
-          <div className="aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED] transition-colors">
-
-            <QrCode
-              className="text-[#3E2723] mb-3"
-              size={32}
-              strokeWidth={1.5}
-            />
-
-            <span className="text-xs">
-              QR Code
-            </span>
-
-          </div>
-
-          <div className="aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED] transition-colors">
-
-            <Camera
-              className="text-[#3E2723] mb-3"
-              size={32}
-              strokeWidth={1.5}
-            />
-
-            <span className="text-xs text-center">
-              Ambil foto
-              <br/>
-              serah terima
-            </span>
-
-          </div>
+          <span className="text-xs text-[#A1887F]">
+            Tambahkan foto paketmu di sini
+          </span>
 
         </div>
 
       </main>
 
-      {/* Navigation */}
 
       <div className="flex justify-between px-8 pb-8 text-sm">
 
-        <Link href="/package" className="opacity-60">
+        <Link href="/create" className="opacity-60">
           ← Sebelumnya
         </Link>
 
-        <Link href="/events">
-          Selesai →
-        </Link>
+        <button
+          onClick={next}
+          className="font-medium"
+        >
+          Lanjut →
+        </button>
 
       </div>
 
     </div>
-  );
+
+  )
+
 }
