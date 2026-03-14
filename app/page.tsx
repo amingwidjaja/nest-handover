@@ -7,7 +7,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col items-center justify-center px-8 text-center">
 
       <img
-        src="nest-paket-logo.png"
+        src="/logo-nest-paket.png"
         alt="NEST Paket"
         className="w-24 mb-4"
       />
