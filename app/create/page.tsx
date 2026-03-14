@@ -6,7 +6,20 @@ import Link from "next/link";
 export default function CreatePage() {
 
   const [senderType, setSenderType] = useState("self");
+
+  const [senderName, setSenderName] = useState("");
+  const [senderContact, setSenderContact] = useState("");
+
   const [receiverName, setReceiverName] = useState("");
+  const [receiverContact, setReceiverContact] = useState("");
+
+  const canContinue =
+    receiverName.trim() !== "" &&
+    receiverContact.trim() !== "" &&
+    (
+      senderType === "self" ||
+      (senderName.trim() !== "" && senderContact.trim() !== "")
+    );
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
@@ -47,21 +60,23 @@ export default function CreatePage() {
           </div>
 
           {senderType === "other" && (
-
             <div className="space-y-4 mb-8">
 
               <input
                 className="line-input"
                 placeholder="Nama pengirim"
+                value={senderName}
+                onChange={(e) => setSenderName(e.target.value)}
               />
 
               <input
                 className="line-input"
                 placeholder="WA / Email"
+                value={senderContact}
+                onChange={(e) => setSenderContact(e.target.value)}
               />
 
             </div>
-
           )}
 
         </section>
@@ -84,6 +99,8 @@ export default function CreatePage() {
             <input
               className="line-input"
               placeholder="WA / Email"
+              value={receiverContact}
+              onChange={(e) => setReceiverContact(e.target.value)}
             />
 
           </div>
@@ -98,7 +115,7 @@ export default function CreatePage() {
           ← Sebelumnya
         </Link>
 
-        {receiverName ? (
+        {canContinue ? (
           <Link href="/package">
             Lanjut →
           </Link>
