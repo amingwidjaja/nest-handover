@@ -95,7 +95,7 @@ export default function PackagePage() {
         </Link>
 
         {canContinue ? (
-          <Link href="/handover">
+          <Link href="/events">
             Lanjut →
           </Link>
         ) : (
