@@ -237,12 +237,7 @@ terlebih dahulu`
           ← Sebelumnya
         </Link>
 
-        <Link
-          href={`/handover/${id}/success`}
-        >
-          Selesai →
-        </Link>
-
+        
       </div>
 
     </div>
