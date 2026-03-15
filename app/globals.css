@@ -60,3 +60,19 @@ body {
     opacity:1;
   }
 }
+
+.new-row {
+  border-left: 3px solid var(--accent-light);
+  animation: fadeInRow 0.4s ease;
+}
+
+@keyframes fadeInRow {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -2,25 +2,91 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { Home } from "lucide-react"
 
 export default function DashboardPage(){
 
   const [handovers,setHandovers] = useState<any[]>([])
+  const [selectMode,setSelectMode] = useState(false)
+  const [selected,setSelected] = useState<string[]>([])
+  const [highlightId,setHighlightId] = useState<string | null>(null)
 
   useEffect(()=>{
+    load()
+  },[])
 
-    async function load(){
 
-      const res = await fetch("/api/handover/list")
-      const data = await res.json()
+  async function load(){
 
-      setHandovers(data.handovers || [])
+    const res = await fetch("/api/handover/list")
+    const data = await res.json()
+
+    const rows = data.handovers || []
+
+    setHandovers(rows)
+
+    if(rows.length){
+
+      window.scrollTo({ top:0 })
+
+      setHighlightId(rows[0].id)
+
+      setTimeout(()=>{
+        setHighlightId(null)
+      },3000)
 
     }
 
+  }
+
+
+  function toggleSelect(id:string){
+
+    if(selected.includes(id)){
+      setSelected(selected.filter(i=>i!==id))
+    }else{
+      setSelected([...selected,id])
+    }
+
+  }
+
+
+  function startSelect(id:string){
+
+    setSelectMode(true)
+    setSelected([id])
+
+  }
+
+
+  function cancelSelect(){
+
+    setSelectMode(false)
+    setSelected([])
+
+  }
+
+
+  async function deleteSelected(){
+
+    if(selected.length === 0) return
+
+    if(!confirm("Hapus paket yang dipilih?")) return
+
+    await fetch("/api/handover/delete",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        ids:selected
+      })
+    })
+
+    cancelSelect()
     load()
 
-  },[])
+  }
 
 
   const pending = handovers.filter(h=>h.status !== "received")
@@ -41,12 +107,30 @@ export default function DashboardPage(){
         ? h.handover_items[0].description
         : "-"
 
+    const checked = selected.includes(h.id)
+
     return(
 
-      <Link
+      <div
         key={h.id}
-        href={`/handover/${h.id}`}
-        className="px-6 py-4 flex items-center justify-between text-[13px] border-b border-[#E0DED7]"
+        onClick={()=>{
+          if(selectMode){
+            toggleSelect(h.id)
+          }else{
+            window.location.href = `/handover/${h.id}`
+          }
+        }}
+        onContextMenu={(e)=>{
+          e.preventDefault()
+          if(!selectMode){
+            startSelect(h.id)
+          }
+        }}
+        className={`
+          px-6 py-4 flex items-center justify-between text-[13px]
+          border-b border-[#E0DED7] cursor-pointer
+          ${highlightId === h.id ? "new-row" : ""}
+        `}
       >
 
         <span className="w-14 font-mono text-[#A1887F]">
@@ -61,11 +145,21 @@ export default function DashboardPage(){
           {packageName}
         </span>
 
-        <span className="w-4 text-right">
-          {h.status === "received" ? "✓" : "○"}
+        <span className="w-6 text-right">
+
+          {selectMode ? (
+
+            checked ? "☑" : "☐"
+
+          ) : (
+
+            h.status === "received" ? "✓" : "○"
+
+          )}
+
         </span>
 
-      </Link>
+      </div>
 
     )
 
@@ -76,17 +170,24 @@ export default function DashboardPage(){
 
     <main className="flex flex-col min-h-full text-[#3E2723]">
 
+
       {/* HEADER */}
 
-      <header className="px-6 py-8 shrink-0">
+      <header className="px-6 py-8 shrink-0 flex items-center justify-between">
+
         <h1 className="text-xl font-medium tracking-tight">
           Daftar Paket
         </h1>
+
+        <Link href="/">
+          <Home size={20} strokeWidth={1.5} className="opacity-60"/>
+        </Link>
+
       </header>
 
 
 
-      {/* SECTION 1 */}
+      {/* DALAM PROSES */}
 
       <section className="flex flex-col flex-1 min-h-0 overflow-hidden border-b border-[#E0DED7]">
 
@@ -102,7 +203,7 @@ export default function DashboardPage(){
 
 
 
-      {/* SECTION 2 */}
+      {/* SUDAH DITERIMA */}
 
       <section className="flex flex-col flex-1 min-h-0 overflow-hidden">
 
@@ -118,7 +219,7 @@ export default function DashboardPage(){
 
 
 
-      {/* FOOTER */}
+      {/* FOOTER NOTE */}
 
       <footer className="p-6 border-t border-[#E0DED7] shrink-0">
 
@@ -131,6 +232,34 @@ export default function DashboardPage(){
         </p>
 
       </footer>
+
+
+
+      {/* SELECT TOOLBAR */}
+
+      {selectMode && (
+
+        <div className="fixed bottom-0 left-0 right-0 bg-[#3E2723] text-white flex items-center justify-between px-6 py-4">
+
+          <span className="text-sm">
+            {selected.length} dipilih
+          </span>
+
+          <div className="flex gap-6 text-sm">
+
+            <button onClick={cancelSelect}>
+              Batal
+            </button>
+
+            <button onClick={deleteSelected}>
+              Hapus
+            </button>
+
+          </div>
+
+        </div>
+
+      )}
 
     </main>
 

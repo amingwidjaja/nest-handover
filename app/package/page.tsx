@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Camera, Home } from "lucide-react"
 import imageCompression from "browser-image-compression"
@@ -14,10 +14,14 @@ export default function PackagePage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
 
+  const [saving,setSaving] = useState(false)
+
   const handleItemChange = (index:number,value:string) => {
+
     const copy = [...items]
     copy[index] = value
     setItems(copy)
+
   }
 
   const handlePhoto = async (file:File) => {
@@ -34,14 +38,20 @@ export default function PackagePage() {
 
     setPhotoFile(compressed)
     setPreview(URL.createObjectURL(compressed))
+
   }
 
-  const createHandover = async () => {
+
+  async function createHandover(mode:"save"|"handover"){
 
     if(!items[0].trim()){
       alert("Minimal isi 1 barang")
       return
     }
+
+    if(saving) return
+
+    setSaving(true)
 
     const payload = {
       sender_name: "Sender",
@@ -64,46 +74,62 @@ export default function PackagePage() {
     const data = await res.json()
 
     if(!data.success){
+      setSaving(false)
       alert("Gagal membuat handover")
       return
     }
 
-    router.push(`/handover/${data.handover_id}`)
+    if(mode === "save"){
+
+      router.push("/")
+
+    }else{
+
+      router.push(`/handover/${data.handover_id}`)
+
+    }
 
   }
 
   return (
+
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col">
 
-    
-          <main className="p-10 pt-10">
+
+      <main className="p-10 pt-10">
 
         <div className="flex justify-between items-start mb-8">
 
-            <h2 className="text-lg font-medium uppercase tracking-[0.2em] opacity-60">
-                Daftar Barang
-            </h2>
+          <h2 className="text-lg font-medium uppercase tracking-[0.2em] opacity-60">
+            Daftar Barang
+          </h2>
 
-            <Link href="/paket">
-                <Home size={20} strokeWidth={1.5} className="opacity-60"/>
-            </Link>
+          <Link href="/">
+            <Home size={20} strokeWidth={1.5} className="opacity-60"/>
+          </Link>
 
         </div>
+
+
+        {/* ITEMS */}
 
         <div className="space-y-0 mb-8">
 
           {items.map((item, i) => (
             <textarea
-                key={i}
-                value={item}
-                onChange={(e) => handleItemChange(i, e.target.value)}
-                className="line-input resize-none"
-                rows={2}
-                placeholder={i === 0 ? "Ketik nama barang yang kamu\nmau kirim di sini" : ""}
+              key={i}
+              value={item}
+              onChange={(e) => handleItemChange(i, e.target.value)}
+              className="line-input resize-none"
+              rows={2}
+              placeholder={i === 0 ? "Ketik nama barang yang kamu\nmau kirim di sini" : ""}
             />
-            ))}
+          ))}
 
         </div>
+
+
+        {/* PHOTO */}
 
         <div className="mb-8">
 
@@ -162,17 +188,31 @@ export default function PackagePage() {
 
         </div>
 
-      
 
-      <div className="flex justify-end px-8 pb-4 text-sm">
+        {/* ACTION BUTTONS */}
 
-        <button onClick={createHandover}>
-          Lanjut →
-        </button>
+        <div className="flex justify-between text-sm mt-10">
 
-      </div>
-</main>
+          <button
+            onClick={()=>createHandover("save")}
+            className="opacity-60"
+          >
+            Simpan
+          </button>
+
+          <button
+            onClick={()=>createHandover("handover")}
+            className="font-medium"
+          >
+            Serah Terima →
+          </button>
+
+        </div>
+
+      </main>
+
     </div>
+
   )
 
 }

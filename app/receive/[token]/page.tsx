@@ -6,7 +6,7 @@ import { useState } from "react"
 export default function ReceivePage(){
 
   const params = useParams()
-  const token = params.token
+  const token = params.token as string
 
   const [name,setName] = useState("")
   const [relation,setRelation] = useState("")
