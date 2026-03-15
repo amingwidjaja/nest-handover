@@ -31,7 +31,7 @@ export default function HomePage() {
         href="/events"
         className="block mt-6 text-base opacity-60"
       >
-        Lihat Logbook
+        Lihat Daftar Paket
       </Link>
 
     </div>
