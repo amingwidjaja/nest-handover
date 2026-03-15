@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Camera, QrCode } from "lucide-react";
 
 export default function HandoverPage() {
 
   const params = useParams()
+  const router = useRouter()
   const id = params.id
 
   const [mode, setMode] = useState("direct")
@@ -15,57 +16,34 @@ export default function HandoverPage() {
   const [relation, setRelation] = useState("")
   const [photo, setPhoto] = useState<string | null>(null)
   const [notes, setNotes] = useState("")
-  const [toast,setToast] = useState("")
-
-  const [gps, setGps] = useState<any>(null)
-  const [timestamp, setTimestamp] = useState<any>(null)
-
-  function showToast(msg:string){
-    setToast(msg)
-    setTimeout(()=>setToast(""),2000)
-  }
 
   const captureMeta = () => {
 
-    const now = new Date().toISOString()
-    setTimestamp(now)
+    const timestamp = new Date().toISOString()
+
+    let gps:any = null
 
     if(navigator.geolocation){
       navigator.geolocation.getCurrentPosition((pos)=>{
-        setGps({
+        gps = {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
           accuracy: pos.coords.accuracy
-        })
+        }
       })
     }
 
-  }
-
-  const handleCameraClick = () => {
-
-    if(mode === "delegate"){
-      if(!delegateName.trim() || !relation.trim()){
-        showToast(
-`Isi nama wakil
-dan hubungan dengan penerima
-terlebih dahulu`
-        )
-        return
-      }
-    }
-
-    document.getElementById("handoverCamera")?.click()
+    return {timestamp,gps}
 
   }
 
-  const handleFinish = () => {
+  function finalize(type:string,photoUrl?:string){
 
-    captureMeta()
+    const meta = captureMeta()
 
     const eventLog = [
       {event:"handover_started"},
-      {event: photo ? "photo_used" : "qr_used"},
+      {event:type==="photo" ? "photo_used" : "qr_used"},
       {event:"handover_completed"}
     ]
 
@@ -75,22 +53,79 @@ terlebih dahulu`
       delegateName,
       relation,
       notes,
-      photo,
-      gps,
-      timestamp,
+      photo:photoUrl || null,
+      meta,
       eventLog
     })
 
+    router.push(`/handover/${id}/success`)
+
   }
+
+
+  function handleCameraClick(){
+
+    if(mode==="delegate"){
+
+      if(!delegateName.trim() || !relation.trim()){
+        alert(`Isi nama wakil
+dan hubungan dengan penerima terlebih dahulu`)
+        return
+      }
+
+    }
+
+    document.getElementById("handoverCamera")?.click()
+
+  }
+
+
+  function handlePhoto(e:any){
+
+    if(!e.target.files) return
+
+    const file = e.target.files[0]
+
+    const url = URL.createObjectURL(file)
+
+    setPhoto(url)
+
+    finalize("photo",url)
+
+  }
+
+
+  function handleQR(){
+
+    if(mode==="delegate"){
+
+      if(!delegateName.trim() || !relation.trim()){
+        alert(`Isi nama wakil
+dan hubungan dengan penerima terlebih dahulu`)
+        return
+      }
+
+    }
+
+    finalize("qr")
+
+  }
+
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
       <main className="p-8 pt-16">
 
-        <h2 className="text-xl font-light mb-12">
+        <h2 className="text-xl font-light mb-6">
           Serah terima paket
         </h2>
+
+        <p className="text-xs opacity-60 mb-12 leading-relaxed">
+          Selesaikan Serah Terima dengan menunjukkan QR untuk difoto penerima,
+          atau kamu juga bisa mengambil foto sebagai bukti.
+        </p>
+
 
         <div className="flex gap-8 mb-12 border-b border-[#E0DED7] pb-4">
 
@@ -118,29 +153,42 @@ terlebih dahulu`
 
         </div>
 
+
         {mode === "delegate" && (
 
           <div className="space-y-8 mb-12">
 
             <div>
-              <div className="text-sm mb-2">Nama yang mewakili:</div>
+
+              <div className="text-sm mb-2">
+                Nama yang mewakili:
+              </div>
+
               <input
                 value={delegateName}
                 onChange={(e)=>setDelegateName(e.target.value)}
                 className="line-input w-full"
               />
+
             </div>
 
             <div>
-              <div className="text-sm mb-2">Hubungan dengan penerima:</div>
+
+              <div className="text-sm mb-2">
+                Hubungan dengan penerima:
+              </div>
+
               <input
                 value={relation}
                 onChange={(e)=>setRelation(e.target.value)}
                 className="line-input w-full"
               />
+
             </div>
 
+
             <div>
+
               <div className="text-sm mb-2">
                 Catatan: <span className="opacity-40">(kalau ada)</span>
               </div>
@@ -150,11 +198,13 @@ terlebih dahulu`
                 onChange={(e)=>setNotes(e.target.value)}
                 className="line-input w-full"
               />
+
             </div>
 
           </div>
 
         )}
+
 
         {mode === "direct" && (
 
@@ -175,11 +225,13 @@ terlebih dahulu`
 
         )}
 
+
         <div className="grid grid-cols-2 gap-4 mb-12">
 
-          <Link
-            href={`/handover/${id}/qr`}
-            className="aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED]"
+
+          <div
+            onClick={handleQR}
+            className="aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED] cursor-pointer"
           >
 
             <QrCode
@@ -192,7 +244,8 @@ terlebih dahulu`
               QR Code
             </span>
 
-          </Link>
+          </div>
+
 
           <div
             onClick={handleCameraClick}
@@ -213,7 +266,9 @@ terlebih dahulu`
 
           </div>
 
+
         </div>
+
 
         <input
           id="handoverCamera"
@@ -221,11 +276,7 @@ terlebih dahulu`
           accept="image/*"
           capture="environment"
           className="hidden"
-          onChange={(e)=>{
-            if(!e.target.files) return
-            const file = e.target.files[0]
-            setPhoto(URL.createObjectURL(file))
-          }}
+          onChange={handlePhoto}
         />
 
         {photo && (
@@ -234,26 +285,18 @@ terlebih dahulu`
 
       </main>
 
+
       <div className="flex justify-between px-8 pb-8 text-sm">
 
         <Link href="/package" className="opacity-60">
           ← Sebelumnya
         </Link>
 
-        <Link
-          href={`/handover/${id}/success`}
-          onClick={handleFinish}
-        >
-          Selesai →
+        <Link href="/">
+          Batal
         </Link>
 
       </div>
-
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3E2723] text-white text-sm px-5 py-3 rounded-md shadow-lg text-center whitespace-pre-line">
-          {toast}
-        </div>
-      )}
 
     </div>
   );

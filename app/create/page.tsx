@@ -5,8 +5,7 @@ import Link from "next/link"
 
 export default function CreatePage() {
 
-  const [senderType,setSenderType] = useState("self")
-  const [toast,setToast] = useState("")
+  const [senderType, setSenderType] = useState("self")
 
   const [senderName,setSenderName] = useState("")
   const [senderContact,setSenderContact] = useState("")
@@ -14,26 +13,37 @@ export default function CreatePage() {
   const [receiverName,setReceiverName] = useState("")
   const [receiverContact,setReceiverContact] = useState("")
 
+  const [toast,setToast] = useState("")
+
   function showToast(msg:string){
-
     setToast(msg)
-
-    setTimeout(()=>{
-      setToast("")
-    },2000)
-
+    setTimeout(()=>setToast(""),3000)
   }
 
   async function submit(){
 
-    if(!receiverName || !receiverContact){
-      showToast("Nama dan WA/Email penerima wajib diisi")
+    if(!receiverName.trim()){
+      showToast("Tulis nama penerima paket")
       return
     }
 
-    if(senderType==="other" && (!senderName || !senderContact)){
-      showToast("Data pengirim wajib diisi")
+    if(!receiverContact.trim()){
+      showToast("Nomor WA atau email penerima paket")
       return
+    }
+
+    if(senderType==="other"){
+
+      if(!senderName.trim()){
+        showToast("Tulis nama pengirim paket")
+        return
+      }
+
+      if(!senderContact.trim()){
+        showToast("Nomor WA atau email pengirim paket")
+        return
+      }
+
     }
 
     const res = await fetch("/api/handover/create",{
@@ -80,7 +90,7 @@ export default function CreatePage() {
           <div className="flex gap-8 mb-8">
 
             <button
-              onClick={()=>setSenderType("self")}
+              onClick={() => setSenderType("self")}
               className="flex items-center gap-2"
             >
 
@@ -96,8 +106,9 @@ export default function CreatePage() {
 
             </button>
 
+
             <button
-              onClick={()=>setSenderType("other")}
+              onClick={() => setSenderType("other")}
               className="flex items-center gap-2"
             >
 
@@ -115,20 +126,21 @@ export default function CreatePage() {
 
           </div>
 
+
           {senderType==="other" && (
 
             <div className="space-y-4 mb-8">
 
               <input
                 className="line-input"
-                placeholder="Nama pengirim"
+                placeholder="Tulis nama pengirim paket"
                 value={senderName}
                 onChange={e=>setSenderName(e.target.value)}
               />
 
               <input
                 className="line-input"
-                placeholder="WA / Email"
+                placeholder="Nomor WA atau email pengirim paket"
                 value={senderContact}
                 onChange={e=>setSenderContact(e.target.value)}
               />
@@ -138,6 +150,7 @@ export default function CreatePage() {
           )}
 
         </section>
+
 
         <section>
 
@@ -149,14 +162,14 @@ export default function CreatePage() {
 
             <input
               className="line-input"
-              placeholder="Nama penerima"
+              placeholder="Tulis nama penerima paket"
               value={receiverName}
               onChange={e=>setReceiverName(e.target.value)}
             />
 
             <input
               className="line-input"
-              placeholder="WA / Email"
+              placeholder="Nomor WA atau email penerima paket"
               value={receiverContact}
               onChange={e=>setReceiverContact(e.target.value)}
             />
@@ -166,6 +179,14 @@ export default function CreatePage() {
         </section>
 
       </main>
+
+      {toast && (
+
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3E2723] text-white text-sm px-6 py-3 rounded-full shadow-lg animate-fade">
+          {toast}
+        </div>
+
+      )}
 
       <div className="flex justify-between px-8 pb-8 text-sm">
 
@@ -181,18 +202,6 @@ export default function CreatePage() {
         </button>
 
       </div>
-
-      {toast && (
-        <div
-          className="fixed bottom-8 left-1/2 -translate-x-1/2
-          bg-[#3E2723] text-white text-sm
-          px-5 py-3 rounded-md shadow-lg
-          text-center whitespace-pre-line
-          animate-[toastSlide_0.25s_ease-out]"
-        >
-          {toast}
-        </div>
-      )}
 
     </div>
 

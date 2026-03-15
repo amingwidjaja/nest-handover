@@ -10,11 +10,12 @@ export default function PackagePage() {
   const [items, setItems] = useState(["", "", "", ""])
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+
   const [toast,setToast] = useState("")
 
   function showToast(msg:string){
     setToast(msg)
-    setTimeout(()=>setToast(""),2000)
+    setTimeout(()=>setToast(""),3000)
   }
 
   const handleItemChange = (index:number,value:string) => {
@@ -39,18 +40,33 @@ export default function PackagePage() {
     setPreview(URL.createObjectURL(compressed))
   }
 
+  function handleNext(){
+
+    if(!items[0].trim()){
+      showToast("Tulis nama barang yang kamu kirim")
+      return
+    }
+
+    const id = crypto.randomUUID()
+
+    window.location.href = `/handover/${id}`
+
+  }
+
   return (
+
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
       <main className="p-8 pt-16">
 
         <h2 className="text-xs font-medium uppercase tracking-[0.2em] mb-12 opacity-60">
-          tulis rincian paket kamu di sini
+          ketik nama barang yang kamu mau kirim di sini
         </h2>
 
         <div className="space-y-0 mb-12">
 
           {items.map((item,i)=>(
+
             <input
               key={i}
               value={item}
@@ -58,9 +74,11 @@ export default function PackagePage() {
               className="line-input"
               placeholder={i===0 ? "1. Nama barang..." : ""}
             />
+
           ))}
 
         </div>
+
 
         <div className="mb-8">
 
@@ -121,6 +139,16 @@ export default function PackagePage() {
 
       </main>
 
+
+      {toast && (
+
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3E2723] text-white text-sm px-6 py-3 rounded-full shadow-lg">
+          {toast}
+        </div>
+
+      )}
+
+
       <div className="flex justify-between px-8 pb-8 text-sm">
 
         <Link href="/create" className="opacity-60">
@@ -128,29 +156,14 @@ export default function PackagePage() {
         </Link>
 
         <button
-          onClick={()=>{
-
-            if(!items[0].trim()){
-              showToast("Minimal isi 1 barang")
-              return
-            }
-
-            const id = crypto.randomUUID()
-            window.location.href = `/handover/${id}`
-
-          }}
+          onClick={handleNext}
         >
           Lanjut →
         </button>
 
       </div>
 
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3E2723] text-white text-sm px-5 py-3 rounded-md shadow-lg text-center whitespace-pre-line">
-          {toast}
-        </div>
-      )}
-
     </div>
+
   );
 }
