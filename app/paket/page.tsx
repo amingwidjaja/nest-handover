@@ -21,14 +21,14 @@ export default function HomePage() {
       </h1>
 
       <Link
-        href="/package"
+        href="/create"
         className="block w-full max-w-xs mx-auto py-4 bg-[#3E2723] text-[#FAF9F6] rounded-sm font-medium"
       >
         Buat Serah Terima
       </Link>
 
       <Link
-        href="/events"
+        href="/dasboard"
         className="block mt-6 text-base opacity-60"
       >
         Lihat Daftar Paket
