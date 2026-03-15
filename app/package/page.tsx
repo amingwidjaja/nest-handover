@@ -75,7 +75,7 @@ export default function PackagePage() {
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
     <div className="flex justify-end p-6">
-    <a href="/">
+    <a href="/paket">
         <Home size={20} strokeWidth={1.5} className="text-[#3E2723] opacity-70" />
     </a>
     </div>
