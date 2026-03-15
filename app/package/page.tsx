@@ -74,9 +74,9 @@ export default function PackagePage() {
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
-      <main className="p-8 pt-10">
+      <main className="p-10 pt-10">
 
-        <h2 className="text-lg font-medium uppercase tracking-[0.2em] mb-16 opacity-60">
+        <h2 className="text-lg font-medium uppercase tracking-[0.2em] mb-8 opacity-60">
           Daftar Barang
         </h2>
 
