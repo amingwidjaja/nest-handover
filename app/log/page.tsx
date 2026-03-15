@@ -3,55 +3,70 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 
-type Handover = {
-  id: string
-  status: string
-  created_at: string
-  received_at: string | null
-}
-
-type ReceiveEvent = {
-  receiver_name: string
-  receive_method: string
+type Row = {
+  id:string
+  created_at:string
+  received_at:string | null
+  status:string
+  receiver_name?:string
+  receive_method?:string
+  package?:string
 }
 
 export default function LogPage(){
 
-  const [pending,setPending] = useState<Handover[]>([])
-  const [received,setReceived] = useState<(Handover & {receive?:ReceiveEvent})[]>([])
+  const [pending,setPending] = useState<Row[]>([])
+  const [received,setReceived] = useState<Row[]>([])
 
   useEffect(()=>{
 
     async function load(){
 
-      // pending
-      const { data:pendingData } = await supabase
-        .from("handover")
-        .select("*")
-        .neq("status","received")
-        .order("created_at",{ ascending:false })
-
-      // received
-      const { data:receivedData } = await supabase
+      const { data } = await supabase
         .from("handover")
         .select(`
-          *,
-          receive_event (
-            receiver_name,
-            receive_method
-          )
+          id,
+          status,
+          created_at,
+          received_at,
+          handover_items(description),
+          receive_event(receiver_name,receive_method)
         `)
-        .eq("status","received")
-        .order("received_at",{ ascending:false })
 
-      setPending(pendingData || [])
+      if(!data) return
 
-      const formatted = (receivedData || []).map((r:any)=>({
-        ...r,
-        receive:r.receive_event?.[0]
-      }))
+      const rows = data.map((r:any)=>{
 
-      setReceived(formatted)
+        const firstItem = r.handover_items?.[0]?.description || ""
+
+        const packageText =
+          firstItem.length > 40
+          ? firstItem.slice(0,40) + "..."
+          : firstItem
+
+        return {
+          id:r.id,
+          created_at:r.created_at,
+          received_at:r.received_at,
+          status:r.status,
+          receiver_name:r.receive_event?.[0]?.receiver_name,
+          receive_method:r.receive_event?.[0]?.receive_method,
+          package:packageText
+        }
+
+      })
+
+      setPending(
+        rows
+          .filter(r=>r.status!=="received")
+          .sort((a,b)=>b.created_at.localeCompare(a.created_at))
+      )
+
+      setReceived(
+        rows
+          .filter(r=>r.status==="received")
+          .sort((a,b)=>b.received_at!.localeCompare(a.received_at!))
+      )
 
     }
 
@@ -59,79 +74,79 @@ export default function LogPage(){
 
   },[])
 
-  return(
+  function RowView(r:Row,mode:"pending"|"received"){
 
-    <div className="min-h-screen bg-[#FAF9F6] p-8 max-w-xl mx-auto space-y-12">
+    const time = mode==="pending"
+      ? new Date(r.created_at).toLocaleString()
+      : new Date(r.received_at || "").toLocaleString()
 
-      <h1 className="text-xl text-center">
-        Log Book
-      </h1>
+    const receiver =
+      mode==="pending"
+      ? "dalam proses"
+      : r.receiver_name || "-"
 
-      {/* PENDING */}
+    const status =
+      mode==="pending"
+      ? "dalam proses"
+      : "paket telah diterima"
 
-      <div>
+    return(
 
-        <h2 className="text-sm opacity-60 mb-4">
-          Pending
-        </h2>
+      <div className="grid grid-cols-4 text-xs py-2 border-b border-neutral-200">
 
-        <div className="space-y-3">
+        <div>{time}</div>
 
-          {pending.map(p=>(
-            <div
-              key={p.id}
-              className="border p-3 text-sm"
-            >
+        <div>{receiver}</div>
 
-              <div className="font-mono text-xs">
-                {p.id.slice(0,8)}
-              </div>
+        <div className="truncate pr-2">
+          {r.package}
+        </div>
 
-              <div className="opacity-60 text-xs">
-                Created {new Date(p.created_at).toLocaleString()}
-              </div>
-
-            </div>
-          ))}
-
+        <div className="text-right">
+          {status}
         </div>
 
       </div>
 
-      {/* RECEIVED */}
+    )
 
-      <div>
+  }
 
-        <h2 className="text-sm opacity-60 mb-4">
-          Received
-        </h2>
+  return(
 
-        <div className="space-y-3">
+    <div className="min-h-screen bg-[#FAF9F6] flex flex-col items-center p-6">
 
-          {received.map(r=>(
-            <div
-              key={r.id}
-              className="border p-3 text-sm"
-            >
+      <div className="w-full max-w-3xl space-y-10">
 
-              <div className="font-mono text-xs">
-                {r.id.slice(0,8)}
-              </div>
+        {/* PENDING */}
 
-              <div className="opacity-60 text-xs">
-                Received {new Date(r.received_at || "").toLocaleString()}
-              </div>
+        <div className="h-56 overflow-y-auto">
 
-              {r.receive && (
-                <div className="text-xs mt-1">
-                  {r.receive.receiver_name} • {r.receive.receive_method}
-                </div>
-              )}
-
-            </div>
+          {pending.map(p=>(
+            <RowView key={p.id} {...p} mode="pending"/>
           ))}
 
         </div>
+
+        {/* RECEIVED */}
+
+        <div className="h-72 overflow-y-auto">
+
+          {received.map(r=>(
+            <RowView key={r.id} {...r} mode="received"/>
+          ))}
+
+        </div>
+
+        {/* GUIDELINE */}
+
+        <p className="text-[11px] text-neutral-500 text-center leading-relaxed">
+
+          Photo akan di delete otomatis setelah melewati 30 hari,
+          atau setelah proses serah terima selesai dan kami buatkan buktinya.
+          Terima kasih.
+
+        </p>
 
       </div>
 
