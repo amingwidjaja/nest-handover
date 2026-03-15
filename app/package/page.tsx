@@ -78,7 +78,7 @@ export default function PackagePage() {
     
           <main className="p-10 pt-10">
 
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-start mb-8">
 
             <h2 className="text-lg font-medium uppercase tracking-[0.2em] opacity-60">
                 Daftar Barang
@@ -92,15 +92,16 @@ export default function PackagePage() {
 
         <div className="space-y-0 mb-8">
 
-          {items.map((item,i)=>(
-            <input
-              key={i}
-              value={item}
-              onChange={(e)=>handleItemChange(i,e.target.value)}
-              className="line-input"
-              placeholder={i===0 ? "Ketik nama barang yang kamu mau kirim di sini" : ""}
+          {items.map((item, i) => (
+            <textarea
+                key={i}
+                value={item}
+                onChange={(e) => handleItemChange(i, e.target.value)}
+                className="line-input resize-none"
+                rows={2}
+                placeholder={i === 0 ? "Ketik nama barang yang kamu\nmau kirim di sini" : ""}
             />
-          ))}
+            ))}
 
         </div>
 
