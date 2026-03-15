@@ -27,6 +27,8 @@ export default function PackagePage() {
 
     const compressed = await imageCompression(file, options)
 
+    if(preview) URL.revokeObjectURL(preview)
+
     setPhotoFile(compressed)
     setPreview(URL.createObjectURL(compressed))
   }
@@ -39,8 +41,6 @@ export default function PackagePage() {
         <h2 className="text-xs font-medium uppercase tracking-[0.2em] mb-12 opacity-60">
           tulis rincian paket kamu di sini
         </h2>
-
-        {/* ITEMS */}
 
         <div className="space-y-0 mb-12">
 
@@ -55,8 +55,6 @@ export default function PackagePage() {
           ))}
 
         </div>
-
-        {/* PHOTO */}
 
         <div className="mb-8">
 
@@ -117,8 +115,6 @@ export default function PackagePage() {
 
       </main>
 
-      {/* NAV */}
-
       <div className="flex justify-between px-8 pb-8 text-sm">
 
         <Link href="/create" className="opacity-60">
@@ -126,16 +122,18 @@ export default function PackagePage() {
         </Link>
 
         <button
-  onClick={()=>{
-    if(!items[0].trim()){
-      alert("Minimal isi 1 barang")
-      return
-    }
-    window.location.href="/handover"
-  }}
->
-  Lanjut →
-</button>
+          onClick={()=>{
+            if(!items[0].trim()){
+              alert("Minimal isi 1 barang")
+              return
+            }
+
+            const id = crypto.randomUUID()
+            window.location.href = `/handover/${id}`
+          }}
+        >
+          Lanjut →
+        </button>
 
       </div>
 
