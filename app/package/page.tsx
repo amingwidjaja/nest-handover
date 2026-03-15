@@ -80,7 +80,7 @@ export default function PackagePage() {
           Daftar Barang
         </h2>
 
-        <div className="space-y-0 mb-12">
+        <div className="space-y-0 mb-8">
 
           {items.map((item,i)=>(
             <input
