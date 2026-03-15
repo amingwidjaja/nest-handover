@@ -131,7 +131,7 @@ export default function PackagePage() {
       alert("Minimal isi 1 barang")
       return
     }
-    window.location.href="/events"
+    window.location.href="/handover"
   }}
 >
   Lanjut →
