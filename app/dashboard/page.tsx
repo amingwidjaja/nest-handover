@@ -62,12 +62,7 @@ export default function DashboardPage(){
         </span>
 
         <span className="w-4 text-right">
-
-          {h.status === "received"
-            ? "✓"
-            : "○"
-          }
-
+          {h.status === "received" ? "✓" : "○"}
         </span>
 
       </Link>
@@ -79,36 +74,43 @@ export default function DashboardPage(){
 
   return(
 
-    <main className="flex flex-col min-h-full pt-12 text-[#3E2723]">
+    <main className="flex flex-col min-h-full text-[#3E2723]">
 
-      <h1 className="px-6 text-xl font-medium tracking-tight mb-8">
-        Daftar Paket
-      </h1>
+      {/* HEADER */}
+
+      <header className="px-6 py-8 shrink-0">
+        <h1 className="text-xl font-medium tracking-tight">
+          Daftar Paket
+        </h1>
+      </header>
 
 
-      {/* Dalam Proses */}
 
-      <section className="flex-1 overflow-y-auto border-b border-[#E0DED7]">
+      {/* SECTION 1 */}
 
-        <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50">
+      <section className="flex flex-col flex-1 min-h-0 overflow-hidden border-b border-[#E0DED7]">
+
+        <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50 shrink-0">
           Dalam Proses
         </div>
 
-        {pending.map(row)}
+        <div className="flex-1 overflow-y-auto">
+          {pending.map(row)}
+        </div>
 
       </section>
 
 
 
-      {/* Paket diterima */}
+      {/* SECTION 2 */}
 
-      <section className="flex-1 overflow-y-auto">
+      <section className="flex flex-col flex-1 min-h-0 overflow-hidden">
 
-        <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50">
+        <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50 shrink-0">
           Paket Telah Diterima
         </div>
 
-        <div className="opacity-60">
+        <div className="flex-1 overflow-y-auto opacity-60">
           {received.map(row)}
         </div>
 
@@ -116,7 +118,9 @@ export default function DashboardPage(){
 
 
 
-      <footer className="p-6 border-t border-[#E0DED7]">
+      {/* FOOTER */}
+
+      <footer className="p-6 border-t border-[#E0DED7] shrink-0">
 
         <p className="text-[10px] leading-relaxed text-[#A1887F] text-center italic">
 
