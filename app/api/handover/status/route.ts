@@ -13,7 +13,7 @@ export async function GET(req: Request){
     )
   }
 
-  const { data, error } = await supabase
+  const { data,error } = await supabase
     .from("handover")
     .select("status")
     .eq("id",id)
