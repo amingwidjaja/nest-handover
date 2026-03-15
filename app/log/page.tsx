@@ -76,7 +76,8 @@ export default function LogPage(){
 
   function RowView(r:Row,mode:"pending"|"received"){
 
-    const time = mode==="pending"
+    const time =
+      mode==="pending"
       ? new Date(r.created_at).toLocaleString()
       : new Date(r.received_at || "").toLocaleString()
 
@@ -118,27 +119,25 @@ export default function LogPage(){
 
       <div className="w-full max-w-3xl space-y-10">
 
-        {/* PENDING */}
-
         <div className="h-56 overflow-y-auto">
 
           {pending.map(p=>(
-            <RowView key={p.id} {...p} mode="pending"/>
+            <div key={p.id}>
+              {RowView(p,"pending")}
+            </div>
           ))}
 
         </div>
-
-        {/* RECEIVED */}
 
         <div className="h-72 overflow-y-auto">
 
           {received.map(r=>(
-            <RowView key={r.id} {...r} mode="received"/>
+            <div key={r.id}>
+              {RowView(r,"received")}
+            </div>
           ))}
 
         </div>
-
-        {/* GUIDELINE */}
 
         <p className="text-[11px] text-neutral-500 text-center leading-relaxed">
 
