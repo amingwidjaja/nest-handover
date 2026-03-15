@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Camera } from "lucide-react"
+import { Camera, Home } from "lucide-react"
 import imageCompression from "browser-image-compression"
 
 export default function PackagePage() {
@@ -73,6 +73,12 @@ export default function PackagePage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
+
+    <div className="flex justify-end p-6">
+    <a href="/">
+        <Home size={20} strokeWidth={1.5} className="text-[#3E2723] opacity-70" />
+    </a>
+    </div>
 
       <main className="p-10 pt-10">
 
@@ -153,7 +159,7 @@ export default function PackagePage() {
 
       </main>
 
-      <div className="flex justify-end px-8 pb-8 text-sm">
+      <div className="flex justify-end px-8 pb-4 text-sm">
 
         <button onClick={createHandover}>
           Lanjut →
