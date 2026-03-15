@@ -1,59 +1,37 @@
-'use client'
+'use client';
 
-import { useState } from "react"
-import Link from "next/link"
-import { Camera } from "lucide-react"
+import { useState } from "react";
+import Link from "next/link";
+import { Camera } from "lucide-react";
+import imageCompression from "browser-image-compression";
 
 export default function PackagePage() {
 
-  const [items,setItems] = useState([
-    "",
-    "",
-    "",
-    ""
-  ])
+  const [items, setItems] = useState(["", "", "", ""])
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [preview, setPreview] = useState<string | null>(null)
 
-
-  function updateItem(index:number,value:string){
-
+  const handleItemChange = (index:number,value:string) => {
     const copy = [...items]
     copy[index] = value
     setItems(copy)
-
   }
 
+  const handlePhoto = async (file:File) => {
 
-  async function next(){
+    const options = {
+      maxSizeMB: 0.6,
+      maxWidthOrHeight: 1600,
+      useWebWorker: true
+    }
 
-    const handover_id = localStorage.getItem("handover_id")
+    const compressed = await imageCompression(file, options)
 
-    const cleanItems = items
-      .filter(i => i.trim()!=="")
-      .map(i => ({
-        description:i,
-        photo_url:null
-      }))
-
-
-    await fetch("/api/handover/create",{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify({
-        handover_id,
-        items:cleanItems
-      })
-    })
-
-
-    window.location.href="/events"
-
+    setPhotoFile(compressed)
+    setPreview(URL.createObjectURL(compressed))
   }
-
 
   return (
-
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
       <main className="p-8 pt-16">
@@ -62,38 +40,84 @@ export default function PackagePage() {
           tulis rincian paket kamu di sini
         </h2>
 
+        {/* ITEMS */}
 
-        <div className="space-y-0 mb-16">
+        <div className="space-y-0 mb-12">
 
           {items.map((item,i)=>(
             <input
               key={i}
-              className="line-input"
-              placeholder={i===0?"1. Nama barang...":""}
               value={item}
-              onChange={(e)=>updateItem(i,e.target.value)}
+              onChange={(e)=>handleItemChange(i,e.target.value)}
+              className="line-input"
+              placeholder={i===0 ? "1. Nama barang..." : ""}
             />
           ))}
 
         </div>
 
+        {/* PHOTO */}
 
-        <div className="w-full aspect-[4/3] border border-dashed border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED] transition-colors">
+        <div className="mb-8">
 
-          <Camera
-            className="text-[#A1887F] mb-2"
-            size={24}
-            strokeWidth={1.5}
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            id="cameraInput"
+            className="hidden"
+            onChange={(e)=>{
+              if(!e.target.files) return
+              handlePhoto(e.target.files[0])
+            }}
           />
 
-          <span className="text-xs text-[#A1887F]">
-            Tambahkan foto paketmu di sini
-          </span>
+          {!preview && (
+
+            <label
+              htmlFor="cameraInput"
+              className="w-full aspect-[4/3] border border-dashed border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED]"
+            >
+
+              <Camera
+                className="text-[#A1887F] mb-2"
+                size={24}
+                strokeWidth={1.5}
+              />
+
+              <span className="text-xs text-[#A1887F]">
+                Tambahkan foto paketmu di sini
+              </span>
+
+            </label>
+
+          )}
+
+          {preview && (
+
+            <div className="space-y-3">
+
+              <img
+                src={preview}
+                className="w-full rounded-sm"
+              />
+
+              <label
+                htmlFor="cameraInput"
+                className="text-xs opacity-60 cursor-pointer"
+              >
+                Ambil ulang foto
+              </label>
+
+            </div>
+
+          )}
 
         </div>
 
       </main>
 
+      {/* NAV */}
 
       <div className="flex justify-between px-8 pb-8 text-sm">
 
@@ -102,16 +126,19 @@ export default function PackagePage() {
         </Link>
 
         <button
-          onClick={next}
-          className="font-medium"
-        >
-          Lanjut →
-        </button>
+  onClick={()=>{
+    if(!items[0].trim()){
+      alert("Minimal isi 1 barang")
+      return
+    }
+    window.location.href="/events"
+  }}
+>
+  Lanjut →
+</button>
 
       </div>
 
     </div>
-
-  )
-
+  );
 }
