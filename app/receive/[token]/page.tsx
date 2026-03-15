@@ -29,9 +29,9 @@ export default function ReceivePage(){
     const data = await res.json()
 
     if(data.success){
-      window.location.href="/log"
+    window.location.href="/log"
     }else{
-      alert("Gagal menyimpan penerimaan")
+    alert(data.error || "Gagal menyimpan penerimaan")
     }
 
   }
