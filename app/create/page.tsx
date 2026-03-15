@@ -9,7 +9,7 @@ export default function CreatePage() {
 
   const [senderName,setSenderName] = useState("")
   const [senderContact,setSenderContact] = useState("")
-
+  const [error,setError] = useState("")
   const [receiverName,setReceiverName] = useState("")
   const [receiverContact,setReceiverContact] = useState("")
 
@@ -17,12 +17,12 @@ export default function CreatePage() {
   async function submit(){
 
     if(!receiverName || !receiverContact){
-      alert("Nama dan WA/Email penerima wajib diisi")
+      setError("Nama dan WA/Email penerima wajib diisi")
       return
     }
 
     if(senderType==="other" && (!senderName || !senderContact)){
-      alert("Data pengirim wajib diisi")
+      setError("Data pengirim wajib diisi")
       return
     }
 
@@ -56,7 +56,7 @@ export default function CreatePage() {
 
     }else{
 
-      alert("Gagal membuat handover")
+      setError("Gagal membuat Serah Terima")
 
     }
 
@@ -169,6 +169,11 @@ export default function CreatePage() {
 
       </main>
 
+      {error && (
+        <div className="px-8 pb-4 text-sm text-red-500">
+          {error}
+        </div>
+      )}
 
       <div className="flex justify-between px-8 pb-8 text-sm">
 

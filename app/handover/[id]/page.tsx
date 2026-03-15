@@ -2,24 +2,89 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Camera, QrCode } from "lucide-react";
 
 export default function HandoverPage() {
 
-  const [mode, setMode] = useState("direct");
+  const params = useParams()
+  const id = params.id
+
+  const [mode, setMode] = useState("direct")
+  const [delegateName, setDelegateName] = useState("")
+  const [relation, setRelation] = useState("")
+  const [photo, setPhoto] = useState<string | null>(null)
+  const [notes, setNotes] = useState("")
+
+  const [gps, setGps] = useState<any>(null)
+  const [timestamp, setTimestamp] = useState<any>(null)
+
+  const captureMeta = () => {
+
+    const now = new Date().toISOString()
+    setTimestamp(now)
+
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition((pos)=>{
+        setGps({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy
+        })
+      })
+    }
+
+  }
+
+  const handleCameraClick = () => {
+
+    if(mode === "delegate"){
+      if(!delegateName.trim() || !relation.trim()){
+        alert(
+`Isi nama wakil
+dan hubungan dengan penerima
+terlebih dahulu`
+        )
+        return
+      }
+    }
+
+    document.getElementById("handoverCamera")?.click()
+
+  }
+
+  const handleFinish = () => {
+
+    captureMeta()
+
+    const eventLog = [
+      {event:"handover_started"},
+      {event: photo ? "photo_used" : "qr_used"},
+      {event:"handover_completed"}
+    ]
+
+    console.log({
+      id,
+      mode,
+      delegateName,
+      relation,
+      notes,
+      photo,
+      gps,
+      timestamp,
+      eventLog
+    })
+
+  }
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
       <main className="p-8 pt-16">
 
-        {/* Title */}
-
         <h2 className="text-xl font-light mb-12">
-          Paket untuk <span className="font-medium">Budi Santoso</span>
+          Serah terima paket
         </h2>
-
-        {/* Tabs */}
 
         <div className="flex gap-8 mb-12 border-b border-[#E0DED7] pb-4">
 
@@ -47,31 +112,69 @@ export default function HandoverPage() {
 
         </div>
 
-        {/* Delegate Fields */}
-
         {mode === "delegate" && (
 
-          <div className="space-y-4 mb-12">
+          <div className="space-y-8 mb-12">
 
-            <input
-              className="line-input"
-              placeholder="Nama"
-            />
+            <div>
+              <div className="text-sm mb-2">Nama yang mewakili:</div>
+              <input
+                value={delegateName}
+                onChange={(e)=>setDelegateName(e.target.value)}
+                className="line-input w-full"
+              />
+            </div>
 
-            <input
-              className="line-input"
-              placeholder="Hubungan dengan penerima"
+            <div>
+              <div className="text-sm mb-2">Hubungan dengan penerima:</div>
+              <input
+                value={relation}
+                onChange={(e)=>setRelation(e.target.value)}
+                className="line-input w-full"
+              />
+            </div>
+
+            <div>
+              <div className="text-sm mb-2">
+                Catatan: <span className="opacity-40">(kalau ada)</span>
+              </div>
+
+              <input
+                value={notes}
+                onChange={(e)=>setNotes(e.target.value)}
+                className="line-input w-full"
+              />
+            </div>
+
+          </div>
+
+        )}
+
+        {mode === "direct" && (
+
+          <div className="mb-12">
+
+            <div className="text-sm mb-2">
+              Catatan: <span className="opacity-40">(kalau ada)</span>
+            </div>
+
+            <textarea
+              rows={2}
+              value={notes}
+              onChange={(e)=>setNotes(e.target.value)}
+              className="line-input w-full"
             />
 
           </div>
 
         )}
 
-        {/* Proof Options */}
+        <div className="grid grid-cols-2 gap-4 mb-12">
 
-        <div className="grid grid-cols-2 gap-4">
-
-          <div className="aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED] transition-colors">
+          <Link
+            href={`/handover/${id}/qr`}
+            className="aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED]"
+          >
 
             <QrCode
               className="text-[#3E2723] mb-3"
@@ -83,9 +186,12 @@ export default function HandoverPage() {
               QR Code
             </span>
 
-          </div>
+          </Link>
 
-          <div className="aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED] transition-colors">
+          <div
+            onClick={handleCameraClick}
+            className="aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED] cursor-pointer"
+          >
 
             <Camera
               className="text-[#3E2723] mb-3"
@@ -103,9 +209,24 @@ export default function HandoverPage() {
 
         </div>
 
-      </main>
+        <input
+          id="handoverCamera"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e)=>{
+            if(!e.target.files) return
+            const file = e.target.files[0]
+            setPhoto(URL.createObjectURL(file))
+          }}
+        />
 
-      {/* Navigation */}
+        {photo && (
+          <img src={photo} className="w-full rounded-sm mb-12"/>
+        )}
+
+      </main>
 
       <div className="flex justify-between px-8 pb-8 text-sm">
 
@@ -113,7 +234,10 @@ export default function HandoverPage() {
           ← Sebelumnya
         </Link>
 
-        <Link href="/events">
+        <Link
+          href={`/handover/${id}/success`}
+          onClick={handleFinish}
+        >
           Selesai →
         </Link>
 
