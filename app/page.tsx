@@ -7,7 +7,6 @@ export const metadata: Metadata = {
 }
 
 export default function Home() {
-
   return (
 
 <main className="bg-[#FAF9F6] text-[#3E2723] min-h-screen p-8 md:p-16 max-w-4xl mx-auto font-sans">
@@ -17,7 +16,7 @@ export default function Home() {
   <header className="py-24">
 
     <div className="text-[10px] tracking-[0.35em] uppercase opacity-40 mb-6">
-      Systems Tools Order
+      SYSTEMS · TOOLS · ORDER
     </div>
 
     <div className="text-xs tracking-[0.2em] uppercase opacity-60 mb-4">
@@ -48,17 +47,23 @@ export default function Home() {
         className="group block py-6 border-b border-[#E0DED7] hover:border-[#3E2723] transition-colors"
       >
         <h3 className="text-lg font-medium mb-2">NEST Paket</h3>
-        <p className="text-sm opacity-60">Serah terima barang.</p>
+        <p className="text-sm opacity-60">
+          Serah terima barang.
+        </p>
       </Link>
 
       <div className="block py-6 border-b border-[#E0DED7] opacity-50">
         <h3 className="text-lg font-medium mb-2">NEST Factory</h3>
-        <p className="text-sm">Production system.</p>
+        <p className="text-sm">
+          Production system.
+        </p>
       </div>
 
       <div className="block py-6 border-b border-[#E0DED7] opacity-50">
         <h3 className="text-lg font-medium mb-2">NEST School</h3>
-        <p className="text-sm">School operations system.</p>
+        <p className="text-sm">
+          School operations system.
+        </p>
       </div>
 
     </div>
@@ -132,5 +137,4 @@ export default function Home() {
 </main>
 
   )
-
 }
