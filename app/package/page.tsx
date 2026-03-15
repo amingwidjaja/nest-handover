@@ -74,10 +74,10 @@ export default function PackagePage() {
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
-      <main className="p-8 pt-16">
+      <main className="p-8 pt-10">
 
         <h2 className="text-xs font-medium uppercase tracking-[0.2em] mb-12 opacity-60">
-          Ketik nama barang yang kamu mau kirim di sini
+          Daftar Barang
         </h2>
 
         <div className="space-y-0 mb-12">
@@ -88,7 +88,7 @@ export default function PackagePage() {
               value={item}
               onChange={(e)=>handleItemChange(i,e.target.value)}
               className="line-input"
-              placeholder={i===0 ? "1. Nama barang..." : ""}
+              placeholder={i===0 ? "Ketik nama barang yang kamu mau kirim di sini" : ""}
             />
           ))}
 
