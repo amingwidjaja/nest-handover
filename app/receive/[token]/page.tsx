@@ -10,6 +10,7 @@ export default function ReceivePage(){
 
   const [name,setName] = useState("")
   const [relation,setRelation] = useState("")
+  const [done,setDone] = useState(false)
 
   async function confirm(){
 
@@ -29,11 +30,26 @@ export default function ReceivePage(){
     const data = await res.json()
 
     if(data.success){
-      window.location.href="/log"
+      setDone(true)
     }else{
       alert(data.error || "Gagal menyimpan penerimaan")
     }
 
+  }
+
+  if(done){
+    return(
+      <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center p-8">
+        <div className="text-center space-y-4">
+          <h2 className="text-xl">
+            Paket berhasil diterima
+          </h2>
+          <p className="text-sm text-gray-600">
+            Terima kasih
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return(
