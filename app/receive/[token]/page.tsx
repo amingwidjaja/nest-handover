@@ -22,16 +22,16 @@ export default function ReceivePage(){
         token,
         receiver_name:name,
         receiver_relation:relation,
-        receive_method:"qr"
+        receive_method:"direct_qr"
       })
     })
 
     const data = await res.json()
 
     if(data.success){
-    window.location.href="/log"
+      window.location.href="/log"
     }else{
-    alert(data.error || "Gagal menyimpan penerimaan")
+      alert(data.error || "Gagal menyimpan penerimaan")
     }
 
   }
