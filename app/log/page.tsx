@@ -1,85 +1,137 @@
-'use client';
+'use client'
 
-import Link from "next/link";
+import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase"
+
+type Handover = {
+  id: string
+  status: string
+  created_at: string
+  received_at: string | null
+}
+
+type ReceiveEvent = {
+  receiver_name: string
+  receive_method: string
+}
 
 export default function LogPage(){
 
-  const logs = [
-    {
-      id:"DOC-20491",
-      receiver:"Budi Santoso",
-      item:"Dokumen kontrak",
-      date:"2026-03-15 10:42"
-    },
-    {
-      id:"DOC-20490",
-      receiver:"Rina Wijaya",
-      item:"Sample produk",
-      date:"2026-03-15 09:10"
+  const [pending,setPending] = useState<Handover[]>([])
+  const [received,setReceived] = useState<(Handover & {receive?:ReceiveEvent})[]>([])
+
+  useEffect(()=>{
+
+    async function load(){
+
+      // pending
+      const { data:pendingData } = await supabase
+        .from("handover")
+        .select("*")
+        .neq("status","received")
+        .order("created_at",{ ascending:false })
+
+      // received
+      const { data:receivedData } = await supabase
+        .from("handover")
+        .select(`
+          *,
+          receive_event (
+            receiver_name,
+            receive_method
+          )
+        `)
+        .eq("status","received")
+        .order("received_at",{ ascending:false })
+
+      setPending(pendingData || [])
+
+      const formatted = (receivedData || []).map((r:any)=>({
+        ...r,
+        receive:r.receive_event?.[0]
+      }))
+
+      setReceived(formatted)
+
     }
-  ]
+
+    load()
+
+  },[])
 
   return(
 
-    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col">
+    <div className="min-h-screen bg-[#FAF9F6] p-8 max-w-xl mx-auto space-y-12">
 
-      <main className="p-8 pt-16">
+      <h1 className="text-xl text-center">
+        Log Book
+      </h1>
 
-        <h2 className="text-xl font-light mb-12">
-          Log Book
+      {/* PENDING */}
+
+      <div>
+
+        <h2 className="text-sm opacity-60 mb-4">
+          Pending
         </h2>
 
-        <div className="space-y-6">
+        <div className="space-y-3">
 
-          {logs.map((log)=>(
-            
-            <Link
-              key={log.id}
-              href={`/handover/${log.id}`}
-              className="block border border-[#E0DED7] rounded-sm p-5 active:bg-[#F2F1ED] transition"
+          {pending.map(p=>(
+            <div
+              key={p.id}
+              className="border p-3 text-sm"
             >
 
-              <div className="flex justify-between items-center">
-
-                <div>
-
-                  <div className="text-sm font-medium mb-1">
-                    {log.receiver}
-                  </div>
-
-                  <div className="text-xs opacity-60 mb-1">
-                    {log.item}
-                  </div>
-
-                  <div className="text-xs opacity-40">
-                    {log.date}
-                  </div>
-
-                </div>
-
-                <div className="text-xs font-mono opacity-60">
-                  {log.id}
-                </div>
-
+              <div className="font-mono text-xs">
+                {p.id.slice(0,8)}
               </div>
 
-            </Link>
+              <div className="opacity-60 text-xs">
+                Created {new Date(p.created_at).toLocaleString()}
+              </div>
 
+            </div>
           ))}
 
         </div>
 
-      </main>
+      </div>
 
+      {/* RECEIVED */}
 
-      <div className="flex justify-center pb-10 pt-12">
+      <div>
 
-        <Link
-          href="/create"
-          className="text-sm font-medium border border-[#3E2723] px-8 py-3 rounded-sm active:bg-[#3E2723] active:text-white transition"
-        >
-          Buat Serah Terima Baru
-        </Link>
+        <h2 className="text-sm opacity-60 mb-4">
+          Received
+        </h2>
+
+        <div className="space-y-3">
+
+          {received.map(r=>(
+            <div
+              key={r.id}
+              className="border p-3 text-sm"
+            >
+
+              <div className="font-mono text-xs">
+                {r.id.slice(0,8)}
+              </div>
+
+              <div className="opacity-60 text-xs">
+                Received {new Date(r.received_at || "").toLocaleString()}
+              </div>
+
+              {r.receive && (
+                <div className="text-xs mt-1">
+                  {r.receive.receiver_name} • {r.receive.receive_method}
+                </div>
+              )}
+
+            </div>
+          ))}
+
+        </div>
 
       </div>
 
