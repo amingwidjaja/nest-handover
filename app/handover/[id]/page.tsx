@@ -15,9 +15,15 @@ export default function HandoverPage() {
   const [relation, setRelation] = useState("")
   const [photo, setPhoto] = useState<string | null>(null)
   const [notes, setNotes] = useState("")
+  const [toast,setToast] = useState("")
 
   const [gps, setGps] = useState<any>(null)
   const [timestamp, setTimestamp] = useState<any>(null)
+
+  function showToast(msg:string){
+    setToast(msg)
+    setTimeout(()=>setToast(""),2000)
+  }
 
   const captureMeta = () => {
 
@@ -40,7 +46,7 @@ export default function HandoverPage() {
 
     if(mode === "delegate"){
       if(!delegateName.trim() || !relation.trim()){
-        alert(
+        showToast(
 `Isi nama wakil
 dan hubungan dengan penerima
 terlebih dahulu`
@@ -242,6 +248,12 @@ terlebih dahulu`
         </Link>
 
       </div>
+
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3E2723] text-white text-sm px-5 py-3 rounded-md shadow-lg text-center whitespace-pre-line">
+          {toast}
+        </div>
+      )}
 
     </div>
   );

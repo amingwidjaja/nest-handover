@@ -10,6 +10,12 @@ export default function PackagePage() {
   const [items, setItems] = useState(["", "", "", ""])
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [toast,setToast] = useState("")
+
+  function showToast(msg:string){
+    setToast(msg)
+    setTimeout(()=>setToast(""),2000)
+  }
 
   const handleItemChange = (index:number,value:string) => {
     const copy = [...items]
@@ -123,19 +129,27 @@ export default function PackagePage() {
 
         <button
           onClick={()=>{
+
             if(!items[0].trim()){
-              alert("Minimal isi 1 barang")
+              showToast("Minimal isi 1 barang")
               return
             }
 
             const id = crypto.randomUUID()
             window.location.href = `/handover/${id}`
+
           }}
         >
           Lanjut →
         </button>
 
       </div>
+
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3E2723] text-white text-sm px-5 py-3 rounded-md shadow-lg text-center whitespace-pre-line">
+          {toast}
+        </div>
+      )}
 
     </div>
   );

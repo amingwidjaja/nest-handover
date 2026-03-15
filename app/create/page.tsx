@@ -5,24 +5,34 @@ import Link from "next/link"
 
 export default function CreatePage() {
 
-  const [senderType, setSenderType] = useState("self")
+  const [senderType,setSenderType] = useState("self")
+  const [toast,setToast] = useState("")
 
   const [senderName,setSenderName] = useState("")
   const [senderContact,setSenderContact] = useState("")
-  const [error,setError] = useState("")
+
   const [receiverName,setReceiverName] = useState("")
   const [receiverContact,setReceiverContact] = useState("")
 
+  function showToast(msg:string){
+
+    setToast(msg)
+
+    setTimeout(()=>{
+      setToast("")
+    },2000)
+
+  }
 
   async function submit(){
 
     if(!receiverName || !receiverContact){
-      setError("Nama dan WA/Email penerima wajib diisi")
+      showToast("Nama dan WA/Email penerima wajib diisi")
       return
     }
 
     if(senderType==="other" && (!senderName || !senderContact)){
-      setError("Data pengirim wajib diisi")
+      showToast("Data pengirim wajib diisi")
       return
     }
 
@@ -42,33 +52,24 @@ export default function CreatePage() {
 
     if(data.success){
 
-      localStorage.setItem(
-        "handover_id",
-        data.handover_id
-      )
-
-      localStorage.setItem(
-        "handover_token",
-        data.token
-      )
+      localStorage.setItem("handover_id",data.handover_id)
+      localStorage.setItem("handover_token",data.token)
 
       window.location.href="/package"
 
     }else{
 
-      setError("Gagal membuat Serah Terima")
+      showToast("Gagal membuat Serah Terima")
 
     }
 
   }
-
 
   return (
 
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
       <main className="p-8 pt-16 space-y-12">
-
 
         <section>
 
@@ -79,7 +80,7 @@ export default function CreatePage() {
           <div className="flex gap-8 mb-8">
 
             <button
-              onClick={() => setSenderType("self")}
+              onClick={()=>setSenderType("self")}
               className="flex items-center gap-2"
             >
 
@@ -95,9 +96,8 @@ export default function CreatePage() {
 
             </button>
 
-
             <button
-              onClick={() => setSenderType("other")}
+              onClick={()=>setSenderType("other")}
               className="flex items-center gap-2"
             >
 
@@ -114,7 +114,6 @@ export default function CreatePage() {
             </button>
 
           </div>
-
 
           {senderType==="other" && (
 
@@ -139,7 +138,6 @@ export default function CreatePage() {
           )}
 
         </section>
-
 
         <section>
 
@@ -169,12 +167,6 @@ export default function CreatePage() {
 
       </main>
 
-      {error && (
-        <div className="px-8 pb-4 text-sm text-red-500">
-          {error}
-        </div>
-      )}
-
       <div className="flex justify-between px-8 pb-8 text-sm">
 
         <Link href="/" className="opacity-60">
@@ -189,6 +181,18 @@ export default function CreatePage() {
         </button>
 
       </div>
+
+      {toast && (
+        <div
+          className="fixed bottom-8 left-1/2 -translate-x-1/2
+          bg-[#3E2723] text-white text-sm
+          px-5 py-3 rounded-md shadow-lg
+          text-center whitespace-pre-line
+          animate-[toastSlide_0.25s_ease-out]"
+        >
+          {toast}
+        </div>
+      )}
 
     </div>
 
