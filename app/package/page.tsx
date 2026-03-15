@@ -73,7 +73,7 @@ export default function PackagePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
+    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col">
 
     
           <main className="p-10 pt-10">
