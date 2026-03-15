@@ -162,7 +162,7 @@ export default function PackagePage() {
 
         </div>
 
-      </main>
+      
 
       <div className="flex justify-end px-8 pb-4 text-sm">
 
@@ -171,7 +171,7 @@ export default function PackagePage() {
         </button>
 
       </div>
-
+</main>
     </div>
   )
 
