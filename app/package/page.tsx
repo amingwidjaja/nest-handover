@@ -76,7 +76,7 @@ export default function PackagePage() {
 
       <main className="p-8 pt-10">
 
-        <h2 className="text-xs font-medium uppercase tracking-[0.2em] mb-16 opacity-60">
+        <h2 className="text-lg font-medium uppercase tracking-[0.2em] mb-16 opacity-60">
           Daftar Barang
         </h2>
 
