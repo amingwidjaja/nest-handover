@@ -1,77 +1,76 @@
 'use client'
 
-import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
+import { useState } from "react"
 
-export default function ReceivePage() {
+export default function ReceivePage(){
 
   const params = useParams()
-  const token = params.token as string
+  const token = params.token
 
-  const [handover, setHandover] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const [name,setName] = useState("")
+  const [relation,setRelation] = useState("")
 
-  useEffect(() => {
+  async function confirm(){
 
-    const load = async () => {
+    const res = await fetch("/api/handover/receive",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body: JSON.stringify({
+        token,
+        receiver_name:name,
+        receiver_relation:relation,
+        receive_method:"qr"
+      })
+    })
 
-      const res = await fetch(`/api/handover/by-token?token=${token}`)
-      const data = await res.json()
+    const data = await res.json()
 
-      setHandover(data)
-      setLoading(false)
-
+    if(data.success){
+      window.location.href="/log"
+    }else{
+      alert("Gagal menyimpan penerimaan")
     }
 
-    load()
-
-  }, [token])
-
-
-  if (loading) {
-    return <div className="p-8">Loading...</div>
   }
 
-  if (!handover) {
-    return <div className="p-8">Token tidak valid</div>
-  }
+  return(
 
-  return (
-    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] p-8">
+    <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center p-8">
 
-      <h1 className="text-xl mb-6">
-        Paket untuk <b>{handover.receiver_target_name}</b>
-      </h1>
+      <div className="w-full max-w-sm space-y-8">
 
-      <p className="mb-12 opacity-60">
-        Kiriman dari {handover.sender_name || "pengirim"}
-      </p>
+        <h2 className="text-xl text-center">
+          Konfirmasi penerimaan paket
+        </h2>
 
-      <button
-        className="w-full py-4 bg-[#3E2723] text-white"
-        onClick={async () => {
+        <input
+          className="line-input w-full"
+          placeholder="Nama penerima"
+          value={name}
+          onChange={(e)=>setName(e.target.value)}
+        />
 
-          const device_id = navigator.userAgent
+        <input
+          className="line-input w-full"
+          placeholder="Hubungan dengan penerima"
+          value={relation}
+          onChange={(e)=>setRelation(e.target.value)}
+        />
 
-          await fetch("/api/handover/receive", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              handover_id: handover.id,
-              receive_method: "direct_qr",
-              device_id
-            })
-          })
+        <button
+          onClick={confirm}
+          className="w-full py-3 border border-[#3E2723]"
+        >
+          Konfirmasi Terima
+        </button>
 
-          alert("Paket berhasil diterima")
-
-        }}
-      >
-        Terima Paket
-      </button>
+      </div>
 
     </div>
+
   )
+
 }
