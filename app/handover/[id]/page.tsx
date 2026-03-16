@@ -24,8 +24,8 @@ export default function HandoverPage() {
     if(mode === "delegate"){
       if(!delegateName.trim() || !relation.trim()){
         alert(
-`Isi nama wakil
-dan hubungan dengan penerima
+`Isi nama wakil dan
+hubungan dengan penerima
 terlebih dahulu`
         )
         return

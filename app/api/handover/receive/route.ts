@@ -7,31 +7,16 @@ export async function POST(req: Request){
 
     const body = await req.json()
 
+    console.log("receive body:", body)
+
     const {
-      token,
+      handover_id,
       receiver_name,
       receiver_relation,
       receive_method
     } = body
 
-    // cari handover dari token
-    const { data:handover, error:findError } = await supabase
-      .from("handover")
-      .select("id")
-      .eq("share_token",token)
-      .single()
-
-    if(findError || !handover){
-      return NextResponse.json(
-        { success:false, error:"handover tidak ditemukan" },
-        { status:404 }
-      )
-    }
-
-    const handover_id = handover.id
-
-    // insert receive event
-    const { error:insertError } = await supabase
+    const { error } = await supabase
       .from("receive_event")
       .insert({
         handover_id,
@@ -41,19 +26,19 @@ export async function POST(req: Request){
         timestamp: new Date().toISOString()
       })
 
-    if(insertError){
+    if(error){
+
       return NextResponse.json(
-        { success:false, error:insertError.message },
+        { success:false, error:error.message },
         { status:500 }
       )
+
     }
 
-    // update status handover
     await supabase
       .from("handover")
       .update({
-        status:"received",
-        received_at:new Date().toISOString()
+        status:"received"
       })
       .eq("id",handover_id)
 
