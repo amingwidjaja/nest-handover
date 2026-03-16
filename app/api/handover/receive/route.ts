@@ -7,40 +7,73 @@ export async function POST(req: Request){
 
     const body = await req.json()
 
-    console.log("receive body:", body)
-
     const {
+      token,
       handover_id,
       receiver_name,
       receiver_relation,
       receive_method
     } = body
 
-    const { error } = await supabase
+    let finalHandoverId = handover_id
+
+    if(!finalHandoverId && token){
+
+      const { data:handover, error:findError } = await supabase
+        .from("handover")
+        .select("id")
+        .eq("share_token",token)
+        .single()
+
+      if(findError || !handover){
+        return NextResponse.json(
+          { success:false, error:"handover tidak ditemukan" },
+          { status:404 }
+        )
+      }
+
+      finalHandoverId = handover.id
+
+    }
+
+    if(!finalHandoverId){
+      return NextResponse.json(
+        { success:false, error:"handover_id atau token wajib ada" },
+        { status:400 }
+      )
+    }
+
+    const { error:insertError } = await supabase
       .from("receive_event")
       .insert({
-        handover_id,
+        handover_id: finalHandoverId,
         receiver_name,
         receiver_relation,
         receive_method,
         timestamp: new Date().toISOString()
       })
 
-    if(error){
-
+    if(insertError){
       return NextResponse.json(
-        { success:false, error:error.message },
+        { success:false, error:insertError.message },
         { status:500 }
       )
-
     }
 
-    await supabase
+    const { error:updateError } = await supabase
       .from("handover")
       .update({
-        status:"received"
+        status:"received",
+        received_at:new Date().toISOString()
       })
-      .eq("id",handover_id)
+      .eq("id",finalHandoverId)
+
+    if(updateError){
+      return NextResponse.json(
+        { success:false, error:updateError.message },
+        { status:500 }
+      )
+    }
 
     return NextResponse.json({
       success:true
@@ -49,7 +82,7 @@ export async function POST(req: Request){
   }catch{
 
     return NextResponse.json(
-      { success:false },
+      { success:false, error:"request gagal" },
       { status:400 }
     )
 

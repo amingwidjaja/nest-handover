@@ -48,13 +48,6 @@ terlebih dahulu`
 
     setPhoto(url)
 
-    const token = localStorage.getItem("handover_token")
-
-    if(!token){
-      alert("Token tidak ditemukan")
-      return
-    }
-
     setSaving(true)
 
     const receive_method =
@@ -78,7 +71,7 @@ terlebih dahulu`
         "Content-Type":"application/json"
       },
       body: JSON.stringify({
-        token,
+        handover_id: id,
         receiver_name,
         receiver_relation,
         receive_method,
