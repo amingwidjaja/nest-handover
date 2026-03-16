@@ -3,8 +3,11 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Home } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export default function DashboardPage(){
+
+  const router = useRouter()
 
   const [handovers,setHandovers] = useState<any[]>([])
   const [selectMode,setSelectMode] = useState(false)
@@ -18,7 +21,10 @@ export default function DashboardPage(){
 
   async function load(){
 
-    const res = await fetch("/api/handover/list")
+    const res = await fetch("/api/handover/list", {
+      cache: "no-store"
+    })
+
     const data = await res.json()
 
     const rows = data.handovers || []
@@ -117,7 +123,7 @@ export default function DashboardPage(){
           if(selectMode){
             toggleSelect(h.id)
           }else{
-            window.location.href = `/handover/${h.id}`
+            router.push(`/handover/${h.id}`)
           }
         }}
         onContextMenu={(e)=>{
@@ -179,7 +185,7 @@ export default function DashboardPage(){
           Daftar Paket
         </h1>
 
-        <Link href="/">
+        <Link href="/paket">
           <Home size={20} strokeWidth={1.5} className="opacity-60"/>
         </Link>
 

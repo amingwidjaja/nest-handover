@@ -10,7 +10,13 @@ export default function HandoverPage() {
 
   const params = useParams()
   const router = useRouter()
-  const id = params.id as string
+  
+  const id =
+    typeof params.id === "string"
+      ? params.id
+      : Array.isArray(params.id)
+        ? params.id[0]
+        : ""
 
   const [mode,setMode] = useState("direct")
   const [delegateName,setDelegateName] = useState("")
