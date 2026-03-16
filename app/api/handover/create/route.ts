@@ -10,6 +10,7 @@ export async function POST(req: Request) {
   try {
 
     const body = await req.json()
+    console.log("BODY:", body)
 
     const {
       sender_name,
@@ -25,11 +26,11 @@ export async function POST(req: Request) {
       .from("handover")
       .insert({
         share_token: token,
-        status: "pending",
-        sender_name,
-        receiver_target_name,
-        receiver_target_phone,
-        receiver_target_email
+        status: "created",
+        sender_name: sender_name ?? "",
+        receiver_target_name: receiver_target_name ?? "",
+        receiver_target_phone: receiver_target_phone ?? "",
+        receiver_target_email: receiver_target_email ?? ""
       })
       .select()
       .single()
