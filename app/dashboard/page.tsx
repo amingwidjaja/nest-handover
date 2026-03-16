@@ -95,8 +95,8 @@ export default function DashboardPage(){
   }
 
 
-  const pending = handovers.filter(h=>h.status !== "received")
-  const received = handovers.filter(h=>h.status === "received")
+  const pending = handovers.filter(h=>h.status === "process")
+const received = handovers.filter(h=>h.status === "received")
 
 
   function row(h:any){

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 
-export async function GET() {
+export async function GET(){
 
   const { data, error } = await supabase
     .from("handover")
@@ -17,26 +17,20 @@ export async function GET() {
         id,
         description,
         photo_url
-      ),
-      receive_event (
-        receiver_name,
-        receiver_relation,
-        receive_method,
-        timestamp
       )
     `)
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending:false })
 
-  if (error) {
+  if(error){
     return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
+      { error:error.message },
+      { status:500 }
     )
   }
 
   return NextResponse.json({
-    success: true,
-    handovers: data
+    success:true,
+    handovers:data
   })
 
 }
