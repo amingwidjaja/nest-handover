@@ -81,7 +81,7 @@ export default function PackagePage() {
 
     if(mode === "save"){
 
-      router.push("/")
+      router.push("/paket")
 
     }else{
 
@@ -104,7 +104,7 @@ export default function PackagePage() {
             Daftar Barang
           </h2>
 
-          <Link href="/">
+          <Link href="/paket">
             <Home size={20} strokeWidth={1.5} className="opacity-60"/>
           </Link>
 

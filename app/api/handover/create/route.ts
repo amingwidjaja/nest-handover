@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       .from("handover")
       .insert({
         share_token: token,
-        status: "created",
+        status: "pending",
         sender_name,
         receiver_target_name,
         receiver_target_phone,
@@ -34,10 +34,10 @@ export async function POST(req: Request) {
       .select()
       .single()
 
-    if (error) {
+    if (error || !data) {
       return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
+        { success:false, error: error?.message || "insert failed" },
+        { status:500 }
       )
     }
 
@@ -49,23 +49,30 @@ export async function POST(req: Request) {
         photo_url: item.photo_url ?? null
       }))
 
-      await supabase
+      const { error:itemsError } = await supabase
         .from("handover_items")
         .insert(rows)
+
+      if(itemsError){
+        return NextResponse.json(
+          { success:false, error:itemsError.message },
+          { status:500 }
+        )
+      }
 
     }
 
     return NextResponse.json({
-      success: true,
+      success:true,
       token,
-      handover_id: data.id
+      handover_id:data.id
     })
 
-  } catch (err) {
+  } catch {
 
     return NextResponse.json(
-      { error: "invalid request" },
-      { status: 400 }
+      { success:false, error:"invalid request" },
+      { status:400 }
     )
 
   }
