@@ -3,7 +3,11 @@
 import Link from "next/link"
 import { Home } from "lucide-react"
 
-export default function Header({ title }:{ title:string }){
+type Props = {
+  title: string
+}
+
+export default function Header({ title }: Props){
 
   return(
 
