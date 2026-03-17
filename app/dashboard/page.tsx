@@ -95,8 +95,10 @@ export default function DashboardPage(){
   }
 
 
-  const pending = handovers.filter(h=>h.status === "process")
-const received = handovers.filter(h=>h.status === "received")
+const pending = handovers.filter(h=>h.status === "created")
+const received = handovers.filter(
+  h=>h.status === "received" || h.status === "accepted"
+)
 
 
   function row(h:any){
@@ -161,9 +163,7 @@ const received = handovers.filter(h=>h.status === "received")
 
             h.status === "accepted"
               ? "✓"
-              : h.status === "received"
-                ? "○"
-                : "○"
+              : "○"
 
           )}
 
