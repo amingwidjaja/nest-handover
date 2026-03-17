@@ -6,19 +6,26 @@
 
 A lightweight QR-based handover system designed to prove a frictionless item transfer mechanism without requiring user accounts.
 
-The system focuses on **simplicity, speed, and trust verification**.
+The system focuses on:
+
+* simplicity
+* speed
+* trust verification
+
+The main goal is to create **a verifiable proof of item transfer** using a minimal workflow.
 
 ---
 
 # 1. Core Idea
 
-Traditional delivery systems require:
+Traditional delivery or transfer systems usually require:
 
-* accounts
-* apps
-* complicated tracking
+* user accounts
+* applications
+* tracking numbers
+* complex logistics workflow
 
-NEST76 removes that.
+NEST76 removes these requirements.
 
 Instead it uses:
 
@@ -26,18 +33,26 @@ Instead it uses:
 QR + token verification
 ```
 
-The QR becomes the **proof of transfer key**.
+The QR code becomes the **transfer verification key**.
 
-The receiver simply scans and confirms.
+The receiver simply scans the QR and confirms the item.
+
+No login is required.
 
 ---
 
-# 2. Handover Lifecycle
+# 2. Current User Flow
 
-The lifecycle of an item handover follows this sequence.
+The working flow in the prototype is:
 
 ```
-CREATE
+PAKET (dashboard)
+↓
+CREATE (sender + receiver)
+↓
+PACKAGE (items + optional photo)
+↓
+SAVE / HANDOVER
 ↓
 QR GENERATED
 ↓
@@ -50,101 +65,132 @@ RECEIVER CONFIRMATION
 HANDOVER COMPLETE
 ```
 
-This creates a **verifiable transfer record**.
+Meaning:
+
+1. Sender opens the **paket dashboard**.
+2. Sender enters **sender and receiver information**.
+3. Sender adds **items and optional package photo**.
+4. System generates a **handover record**.
+5. QR code is generated.
+6. Receiver scans the QR.
+7. Receiver confirms receipt.
+
+This creates a **traceable digital transfer record**.
 
 ---
 
 # 3. Status Model
 
-The system currently uses two main states.
+The system currently uses the following lifecycle states.
 
 ```
 created
-received
+process
+delivered
+accepted
 ```
 
 Meaning:
 
-| Status   | Meaning                                |
-| -------- | -------------------------------------- |
-| created  | Handover created but not yet confirmed |
-| received | Receiver has confirmed delivery        |
+| Status    | Meaning                 |
+| --------- | ----------------------- |
+| created   | Handover record created |
+| process   | Package in transfer     |
+| delivered | Receiver scanned QR     |
+| accepted  | Receiver confirmed item |
 
-Future states may include:
+Important rule:
 
 ```
-cancelled
-expired
-disputed
+PDF document is generated only when status = accepted
 ```
+
+This ensures the document becomes a **final immutable proof of transfer**.
 
 ---
 
 # 4. Data Model
 
-Each handover record contains:
+Main table:
+
+```
+handover
+```
+
+Fields:
 
 ```
 id
-receiver_target_name
-receiver_phone
-item_summary
+share_token
 status
-token
+sender_name
+receiver_target_name
+receiver_target_phone
+receiver_target_email
 created_at
-received_at
 ```
 
-Purpose of each field:
+Items table:
 
-| Field                | Purpose                    |
-| -------------------- | -------------------------- |
-| id                   | internal record id         |
-| receiver_target_name | person receiving item      |
-| receiver_phone       | WhatsApp contact           |
-| item_summary         | quick description of items |
-| status               | lifecycle state            |
-| token                | QR verification token      |
-| created_at           | creation timestamp         |
-| received_at          | confirmation timestamp     |
+```
+handover_items
+```
+
+Fields:
+
+```
+id
+handover_id
+description
+photo_url
+```
+
+Relationship:
+
+```
+handover
+  ↓
+handover_items
+```
+
+One handover may contain **multiple items**.
+
+Package may contain **one optional photo**.
 
 ---
 
 # 5. Token Mechanism
 
-Every handover generates a **unique token**.
+Each handover generates a unique token.
 
 Example:
 
 ```
-abc92kfj32
+a4c92f83bde7
 ```
 
-This token becomes the QR destination:
-
-```
-https://nest-handover.vercel.app/r/{token}
-```
+This token becomes the QR destination.
 
 Example:
 
 ```
-https://nest-handover.vercel.app/r/abc92kfj32
+https://nest-handover.vercel.app/r/a4c92f83bde7
 ```
 
-The token is used to:
+Purpose of token:
 
 * identify the handover
-* prevent manual editing
+* avoid manual editing
 * allow quick scanning
+* remove need for login
+
+The token works as a **stateless verification key**.
 
 ---
 
 # 6. QR Workflow
 
-The QR is the core of the system.
-
-Flow:
+The QR system works as follows.
 
 ```
 Sender creates handover
@@ -169,84 +215,125 @@ This removes the need for:
 ```
 login
 password
-accounts
+account creation
 ```
 
-Everything runs through **secure tokens**.
+Everything runs through **token verification**.
 
 ---
 
-# 7. User Roles
+# 7. Photo Handling
 
-Currently the system only assumes two roles.
+Package photos are captured from the device camera.
 
-### Sender
+Processing happens **client-side**.
 
-Creates the handover.
-
-Responsibilities:
+Process:
 
 ```
-enter receiver name
-enter phone
-enter items
-generate QR
+capture
+↓
+square crop
+↓
+resize (max 1200px)
+↓
+jpeg compression (0.8)
 ```
+
+Typical result:
+
+```
+4MB camera image → 150–300KB
+```
+
+Purpose:
+
+* reduce upload size
+* reduce storage usage
+* improve mobile speed
+
+Photos use **square frame layout** so documents remain visually stable.
 
 ---
 
-### Receiver
+# 8. Document View
 
-Receives item.
+Once a handover reaches **accepted status**, the system generates a **document style page**.
 
-Responsibilities:
+Route:
 
 ```
-scan QR
-confirm receipt
+/handover/[id]/document
 ```
 
-The receiver does not need an account.
+This page shows:
+
+* sender
+* receiver
+* item list
+* package photo
+* confirmation timestamp
+* device info (future)
+* GPS (future)
+
+This page becomes the **final visual proof document**.
+
+The page is **read-only**.
 
 ---
 
-# 8. UI Flow
+# 9. PDF Generation
 
-User journey.
-
-### Sender Flow
+PDF generation is triggered only after acceptance.
 
 ```
-Dashboard
+accepted
 ↓
-Create Handover
+compile document data
 ↓
-Fill Receiver Info
+generate PDF
 ↓
-Add Items
+store PDF
 ↓
-Generate QR
+download link available
 ```
+
+The download link appears inside:
+
+```
+/handover/[id]/document
+```
+
+PDF layout mirrors the document page.
 
 ---
 
-### Receiver Flow
+# 10. UI Philosophy
+
+The interface is designed for **non-technical users**.
+
+Design principles:
 
 ```
-Scan QR
-↓
-Open token page
-↓
-Review item details
-↓
-Confirm receive
-↓
-Success screen
+mobile first
+large tap targets
+minimal text
+clear actions
+no complex forms
 ```
+
+Example decisions:
+
+* square photo layout
+* simple text fields
+* large capture button
+* minimal navigation
+
+The system assumes many users may be **not familiar with digital tools**.
 
 ---
 
-# 9. API Interaction
+# 11. API Interaction
 
 Current API endpoints.
 
@@ -254,82 +341,32 @@ Current API endpoints.
 POST /api/handover/create
 GET  /api/handover/list
 POST /api/handover/receive
-GET  /api/token
 ```
 
-These routes interact with **Supabase**.
-
----
-
-# 10. Design Philosophy
-
-The system prioritizes:
-
-```
-minimal friction
-mobile-first UI
-QR-based interaction
-stateless verification
-```
-
-Meaning:
-
-```
-no login
-no complex workflow
-no app install required
-```
-
-Everything works through **browser + QR**.
-
----
-
-# 11. Why This Matters
-
-This prototype demonstrates a concept that can be used for:
-
-```
-micro logistics
-warehouse transfer
-courier confirmation
-SME delivery verification
-personal item exchange
-```
-
-Future expansions may include:
-
-```
-multi item tracking
-photo verification
-signature capture
-delivery history
-dispute resolution
-```
-
-But the prototype intentionally keeps the system **extremely simple**.
+These endpoints interact with **Supabase PostgreSQL**.
 
 ---
 
 # 12. Current Limitations
 
-As of this version:
+Current prototype limitations:
 
 ```
 no authentication
-no access control
+no permission roles
 no analytics
-no file storage
+no dispute handling
 ```
 
-These will be added later if the concept proves useful.
+These features may be added after the core workflow is proven stable.
 
 ---
 
 # 13. Long Term Vision
 
-This system may become part of the larger **NEST ecosystem**.
+The handover mechanism may become a module inside the **NEST ecosystem**.
 
-Potential modules:
+Possible modules:
 
 ```
 NEST Logistics
@@ -338,8 +375,26 @@ NEST Field Operations
 NEST SME Tools
 ```
 
-The handover QR concept becomes a **universal verification mechanism**.
+The QR transfer model may become a **universal verification mechanism**.
 
 ---
 
-# END
+# Development Mode Note
+
+This project is currently in **active development mode**.
+
+Important rules for collaboration:
+
+1. Avoid micro patch instructions.
+2. Prefer **full file updates**.
+3. Maintain the current flow:
+
+```
+paket → create → package → handover
+```
+
+4. The system is evolving from **prototype → production grade**.
+
+---
+
+END OF DOCUMENT

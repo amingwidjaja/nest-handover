@@ -1,74 +1,81 @@
 # NEST76 – Infrastructure Specification
 
-This document defines the **technical infrastructure** used in the NEST76 project so that development can continue in another environment or conversation without losing system context.
+This document defines the **technical infrastructure** used in the NEST76 project.
+
+The purpose is to allow development to continue in another environment or conversation without losing system context.
 
 ---
 
 # 1. Development Environment
 
-Development is **cloud-based**.
+Development is primarily **cloud based**.
 
-There is **no mandatory local development workflow**.
+Local development is optional.
 
 Code editing may happen via:
 
 * GitHub web editor
-* VSCode / Cursor / other editors
+* VSCode
+* Cursor
 * AI collaboration environments
 
-The system is designed to rely on **Git push → automatic deployment**.
+The system uses **Git push → automatic deployment**.
 
 ---
 
 # 2. Source Control
 
-Repository Platform:
+Repository platform:
 
+```
 GitHub
+```
 
-Repository Structure:
+Repository structure:
 
 Single repository containing frontend and API routes.
 
 Typical structure:
 
+```
 app/
 components/
 public/
+```
 
 Key folders:
 
+```
 app/ → Next.js App Router pages
 components/ → reusable UI components
+```
 
 ---
 
 # 3. Hosting Platform
 
-Hosting Provider:
+Hosting provider:
 
+```
 Vercel
+```
 
 Purpose:
 
 * Next.js application hosting
 * automatic CI/CD deployment
 
-Deployment type:
-
-Git-based deployment.
-
 Deployment flow:
 
-Git push
+```
+git push
 ↓
 Vercel build
 ↓
-Automatic deployment
+automatic deployment
+```
 
-Build environment:
-
-Node.js environment provided by Vercel.
+The build environment is a Node.js runtime provided by Vercel.
 
 ---
 
@@ -76,191 +83,289 @@ Node.js environment provided by Vercel.
 
 Framework:
 
+```
 Next.js
+```
 
 Router:
 
-Next.js **App Router**
+```
+Next.js App Router
+```
 
 Language:
 
+```
 TypeScript
+```
 
 UI Library:
 
+```
 React
+```
 
 Styling:
 
+```
 Tailwind CSS
+```
 
-Icon library:
+Icons:
 
+```
 lucide-react
+```
 
 ---
 
 # 5. Database Infrastructure
 
-Database Platform:
+Database platform:
 
+```
 Supabase
+```
 
-Database Type:
+Database type:
 
+```
 PostgreSQL
+```
 
 Supabase is used for:
 
 * data storage
-* authentication (future)
-* serverless backend functions (future)
-* realtime features (future)
+* future authentication
+* realtime features
+* serverless backend capabilities
 
 Connection type:
 
-Supabase REST / client SDK
+```
+Supabase client SDK
+```
 
 ---
 
 # 6. Backend Strategy
 
-Backend is currently implemented via:
+Backend currently runs through:
 
-Next.js API routes.
+```
+Next.js API Routes
+```
 
-Location example:
+Example location:
 
-app/api/
+```
+app/api/handover/
+```
 
-These routes will act as:
+Routes handle:
 
 * create handover
 * receive confirmation
-* data retrieval
+* retrieve handover list
 
 Future architecture may include:
 
-Supabase Edge Functions.
+```
+Supabase Edge Functions
+```
 
 ---
 
-# 7. QR Code System
+# 7. API Endpoints (Current)
 
-QR generation is handled in the frontend.
+Current endpoints:
 
-Library used:
+```
+POST /api/handover/create
+GET  /api/handover/list
+POST /api/handover/receive
+```
 
+Create endpoint payload example:
+
+```
+{
+  sender_name,
+  receiver_target_name,
+  receiver_target_phone,
+  receiver_target_email,
+  items:[]
+}
+```
+
+---
+
+# 8. Database Tables
+
+Current tables:
+
+```
+handover
+handover_items
+receive_event
+```
+
+handover → main transfer record
+handover_items → item list
+receive_event → receiver confirmation log
+
+Relationship:
+
+```
+handover
+  ↓
+handover_items
+```
+
+---
+
+# 9. QR Code System
+
+QR codes are generated in the frontend.
+
+Library:
+
+```
 react-qr-code
+```
 
-QR codes encode a URL structure:
+QR format:
 
+```
 /r/{token}
+```
 
 Example:
 
-/r/nst-76-x9y2z
+```
+/r/ab93d83f2
+```
 
-The URL resolves to:
+Dynamic route:
 
-Next.js dynamic route:
-
+```
 app/r/[token]/page.tsx
+```
 
 ---
 
-# 8. Domain Configuration
+# 10. Domain Configuration
 
-Current deployment domain:
+Current deployment:
 
+```
 https://nest-handover.vercel.app
+```
 
-Future production domain planned:
+Future production domain:
 
+```
 nest76.app
+```
 
 QR URL generation should rely on:
 
+```
 window.location.origin
+```
 
 This ensures compatibility with:
 
 * preview deployments
-* production domain
+* production
 * staging environments
 
 ---
 
-# 9. Deployment Pipeline
+# 11. Deployment Pipeline
 
-The project uses **automatic deployment** via Vercel.
+Deployment uses Vercel CI/CD.
 
 Process:
 
-1. Developer pushes code to GitHub
-2. Vercel detects repository update
-3. Vercel builds the project
-4. Deployment becomes available
-
-Typical commands:
-
+```
 git add .
 git commit -m "update"
 git push
+```
+
+Vercel then:
+
+```
+detects update
+builds project
+deploys application
+```
 
 ---
 
-# 10. File Structure (Current)
+# 12. Media Handling
 
-Simplified structure:
+Package photos are captured via mobile camera.
 
-app/
+Optimization occurs **client-side** before upload.
 
-create/page.tsx
-dashboard/page.tsx
-handover/[id]/page.tsx
-r/[token]/page.tsx
+Processing:
 
-components/
+```
+square crop
+resize max 1200px
+jpeg compression 0.8
+```
 
-HandoverList.tsx
-HandoverLoading.tsx
+Purpose:
 
-public/
+```
+reduce bandwidth
+reduce storage cost
+improve speed
+```
 
-static assets if needed
-
----
-
-# 11. Environment Variables
-
-Environment variables will be stored in:
-
-Vercel project settings.
-
-Typical variables:
-
-SUPABASE_URL
-SUPABASE_ANON_KEY
-
-These values are injected during deployment.
+The system avoids storing **raw camera images**.
 
 ---
 
-# 12. Architecture Philosophy
+# 13. Architecture Philosophy
 
-The infrastructure is intentionally designed to be:
+Infrastructure is intentionally:
 
-* lightweight
-* serverless
-* scalable
-* simple to deploy
+```
+lightweight
+serverless
+scalable
+low maintenance
+```
 
 The stack relies heavily on:
 
+```
 Vercel + Supabase
+```
 
-to reduce operational overhead.
+to minimize operational complexity.
+
+---
+
+# Development Mode Note
+
+The system is currently under **active development**.
+
+Important collaboration rules:
+
+1. Avoid incremental patch instructions.
+2. Prefer **complete file updates**.
+3. Maintain alignment with the system blueprint.
+
+Current flow:
+
+```
+paket → create → package → handover
+```
 
 ---
 

@@ -159,7 +159,11 @@ const received = handovers.filter(h=>h.status === "received")
 
           ) : (
 
-            h.status === "received" ? "✓" : "○"
+            h.status === "accepted"
+              ? "✓"
+              : h.status === "received"
+                ? "○"
+                : "○"
 
           )}
 

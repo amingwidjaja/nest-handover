@@ -12,7 +12,8 @@ export async function POST(req: Request){
       handover_id,
       receiver_name,
       receiver_relation,
-      receive_method
+      receive_method,
+      receiver_type // 🔥 NEW
     } = body
 
     let finalHandoverId = handover_id
@@ -43,6 +44,12 @@ export async function POST(req: Request){
       )
     }
 
+    // 🔥 determine status
+    const finalStatus = receiver_type === "direct"
+      ? "accepted"
+      : "received"
+
+    // 🔥 insert event
     const { error:insertError } = await supabase
       .from("receive_event")
       .insert({
@@ -50,6 +57,7 @@ export async function POST(req: Request){
         receiver_name,
         receiver_relation,
         receive_method,
+        receiver_type,
         timestamp: new Date().toISOString()
       })
 
@@ -60,11 +68,12 @@ export async function POST(req: Request){
       )
     }
 
+    // 🔥 update handover
     const { error:updateError } = await supabase
       .from("handover")
       .update({
-        status:"received",
-        received_at:new Date().toISOString()
+        status: finalStatus,
+        received_at: new Date().toISOString()
       })
       .eq("id",finalHandoverId)
 
@@ -76,7 +85,8 @@ export async function POST(req: Request){
     }
 
     return NextResponse.json({
-      success:true
+      success:true,
+      status: finalStatus
     })
 
   }catch{
