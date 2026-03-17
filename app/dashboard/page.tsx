@@ -1,194 +1,277 @@
 'use client'
 
 import { useEffect, useState } from "react"
-
-function formatDate(dateString: string) {
-  if (!dateString) return "-"
-
-  const date = new Date(dateString)
-
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric"
-  }).format(date)
-}
+import Link from "next/link"
+import { Home } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export default function DashboardPage(){
 
-  const [data,setData] = useState<any[]>([])
-  const [selected,setSelected] = useState<number[]>([])
-  const [loading,setLoading] = useState(true)
+  const router = useRouter()
 
-  async function load(){
-    const res = await fetch("/api/handover/list")
-    const json = await res.json()
-
-    if(json.handovers){
-      setData(json.handovers)
-    }
-
-    setLoading(false)
-  }
+  const [handovers,setHandovers] = useState<any[]>([])
+  const [selectMode,setSelectMode] = useState(false)
+  const [selected,setSelected] = useState<string[]>([])
+  const [highlightId,setHighlightId] = useState<string | null>(null)
 
   useEffect(()=>{
     load()
   },[])
 
-  function toggleSelect(id:number){
+
+  async function load(){
+
+    const res = await fetch("/api/handover/list", {
+      cache: "no-store"
+    })
+
+    const data = await res.json()
+
+    const rows = data.handovers || []
+
+    setHandovers(rows)
+
+    if(rows.length){
+
+      window.scrollTo({ top:0 })
+
+      setHighlightId(rows[0].id)
+
+      setTimeout(()=>{
+        setHighlightId(null)
+      },3000)
+
+    }
+
+  }
+
+
+  function toggleSelect(id:string){
+
     if(selected.includes(id)){
-      setSelected(selected.filter(i => i !== id))
+      setSelected(selected.filter(i=>i!==id))
     }else{
       setSelected([...selected,id])
     }
+
   }
 
-  async function handleDelete(){
+
+  function startSelect(id:string){
+
+    setSelectMode(true)
+    setSelected([id])
+
+  }
+
+
+  function cancelSelect(){
+
+    setSelectMode(false)
+    setSelected([])
+
+  }
+
+
+  async function deleteSelected(){
+
     if(selected.length === 0) return
 
-    const confirmDelete = confirm("Hapus paket terpilih?")
-    if(!confirmDelete) return
+    if(!confirm("Hapus paket yang dipilih?")) return
 
-    const res = await fetch("/api/handover/delete",{
+    await fetch("/api/handover/delete",{
       method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ ids:selected })
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        ids:selected
+      })
     })
 
-    const json = await res.json()
+    cancelSelect()
+    load()
 
-    if(json.success){
-      setSelected([])
-      load()
-    }else{
-      alert(json.error || "Gagal hapus")
-    }
   }
 
-  if(loading){
-    return <div className="p-8">Loading...</div>
-  }
 
-  // 🔥 SPLIT DATA
-  const createdList = data.filter(h => h.status === "created")
-  const doneList = data.filter(h => h.status !== "created")
+const pending = handovers.filter(h=>h.status === "created")
+const received = handovers.filter(
+  h=>h.status === "received" || h.status === "accepted"
+)
 
-  function renderCard(h:any){
 
-    const isSelected = selected.includes(h.id)
+  function row(h:any){
 
-    const statusIcon =
-      h.status === "accepted"
-        ? "✓"
-        : "○"
+    const time = new Date(h.created_at).toLocaleTimeString("id-ID",{
+      hour:"2-digit",
+      minute:"2-digit"
+    })
+
+    const receiver = h.receiver_target_name || "-"
+
+    const packageName =
+      h.handover_items && h.handover_items.length
+        ? h.handover_items[0].description
+        : "-"
+
+    const checked = selected.includes(h.id)
 
     return(
+
       <div
         key={h.id}
-        onClick={()=>toggleSelect(h.id)}
-        className={`border border-[#E0DED7] p-4 cursor-pointer ${isSelected ? "bg-[#F2F1ED]" : ""}`}
+        onClick={()=>{
+          if(selectMode){
+            toggleSelect(h.id)
+          }else{
+            router.push(`/handover/${h.id}`)
+          }
+        }}
+        onContextMenu={(e)=>{
+          e.preventDefault()
+          if(!selectMode){
+            startSelect(h.id)
+          }
+        }}
+        className={`
+          px-6 py-4 flex items-center justify-between text-[13px]
+          border-b border-[#E0DED7] cursor-pointer
+          ${highlightId === h.id ? "new-row" : ""}
+        `}
       >
 
-        <div className="flex justify-between items-start">
+        <span className="w-14 font-mono text-[#A1887F]">
+          {time}
+        </span>
 
-          <div className="space-y-1">
+        <span className="flex-1 font-medium truncate px-2">
+          {receiver}
+        </span>
 
-            <div className="text-sm">
-              {h.receiver_target_name || "Tanpa Nama"}
-            </div>
+        <span className="flex-1 italic text-[#A1887F] truncate">
+          {packageName}
+        </span>
 
-            <div className="text-xs opacity-60">
-              {formatDate(h.created_at)}
-            </div>
+        <span className="w-6 text-right">
 
-          </div>
+          {selectMode ? (
 
-          <div className="text-lg">
-            {statusIcon}
-          </div>
+            checked ? "☑" : "☐"
 
-        </div>
+          ) : (
 
-        <div className="mt-3 text-sm opacity-80 space-y-1">
+            h.status === "accepted"
+              ? "✓"
+              : "○"
 
-          {h.handover_items?.slice(0,2).map((item:any)=>(
-            <div key={item.id}>
-              • {item.description}
-            </div>
-          ))}
-
-          {h.handover_items?.length > 2 && (
-            <div className="text-xs opacity-50">
-              +{h.handover_items.length - 2} lainnya
-            </div>
           )}
 
-        </div>
+        </span>
 
       </div>
+
     )
+
   }
+
 
   return(
 
-    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723]">
+    <main className="flex flex-col min-h-full text-[#3E2723]">
 
-      <main className="p-8 space-y-10">
 
-        {/* HEADER */}
-        <div className="flex justify-between items-center">
+      {/* HEADER */}
 
-          <h1 className="text-lg uppercase tracking-widest opacity-60">
-            Daftar Paket
-          </h1>
+      <header className="px-6 py-8 shrink-0 flex items-center justify-between">
 
-          {selected.length > 0 && (
-            <button
-              onClick={handleDelete}
-              className="text-sm opacity-60"
-            >
-              Hapus ({selected.length})
+        <h1 className="text-xl font-medium tracking-tight">
+          Daftar Paket
+        </h1>
+
+        <Link href="/paket">
+          <Home size={20} strokeWidth={1.5} className="opacity-60"/>
+        </Link>
+
+      </header>
+
+
+
+      {/* DALAM PROSES */}
+
+      <section className="flex flex-col flex-1 min-h-0 overflow-hidden border-b border-[#E0DED7]">
+
+        <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50 shrink-0">
+          Dalam Proses
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {pending.map(row)}
+        </div>
+
+      </section>
+
+
+
+      {/* SUDAH DITERIMA */}
+
+      <section className="flex flex-col flex-1 min-h-0 overflow-hidden">
+
+        <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50 shrink-0">
+          Paket Telah Diterima
+        </div>
+
+        <div className="flex-1 overflow-y-auto opacity-60">
+          {received.map(row)}
+        </div>
+
+      </section>
+
+
+
+      {/* FOOTER NOTE */}
+
+      <footer className="p-6 border-t border-[#E0DED7] shrink-0">
+
+        <p className="text-[10px] leading-relaxed text-[#A1887F] text-center italic">
+
+          Photo akan di delete otomatis setelah melewati 30 hari,
+          atau setelah proses serah terima selesai dan kami buatkan buktinya.
+          Terima kasih.
+
+        </p>
+
+      </footer>
+
+
+
+      {/* SELECT TOOLBAR */}
+
+      {selectMode && (
+
+        <div className="fixed bottom-0 left-0 right-0 bg-[#3E2723] text-white flex items-center justify-between px-6 py-4">
+
+          <span className="text-sm">
+            {selected.length} dipilih
+          </span>
+
+          <div className="flex gap-6 text-sm">
+
+            <button onClick={cancelSelect}>
+              Batal
             </button>
-          )}
+
+            <button onClick={deleteSelected}>
+              Hapus
+            </button>
+
+          </div>
 
         </div>
 
-        {/* 🔥 CREATED (ATAS) */}
-        {createdList.length > 0 && (
-          <div className="space-y-4">
+      )}
 
-            <div className="text-xs uppercase tracking-widest opacity-40">
-              Dalam Proses
-            </div>
-
-            {createdList.map(renderCard)}
-
-          </div>
-        )}
-
-        {/* 🔥 DONE (BAWAH) */}
-        {doneList.length > 0 && (
-          <div className="space-y-4">
-
-            <div className="text-xs uppercase tracking-widest opacity-40">
-              Selesai
-            </div>
-
-            {doneList.map(renderCard)}
-
-          </div>
-        )}
-
-        {/* EMPTY */}
-        {data.length === 0 && (
-          <div className="text-sm opacity-60">
-            Belum ada paket
-          </div>
-        )}
-
-      </main>
-
-    </div>
+    </main>
 
   )
 
