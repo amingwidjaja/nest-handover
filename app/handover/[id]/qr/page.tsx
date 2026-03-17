@@ -2,67 +2,121 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import QRCode from "react-qr-code"
+import { ChevronLeft } from "lucide-react"
 
 export default function QRPage(){
 
   const params = useParams()
   const router = useRouter()
 
-  const id = params.id
+  const id =
+    typeof params.id === "string"
+      ? params.id
+      : Array.isArray(params.id)
+        ? params.id[0]
+        : ""
 
-  const [token,setToken] = useState<string | null>(null)
+  const [qr,setQr] = useState<string>("")
 
-  async function loadToken(){
-
-    const res = await fetch(`/api/handover/by-token?id=${id}`)
-    const data = await res.json()
-
-    setToken(data.share_token)
-
-  }
-
-  async function checkStatus(){
-
-    const res = await fetch(`/api/handover/status?id=${id}`)
-    const data = await res.json()
-
-    if(data.status === "received"){
-      router.push("/dashboard")
-    }
-
-  }
-
+  // 🔥 GET TOKEN → GENERATE QR
   useEffect(()=>{
 
-    loadToken()
+    if(!id) return
 
-    const interval = setInterval(()=>{
-      checkStatus()
-    },2000)
+    async function load(){
+
+      const tokenRes = await fetch(`/api/handover/by-token?id=${id}`)
+      const tokenData = await tokenRes.json()
+
+      const qrRes = await fetch(`/api/handover/qr?token=${tokenData.share_token}`)
+      const qrData = await qrRes.json()
+
+      setQr(qrData.qr)
+
+    }
+
+    load()
+
+  },[id])
+
+
+
+  // 🔥 FIXED POLLING (INI YANG PENTING)
+  useEffect(()=>{
+
+    if(!id) return
+
+    let interval:any
+
+    async function check(){
+
+      const res = await fetch(`/api/handover/status?id=${id}`)
+      const data = await res.json()
+
+      if(
+        data.status === "received" ||
+        data.status === "accepted"
+      ){
+        clearInterval(interval)
+        router.push("/dashboard")
+      }
+
+    }
+
+    interval = setInterval(check,2000)
 
     return ()=>clearInterval(interval)
 
-  },[])
+  },[id])
 
-  if(!token){
-    return <div className="p-8 text-center">Loading QR...</div>
-  }
 
-  const url = `${window.location.origin}/receive/${token}`
 
   return (
 
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#FAF9F6]">
+    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
-      <QRCode
-        value={url}
-        size={260}
-      />
+      <main className="p-8 pt-12 text-center">
 
-      <p className="text-xs opacity-60 mt-8 text-center">
-        Tunjukkan QR ini kepada penerima untuk difoto
-      </p>
+        <h2 className="text-xl font-light mb-10">
+          Tunjukkan QR ini
+        </h2>
+
+        {qr ? (
+
+          <img
+            src={qr}
+            className="mx-auto w-64 h-64"
+          />
+
+        ) : (
+
+          <div className="w-64 h-64 mx-auto border border-[#E0DED7] flex items-center justify-center">
+            <span className="text-xs opacity-40">Loading QR...</span>
+          </div>
+
+        )}
+
+        <p className="text-[11px] text-[#A1887F] mt-8 leading-relaxed">
+
+          Minta penerima scan QR ini untuk konfirmasi penerimaan paket
+
+        </p>
+
+      </main>
+
+
+
+      <div className="flex justify-between px-8 pb-8 text-sm">
+
+        <button
+          onClick={()=>router.back()}
+          className="opacity-40 flex items-center gap-1"
+        >
+          <ChevronLeft size={16} />
+          <span>Kembali</span>
+        </button>
+
+      </div>
 
     </div>
 

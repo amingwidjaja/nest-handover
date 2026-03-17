@@ -16,13 +16,13 @@ export default function PackagePage() {
 
   const [saving,setSaving] = useState(false)
 
-  const handleItemChange = (index:number,value:string) => {
+  function handleItemChange(index:number,value:string){
     const copy = [...items]
     copy[index] = value
     setItems(copy)
   }
 
-  const handlePhoto = async (file:File) => {
+  async function handlePhoto(file:File){
 
     const options = {
       maxSizeMB: 0.6,
@@ -40,6 +40,7 @@ export default function PackagePage() {
 
   async function createHandover(mode:"save"|"handover"){
 
+    // 🔥 VALIDASI ITEM
     if(!items[0].trim()){
       alert("Minimal isi 1 barang")
       return
@@ -48,19 +49,32 @@ export default function PackagePage() {
     if(saving) return
     setSaving(true)
 
-    try{
+    // 🔥 AMBIL DRAFT DARI LOCAL STORAGE
+    const sender_name = localStorage.getItem("draft_sender_name") || ""
+    const receiver_target_name = localStorage.getItem("draft_receiver_name") || ""
+    const receiver_target_phone = localStorage.getItem("draft_receiver_contact") || ""
+    const receiver_target_email = ""
 
-      const payload = {
-        sender_name: "Sender",
-        receiver_target_name: "",
-        receiver_target_phone: "",
-        receiver_target_email: "",
-        items: items
-          .filter(i => i.trim() !== "")
-          .map(i => ({
-            description: i
-          }))
-      }
+    // 🔥 GUARD (INI YANG LU TANYA TADI)
+    if(!sender_name || !receiver_target_name){
+      alert("Data belum lengkap. Mulai dari halaman awal.")
+      router.push("/create")
+      return
+    }
+
+    const payload = {
+      sender_name,
+      receiver_target_name,
+      receiver_target_phone,
+      receiver_target_email,
+      items: items
+        .filter(i => i.trim() !== "")
+        .map(i => ({
+          description: i
+        }))
+    }
+
+    try{
 
       const res = await fetch("/api/handover/create",{
         method:"POST",
@@ -68,26 +82,32 @@ export default function PackagePage() {
         body: JSON.stringify(payload)
       })
 
-      if(!res.ok){
-        throw new Error("Network error")
-      }
-
       const data = await res.json()
 
-      if(!data.success || !data.handover_id){
-        throw new Error("Invalid response")
+      if(!data.success){
+        setSaving(false)
+        alert("Gagal membuat handover")
+        return
       }
 
+      const id = data.handover_id
+
+      // 🔥 CLEAR DRAFT (PENTING)
+      localStorage.removeItem("draft_sender_name")
+      localStorage.removeItem("draft_sender_contact")
+      localStorage.removeItem("draft_receiver_name")
+      localStorage.removeItem("draft_receiver_contact")
+
+      // 🔥 ROUTING
       if(mode === "save"){
         router.push("/paket")
       }else{
-        router.push(`/handover/${data.handover_id}`)
+        router.push(`/handover/${id}`)
       }
 
-    }catch(err){
-      console.error(err)
-      alert("Terjadi kesalahan saat membuat handover")
+    }catch{
       setSaving(false)
+      alert("Terjadi kesalahan koneksi")
     }
 
   }
@@ -110,6 +130,8 @@ export default function PackagePage() {
 
         </div>
 
+        {/* ITEMS */}
+
         <div className="space-y-0 mb-8">
 
           {items.map((item, i) => (
@@ -124,6 +146,8 @@ export default function PackagePage() {
           ))}
 
         </div>
+
+        {/* PHOTO */}
 
         <div className="mb-8">
 
@@ -140,34 +164,49 @@ export default function PackagePage() {
           />
 
           {!preview && (
+
             <label
               htmlFor="cameraInput"
               className="w-full aspect-[4/3] border border-dashed border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED]"
             >
+
               <Camera
                 className="text-[#A1887F] mb-2"
                 size={24}
                 strokeWidth={1.5}
               />
+
               <span className="text-xs text-[#A1887F]">
                 Tambahkan foto paketmu di sini
               </span>
+
             </label>
+
           )}
 
           {preview && (
+
             <div className="space-y-3">
-              <img src={preview} className="w-full rounded-sm"/>
+
+              <img
+                src={preview}
+                className="w-full rounded-sm"
+              />
+
               <label
                 htmlFor="cameraInput"
                 className="text-xs opacity-60 cursor-pointer"
               >
                 Ambil ulang foto
               </label>
+
             </div>
+
           )}
 
         </div>
+
+        {/* ACTION BUTTONS */}
 
         <div className="flex justify-between text-sm mt-10">
 

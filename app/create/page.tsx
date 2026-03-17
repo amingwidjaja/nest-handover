@@ -33,7 +33,7 @@ export default function CreatePage() {
     setTimeout(()=>setToast(""),3000)
   }
 
-  async function submit(){
+  function submit(){
 
     if(!receiverName.trim()){
       showToast("Tulis nama penerima paket")
@@ -64,33 +64,14 @@ export default function CreatePage() {
         ? (localStorage.getItem("user_name") || "Sender")
         : senderName
 
-    const res = await fetch("/api/handover/create",{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify({
-        sender_name: finalSender,
-        receiver_target_name: receiverName,
-        receiver_target_phone: receiverContact
-      })
-    })
+    // 🔥 SIMPAN KE LOCAL STORAGE (BUKAN API)
+    localStorage.setItem("draft_sender_name", finalSender)
+    localStorage.setItem("draft_sender_contact", senderContact)
+    localStorage.setItem("draft_receiver_name", receiverName)
+    localStorage.setItem("draft_receiver_contact", receiverContact)
 
-    const data = await res.json()
-
-    if(data.success){
-
-      localStorage.setItem("handover_id",data.handover_id)
-      localStorage.setItem("handover_token",data.token)
-
-      window.location.href="/package"
-
-    }else{
-
-      showToast("Gagal membuat Serah Terima")
-
-    }
-
+    // 🔥 LANJUT KE PACKAGE
+    window.location.href = "/package"
   }
 
   return (
