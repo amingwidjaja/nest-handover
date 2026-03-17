@@ -85,7 +85,7 @@ export default function PackagePage() {
 
     }else{
 
-      router.push(`/handover/${data.handover_id}`)
+      router.push("/success")
 
     }
 

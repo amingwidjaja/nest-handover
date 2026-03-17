@@ -10,6 +10,13 @@ export default function HomePage() {
 
   useEffect(()=>{
 
+    const user = localStorage.getItem("user_name")
+
+    if(!user){
+      window.location.href = "/user"
+      return
+    }
+
     async function load(){
 
       const res = await fetch("/api/handover/list");
@@ -17,18 +24,18 @@ export default function HomePage() {
 
       if(!data.handovers) return;
 
-      const pendingList = data.handovers.filter((h:any)=>h.status !== "received");
+      const pendingList = data.handovers.filter((h:any)=>h.status !== "accepted");
 
       setPending(pendingList.length);
 
       if(data.handovers.length){
 
-        const time = new Date(data.handovers[0].created_at).toLocaleTimeString(
+        const date = new Date(data.handovers[0].created_at).toLocaleDateString(
           "id-ID",
-          { hour:"2-digit", minute:"2-digit" }
+          { day:"2-digit", month:"short", year:"numeric" }
         );
 
-        setLast(time);
+        setLast(date);
 
       }
 
@@ -64,6 +71,14 @@ export default function HomePage() {
           Buat Serah Terima
         </Link>
 
+        {/* 🔥 EDIT USER LINK */}
+        <Link
+          href="/user"
+          className="block mt-4 text-sm opacity-50"
+        >
+          Edit Profil
+        </Link>
+
         <Link
           href="/dashboard"
           className="block mt-6 text-base opacity-60"
@@ -73,8 +88,6 @@ export default function HomePage() {
 
       </div>
 
-
-      {/* FOOT INFO */}
 
       {(pending > 0 || last) && (
 
@@ -98,5 +111,4 @@ export default function HomePage() {
 
     </div>
   );
-
 }

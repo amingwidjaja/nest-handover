@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 
 export default function CreatePage() {
@@ -14,6 +14,19 @@ export default function CreatePage() {
   const [receiverContact,setReceiverContact] = useState("")
 
   const [toast,setToast] = useState("")
+
+  useEffect(()=>{
+    const name = localStorage.getItem("user_name")
+    const contact = localStorage.getItem("user_contact")
+
+    if(name){
+      setSenderName(name)
+    }
+
+    if(contact){
+      setSenderContact(contact)
+    }
+  },[])
 
   function showToast(msg:string){
     setToast(msg)
@@ -46,13 +59,18 @@ export default function CreatePage() {
 
     }
 
+    const finalSender =
+      senderType==="self"
+        ? (localStorage.getItem("user_name") || "Sender")
+        : senderName
+
     const res = await fetch("/api/handover/create",{
       method:"POST",
       headers:{
         "Content-Type":"application/json"
       },
       body:JSON.stringify({
-        sender_name: senderType==="self" ? "self" : senderName,
+        sender_name: finalSender,
         receiver_target_name: receiverName,
         receiver_target_phone: receiverContact
       })
@@ -182,7 +200,7 @@ export default function CreatePage() {
 
       {toast && (
 
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3E2723] text-white text-sm px-6 py-3 rounded-full shadow-lg animate-fade">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3E2723] text-white text-sm px-6 py-3 rounded-full shadow-lg">
           {toast}
         </div>
 
