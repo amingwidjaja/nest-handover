@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Camera, Home } from "lucide-react"
 import imageCompression from "browser-image-compression"
@@ -17,11 +17,9 @@ export default function PackagePage() {
   const [saving,setSaving] = useState(false)
 
   const handleItemChange = (index:number,value:string) => {
-
     const copy = [...items]
     copy[index] = value
     setItems(copy)
-
   }
 
   const handlePhoto = async (file:File) => {
@@ -38,9 +36,7 @@ export default function PackagePage() {
 
     setPhotoFile(compressed)
     setPreview(URL.createObjectURL(compressed))
-
   }
-
 
   async function createHandover(mode:"save"|"handover"){
 
@@ -50,43 +46,48 @@ export default function PackagePage() {
     }
 
     if(saving) return
-
     setSaving(true)
 
-    const payload = {
-      sender_name: "Sender",
-      receiver_target_name: "",
-      receiver_target_phone: "",
-      receiver_target_email: "",
-      items: items
-        .filter(i => i.trim() !== "")
-        .map(i => ({
-          description: i
-        }))
-    }
+    try{
 
-    const res = await fetch("/api/handover/create",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify(payload)
-    })
+      const payload = {
+        sender_name: "Sender",
+        receiver_target_name: "",
+        receiver_target_phone: "",
+        receiver_target_email: "",
+        items: items
+          .filter(i => i.trim() !== "")
+          .map(i => ({
+            description: i
+          }))
+      }
 
-    const data = await res.json()
+      const res = await fetch("/api/handover/create",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(payload)
+      })
 
-    if(!data.success){
+      if(!res.ok){
+        throw new Error("Network error")
+      }
+
+      const data = await res.json()
+
+      if(!data.success || !data.handover_id){
+        throw new Error("Invalid response")
+      }
+
+      if(mode === "save"){
+        router.push("/paket")
+      }else{
+        router.push(`/handover/${data.handover_id}`)
+      }
+
+    }catch(err){
+      console.error(err)
+      alert("Terjadi kesalahan saat membuat handover")
       setSaving(false)
-      alert("Gagal membuat handover")
-      return
-    }
-
-    if(mode === "save"){
-
-      router.push("/paket")
-
-    }else{
-
-      router.push("/success")
-
     }
 
   }
@@ -94,7 +95,6 @@ export default function PackagePage() {
   return (
 
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col">
-
 
       <main className="p-10 pt-10">
 
@@ -109,9 +109,6 @@ export default function PackagePage() {
           </Link>
 
         </div>
-
-
-        {/* ITEMS */}
 
         <div className="space-y-0 mb-8">
 
@@ -128,9 +125,6 @@ export default function PackagePage() {
 
         </div>
 
-
-        {/* PHOTO */}
-
         <div className="mb-8">
 
           <input
@@ -146,50 +140,34 @@ export default function PackagePage() {
           />
 
           {!preview && (
-
             <label
               htmlFor="cameraInput"
               className="w-full aspect-[4/3] border border-dashed border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED]"
             >
-
               <Camera
                 className="text-[#A1887F] mb-2"
                 size={24}
                 strokeWidth={1.5}
               />
-
               <span className="text-xs text-[#A1887F]">
                 Tambahkan foto paketmu di sini
               </span>
-
             </label>
-
           )}
 
           {preview && (
-
             <div className="space-y-3">
-
-              <img
-                src={preview}
-                className="w-full rounded-sm"
-              />
-
+              <img src={preview} className="w-full rounded-sm"/>
               <label
                 htmlFor="cameraInput"
                 className="text-xs opacity-60 cursor-pointer"
               >
                 Ambil ulang foto
               </label>
-
             </div>
-
           )}
 
         </div>
-
-
-        {/* ACTION BUTTONS */}
 
         <div className="flex justify-between text-sm mt-10">
 
