@@ -33,13 +33,17 @@ export default function DashboardPage(){
     setHandovers(rows)
 
     if(rows.length){
+
       window.scrollTo({ top:0 })
+
       setHighlightId(rows[0].id)
 
       setTimeout(()=>{
         setHighlightId(null)
       },3000)
+
     }
+
   }
 
   function toggleSelect(id:string){
@@ -79,7 +83,7 @@ export default function DashboardPage(){
     const data = await res.json()
 
     if(!res.ok){
-      alert(data.error || "Tidak bisa menghapus paket")
+      alert(data?.error || "Paket tidak bisa dihapus")
       return
     }
 
@@ -91,6 +95,16 @@ export default function DashboardPage(){
   const received = handovers.filter(
     h=>h.status === "received" || h.status === "accepted"
   )
+
+  function formatDate(dateString:string){
+
+    const date = new Date(dateString)
+
+    return new Intl.DateTimeFormat("id-ID",{
+      day:"numeric",
+      month:"short"
+    }).format(date)
+  }
 
   function getDateLabel(dateString:string){
 
@@ -106,14 +120,18 @@ export default function DashboardPage(){
     if(target.getTime() === today.getTime()) return "Hari ini"
     if(target.getTime() === yesterday.getTime()) return "Kemarin"
 
-    return new Intl.DateTimeFormat("id-ID",{
-      day:"numeric",
-      month:"short"
-    }).format(d)
+    return formatDate(dateString)
   }
 
   function isToday(dateString:string){
-    return getDateLabel(dateString) === "Hari ini"
+    const d = new Date(dateString)
+    const now = new Date()
+
+    return (
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+    )
   }
 
   function handleClick(h:any){
@@ -132,6 +150,7 @@ export default function DashboardPage(){
     else{
       router.push(`/handover/${h.id}`)
     }
+
   }
 
   function row(h:any){
@@ -146,14 +165,14 @@ export default function DashboardPage(){
         : "-"
 
     const checked = selected.includes(h.id)
+
     const today = isToday(h.created_at)
 
     return(
 
       <div
         key={h.id}
-
-        style={{ WebkitUserSelect:"none" }}
+        style={{ WebkitUserSelect:"none", userSelect:"none" }}
 
         onClick={()=>handleClick(h)}
 
@@ -176,26 +195,26 @@ export default function DashboardPage(){
           clearTimeout(timerRef.current)
         }}
 
+        onTouchMove={()=>{
+          clearTimeout(timerRef.current)
+        }}
+
         className={`
           px-6 py-4 flex items-center justify-between text-[13px]
           cursor-pointer
           ${highlightId === h.id ? "new-row" : ""}
-          ${checked ? "bg-[#3E2723]/10" : ""}
+          ${checked ? "bg-[#A1887F]/30" : ""}
         `}
       >
 
-        {/* DATE + VERTICAL LINE */}
-
-        <div className="w-16 flex items-center gap-2">
-
+        <div className="w-20 flex items-center gap-2">
           {today && (
-            <div className="w-[4px] h-6 bg-[#3E2723]/60 rounded-sm"></div>
+            <span className="w-[4px] h-5 rounded-sm bg-[#A1887F] shrink-0"></span>
           )}
 
-          <span className="font-mono text-[#A1887F]">
+          <span className="font-mono text-[#A1887F] whitespace-nowrap">
             {date}
           </span>
-
         </div>
 
         <span className="flex-1 font-medium truncate px-2">
@@ -204,6 +223,22 @@ export default function DashboardPage(){
 
         <span className="flex-1 italic text-[#A1887F] truncate">
           {packageName}
+        </span>
+
+        <span className="w-6 text-right">
+
+          {selectMode ? (
+
+            ""
+
+          ) : (
+
+            h.status === "accepted"
+              ? "✓"
+              : "○"
+
+          )}
+
         </span>
 
       </div>
@@ -249,7 +284,7 @@ export default function DashboardPage(){
           Paket Telah Diterima
         </div>
 
-        <div className="flex-1 overflow-y-auto opacity-60">
+        <div className="flex-1 overflow-y-auto">
           {received.map(row)}
         </div>
 
