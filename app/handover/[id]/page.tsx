@@ -70,6 +70,7 @@ terlebih dahulu`
           receiver_name,
           receiver_relation,
           receive_method,
+          receiver_type: mode === "direct" ? "direct" : "proxy",
           notes
         })
       })
