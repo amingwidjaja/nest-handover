@@ -33,17 +33,13 @@ export default function DashboardPage(){
     setHandovers(rows)
 
     if(rows.length){
-
       window.scrollTo({ top:0 })
-
       setHighlightId(rows[0].id)
 
       setTimeout(()=>{
         setHighlightId(null)
       },3000)
-
     }
-
   }
 
   function toggleSelect(id:string){
@@ -70,7 +66,7 @@ export default function DashboardPage(){
 
     if(!confirm("Hapus paket yang dipilih?")) return
 
-    await fetch("/api/handover/delete",{
+    const res = await fetch("/api/handover/delete",{
       method:"POST",
       headers:{
         "Content-Type":"application/json"
@@ -80,33 +76,38 @@ export default function DashboardPage(){
       })
     })
 
+    const data = await res.json()
+
+    if(!res.ok){
+      alert(data.error || "Tidak bisa menghapus paket")
+      return
+    }
+
     cancelSelect()
     load()
   }
 
-  const pending = handovers.filter(h=>h.status === "created")
-  const received = handovers.filter(
-    h=>h.status === "received" || h.status === "accepted"
-  )
-
   function formatDate(dateString:string){
-
     const date = new Date(dateString)
-
     return new Intl.DateTimeFormat("id-ID",{
       day:"numeric",
       month:"short"
     }).format(date)
   }
 
-  function isToday(dateString:string){
+  function getDayGroup(dateString:string){
     const d = new Date(dateString)
     const now = new Date()
-    return (
-      d.getDate() === now.getDate() &&
-      d.getMonth() === now.getMonth() &&
-      d.getFullYear() === now.getFullYear()
-    )
+
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+
+    const target = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+
+    if(target.getTime() === today.getTime()) return "today"
+    if(target.getTime() === yesterday.getTime()) return "yesterday"
+    return "older"
   }
 
   function handleClick(h:any){
@@ -125,7 +126,6 @@ export default function DashboardPage(){
     else{
       router.push(`/handover/${h.id}`)
     }
-
   }
 
   function row(h:any){
@@ -141,12 +141,13 @@ export default function DashboardPage(){
 
     const checked = selected.includes(h.id)
 
-    const today = isToday(h.created_at)
+    const isToday = getDayGroup(h.created_at) === "today"
 
     return(
 
       <div
         key={h.id}
+        style={{ WebkitUserSelect:"none" }}
 
         onClick={()=>handleClick(h)}
 
@@ -173,7 +174,7 @@ export default function DashboardPage(){
           px-6 py-4 flex items-center justify-between text-[13px]
           cursor-pointer
           ${highlightId === h.id ? "new-row" : ""}
-          ${today ? "border-l-[3px] border-[#A1887F]" : ""}
+          ${isToday ? "border-l-[5px] border-[#3E2723]" : ""}
         `}
       >
 
@@ -190,26 +191,33 @@ export default function DashboardPage(){
         </span>
 
         <span className="w-6 text-right">
-
-          {selectMode ? (
-
-            checked ? "☑" : "☐"
-
-          ) : (
-
-            h.status === "accepted"
-              ? "✓"
-              : "○"
-
-          )}
-
+          {selectMode
+            ? (checked ? "☑" : "☐")
+            : (h.status === "accepted" ? "✓" : "○")
+          }
         </span>
 
       </div>
 
     )
-
   }
+
+  function renderGroup(title:string, items:any[]){
+    if(items.length === 0) return null
+
+    return(
+      <div>
+        <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50">
+          {title}
+        </div>
+        {items.map(row)}
+      </div>
+    )
+  }
+
+  const todayItems = handovers.filter(h=>getDayGroup(h.created_at)==="today")
+  const yesterdayItems = handovers.filter(h=>getDayGroup(h.created_at)==="yesterday")
+  const olderItems = handovers.filter(h=>getDayGroup(h.created_at)==="older")
 
   return(
 
@@ -228,29 +236,12 @@ export default function DashboardPage(){
 
       </header>
 
-      {/* DALAM PROSES */}
-      <section className="flex flex-col flex-1 min-h-0 overflow-hidden border-b border-[#E0DED7]">
+      {/* LIST */}
+      <section className="flex-1 overflow-y-auto">
 
-        <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50 shrink-0">
-          Dalam Proses
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {pending.map(row)}
-        </div>
-
-      </section>
-
-      {/* SUDAH DITERIMA */}
-      <section className="flex flex-col flex-1 min-h-0 overflow-hidden">
-
-        <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50 shrink-0">
-          Paket Telah Diterima
-        </div>
-
-        <div className="flex-1 overflow-y-auto opacity-60">
-          {received.map(row)}
-        </div>
+        {renderGroup("Hari ini", todayItems)}
+        {renderGroup("Kemarin", yesterdayItems)}
+        {renderGroup("Sebelumnya", olderItems)}
 
       </section>
 

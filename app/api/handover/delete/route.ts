@@ -25,17 +25,16 @@ export async function POST(req: Request){
     )
   }
 
-  // ❌ BLOCK received (sedang proses / belum final)
+  // ❌ BLOCK received
   const blocked = rows?.filter(r => r.status === "received")
 
   if(blocked && blocked.length > 0){
     return NextResponse.json(
-      { error:"Ada paket yang belum selesai dan tidak bisa dihapus" },
+      { error:"Paket masih dalam proses dan belum bisa dihapus" },
       { status:403 }
     )
   }
 
-  // ✅ delete created & accepted
   const { error } = await supabase
     .from("handover")
     .delete()
