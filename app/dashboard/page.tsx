@@ -27,7 +27,6 @@ export default function DashboardPage(){
     })
 
     const data = await res.json()
-
     const rows = data.handovers || []
 
     setHandovers(rows)
@@ -165,7 +164,6 @@ export default function DashboardPage(){
         : "-"
 
     const checked = selected.includes(h.id)
-
     const today = isToday(h.created_at)
 
     return(
@@ -201,7 +199,7 @@ export default function DashboardPage(){
 
         className={`
           px-6 py-4 flex items-center justify-between text-[13px]
-          cursor-pointer
+          cursor-pointer border-b border-[#E0DED7]
           ${highlightId === h.id ? "new-row" : ""}
           ${checked ? "bg-[#A1887F]/30" : ""}
         `}
@@ -212,7 +210,7 @@ export default function DashboardPage(){
             <span className="w-[4px] h-5 rounded-sm bg-[#A1887F] shrink-0"></span>
           )}
 
-          <span className="font-mono text-[#A1887F] whitespace-nowrap">
+          <span className="text-[#A1887F] whitespace-nowrap">
             {date}
           </span>
         </div>
@@ -228,15 +226,11 @@ export default function DashboardPage(){
         <span className="w-6 text-right">
 
           {selectMode ? (
-
             ""
-
           ) : (
-
             h.status === "accepted"
               ? "✓"
               : "○"
-
           )}
 
         </span>
@@ -249,7 +243,7 @@ export default function DashboardPage(){
 
   return(
 
-    <main className="flex flex-col min-h-full text-[#3E2723]">
+    <main className="flex flex-col min-h-full text-[#3E2723] bg-[#FAF9F6]">
 
       {/* HEADER */}
       <header className="px-6 py-8 shrink-0 flex items-center justify-between">
