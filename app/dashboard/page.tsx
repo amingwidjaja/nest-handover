@@ -18,7 +18,6 @@ export default function DashboardPage(){
     load()
   },[])
 
-
   async function load(){
 
     const res = await fetch("/api/handover/list", {
@@ -26,87 +25,102 @@ export default function DashboardPage(){
     })
 
     const data = await res.json()
-
     const rows = data.handovers || []
 
     setHandovers(rows)
 
     if(rows.length){
-
       window.scrollTo({ top:0 })
-
       setHighlightId(rows[0].id)
 
       setTimeout(()=>{
         setHighlightId(null)
       },3000)
-
     }
 
   }
 
-
   function toggleSelect(id:string){
-
     if(selected.includes(id)){
       setSelected(selected.filter(i=>i!==id))
     }else{
       setSelected([...selected,id])
     }
-
   }
-
 
   function startSelect(id:string){
-
     setSelectMode(true)
     setSelected([id])
-
   }
-
 
   function cancelSelect(){
-
     setSelectMode(false)
     setSelected([])
-
   }
-
 
   async function deleteSelected(){
 
     if(selected.length === 0) return
-
     if(!confirm("Hapus paket yang dipilih?")) return
 
-    await fetch("/api/handover/delete",{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify({
-        ids:selected
-      })
-    })
+    try{
 
-    cancelSelect()
-    load()
+      const res = await fetch("/api/handover/delete",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          ids:selected
+        })
+      })
+
+      const data = await res.json()
+
+      if(res.status === 403){
+        alert("Paket sedang dalam proses penerimaan dan tidak bisa dihapus")
+        return
+      }
+
+      if(!res.ok){
+        alert(data?.error || "Gagal menghapus")
+        return
+      }
+
+      cancelSelect()
+      load()
+
+    }catch{
+      alert("Terjadi kesalahan koneksi")
+    }
 
   }
 
+  const pending = handovers.filter(h=>h.status === "created")
+  const received = handovers.filter(
+    h=>h.status === "received" || h.status === "accepted"
+  )
 
-const pending = handovers.filter(h=>h.status === "created")
-const received = handovers.filter(
-  h=>h.status === "received" || h.status === "accepted"
-)
+  function isToday(dateString:string){
+    const d = new Date(dateString)
+    const t = new Date()
+    return (
+      d.getDate() === t.getDate() &&
+      d.getMonth() === t.getMonth() &&
+      d.getFullYear() === t.getFullYear()
+    )
+  }
 
+  function formatDate(dateString:string){
+    return new Date(dateString).toLocaleDateString("id-ID",{
+      day:"numeric",
+      month:"short"
+    })
+  }
 
   function row(h:any){
 
-    const time = new Date(h.created_at).toLocaleTimeString("id-ID",{
-      hour:"2-digit",
-      minute:"2-digit"
-    })
+    const date = formatDate(h.created_at)
 
     const receiver = h.receiver_target_name || "-"
 
@@ -116,6 +130,7 @@ const received = handovers.filter(
         : "-"
 
     const checked = selected.includes(h.id)
+    const today = isToday(h.created_at)
 
     return(
 
@@ -138,11 +153,12 @@ const received = handovers.filter(
           px-6 py-4 flex items-center justify-between text-[13px]
           border-b border-[#E0DED7] cursor-pointer
           ${highlightId === h.id ? "new-row" : ""}
+          ${today ? "border-l-2 border-[#3E2723]" : ""}
         `}
       >
 
-        <span className="w-14 font-mono text-[#A1887F]">
-          {time}
+        <span className="w-16 font-mono text-[#A1887F]">
+          {date}
         </span>
 
         <span className="flex-1 font-medium truncate px-2">
@@ -175,7 +191,6 @@ const received = handovers.filter(
 
   }
 
-
   return(
 
     <main className="flex flex-col min-h-full text-[#3E2723]">
@@ -196,7 +211,6 @@ const received = handovers.filter(
       </header>
 
 
-
       {/* DALAM PROSES */}
 
       <section className="flex flex-col flex-1 min-h-0 overflow-hidden border-b border-[#E0DED7]">
@@ -212,7 +226,6 @@ const received = handovers.filter(
       </section>
 
 
-
       {/* SUDAH DITERIMA */}
 
       <section className="flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -221,12 +234,11 @@ const received = handovers.filter(
           Paket Telah Diterima
         </div>
 
-        <div className="flex-1 overflow-y-auto opacity-60">
+        <div className="flex-1 overflow-y-auto">
           {received.map(row)}
         </div>
 
       </section>
-
 
 
       {/* FOOTER NOTE */}
@@ -235,14 +247,11 @@ const received = handovers.filter(
 
         <p className="text-[10px] leading-relaxed text-[#A1887F] text-center italic">
 
-          Photo akan di delete otomatis setelah melewati 30 hari,
-          atau setelah proses serah terima selesai dan kami buatkan buktinya.
-          Terima kasih.
+          Foto akan dihapus otomatis setelah 30 hari. Paket yang dititipkan akan dianggap telah diterima oleh penerima setelah 3 hari.
 
         </p>
 
       </footer>
-
 
 
       {/* SELECT TOOLBAR */}
