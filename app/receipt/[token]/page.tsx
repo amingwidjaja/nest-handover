@@ -58,7 +58,7 @@ export default function ReceiptPage() {
 
   useEffect(() => {
     async function load() {
-      const res = await fetch(`/api/handover/by-token?token=${token}`)
+      const res = await fetch(`/api/handover/receipt-data?token=${token}`)
       const data = await res.json()
 
       setHandover(data)

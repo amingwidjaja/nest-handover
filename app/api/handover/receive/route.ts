@@ -61,7 +61,6 @@ export async function POST(req: Request) {
     }
 
     // insert receive_event only
-    // DB trigger will update handover.status + received_at
     const { error: insertError } = await supabase
       .from("receive_event")
       .insert({
@@ -72,7 +71,7 @@ export async function POST(req: Request) {
         receiver_type,
       })
 
-    // idempotent handling: if already inserted once, treat as success
+    // idempotent handling
     if (insertError) {
       const message = insertError.message?.toLowerCase() || ""
       const details = String(insertError.details || "").toLowerCase()
@@ -91,6 +90,7 @@ export async function POST(req: Request) {
       }
     }
 
+    // read final state from DB
     const { data: finalHandover, error: finalReadError } = await supabase
       .from("handover")
       .select("id,status,received_at")
@@ -104,12 +104,22 @@ export async function POST(req: Request) {
       )
     }
 
+    // 🔥 trigger pdf generation (ONLY HERE, inside try)
+    if (finalHandover.status === "accepted") {
+      fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/handover/generate-receipt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handover_id: handoverId })
+      })
+    }
+
     return NextResponse.json({
       success: true,
       handover_id: finalHandover.id,
       status: finalHandover.status,
       received_at: finalHandover.received_at,
     })
+
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "internal server error"
