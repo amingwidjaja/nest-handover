@@ -1,0 +1,398 @@
+# NEST-Paket — System Map (UI + Local + API Write Layer)
+
+## 1. Entry Points
+
+/app/paket/page.tsx → Landing  
+/app/create/page.tsx → Create (identity input)  
+/app/package/page.tsx → Package (items + create handover)
+
+---
+
+## 2. End-to-End Flow (CREATE HANDOVER)
+
+Landing (/paket)
+→ user klik "Buat Serah Terima"
+→ /create
+
+/create
+→ input sender + receiver
+→ simpan draft ke localStorage
+→ redirect /package
+
+/package
+→ input items + optional photo
+→ POST /api/handover/create
+→ clear draft
+→ redirect:
+   - /paket (save)
+   - /handover/[id] (handover mode)
+
+---
+
+## 3. Package Page (/package)
+
+File:
+/app/package/page.tsx
+
+---
+
+### 3.1 Purpose
+
+- Ambil draft dari localStorage
+- Input daftar barang
+- (optional) ambil foto
+- create handover ke API
+
+---
+
+### 3.2 State
+
+items: string[4]  
+photoFile: File | null  
+preview: string | null  
+saving: boolean  
+
+---
+
+### 3.3 Items Logic
+
+Initial:
+
+["", "", "", ""]
+
+
+Behavior:
+- hanya items[0] wajib
+- items kosong akan di-filter
+
+Transform ke payload:
+
+items
+.filter(i => i.trim() !== "")
+.map(i => ({
+description: i
+}))
+
+
+---
+
+### 3.4 Photo Flow
+
+Input:
+<input type="file" accept="image/*" capture="environment"> ``` id="pkg-photo-input"
+
+Processing:
+
+imageCompression(file, {
+  maxSizeMB: 0.6,
+  maxWidthOrHeight: 1600,
+  useWebWorker: true
+})
+``` id="pkg-photo-compress"
+
+Output:
+- photoFile (compressed)
+- preview (object URL)
+
+⚠️ IMPORTANT:
+- photo TIDAK dikirim ke API
+- hanya disimpan di state UI
+
+---
+
+### 3.5 Draft Read (LocalStorage)
+
+Keys:
+
+draft_sender_name  
+draft_receiver_name  
+draft_receiver_contact  
+
+Mapping:
+
+
+sender_name
+receiver_target_name
+receiver_target_phone
+receiver_target_email = ""
+
+
+---
+
+### 3.6 Guard (Critical)
+
+
+if(!sender_name || !receiver_target_name){
+alert(...)
+router.push("/create")
+}
+
+
+Meaning:
+- package page tidak bisa jalan tanpa create step
+- localStorage = dependency wajib
+
+---
+
+### 3.7 Payload (API Contract)
+
+POST /api/handover/create
+
+Body:
+
+
+{
+sender_name: string,
+receiver_target_name: string,
+receiver_target_phone: string,
+receiver_target_email: string,
+items: [
+{ description: string }
+]
+}
+
+
+---
+
+### 3.8 API Response (Expected)
+
+
+{
+success: boolean,
+handover_id: string
+}
+
+
+---
+
+### 3.9 Draft Cleanup
+
+Setelah success:
+
+
+removeItem:
+
+draft_sender_name
+
+draft_sender_contact
+
+draft_receiver_name
+
+draft_receiver_contact
+
+
+---
+
+### 3.10 Routing Logic
+
+Mode:
+
+save:
+→ /paket
+
+handover:
+→ /handover/{id}
+
+``` id="pkg-routing"
+
+---
+
+### 3.11 Saving Lock
+
+
+if(saving) return
+setSaving(true)
+
+
+⚠️ Tidak di-reset kalau success  
+→ karena langsung redirect
+
+---
+
+## 4. API Mapping (Write Layer)
+
+Endpoint:
+POST /api/handover/create
+
+Digunakan oleh:
+- /package page
+
+---
+
+### 4.1 Minimal Required Fields
+
+Dari UI:
+
+sender_name  
+receiver_target_name  
+items[0].description  
+
+---
+
+### 4.2 Optional Fields
+
+receiver_target_phone  
+receiver_target_email  
+
+---
+
+### 4.3 Items Structure
+
+Array of object:
+
+
+{
+description: string
+}
+
+
+---
+
+## 5. Local Storage Contract (Full)
+
+### Identity
+
+user_name  
+user_contact  
+
+---
+
+### Draft
+
+draft_sender_name  
+draft_sender_contact  
+draft_receiver_name  
+draft_receiver_contact  
+
+---
+
+### Lifecycle
+
+/create:
+→ write draft
+
+/package:
+→ read draft
+→ validate
+→ delete after success
+
+---
+
+## 6. System Truth Table
+
+| Entity | Source of Truth |
+|------|--------|
+| User identity | localStorage |
+| Draft handover | localStorage |
+| Handover record | Database (via API) |
+| Items | Database |
+| Status | Database |
+
+---
+
+## 7. Critical Dependencies
+
+1. Create → Package dependency
+
+Package membutuhkan:
+
+draft_sender_name
+draft_receiver_name
+
+
+---
+
+2. API contract
+
+Package bergantung ke:
+
+POST /api/handover/create
+
+
+---
+
+3. Landing bergantung ke:
+
+
+GET /api/handover/list
+
+
+---
+
+## 8. Observed System Behavior
+
+1. Create = hanya staging (local)
+2. Package = titik commit ke DB
+3. API hanya dipanggil di package
+4. Photo belum masuk backend
+5. Draft lifecycle jelas (write → read → delete)
+
+---
+
+## 9. Observed Gaps (No Assumption)
+
+1. Photo tidak pernah dikirim ke server
+
+→ data hilang setelah page
+
+---
+
+2. sender_contact tidak dipakai di payload
+
+→ ada di draft tapi tidak dikirim
+
+---
+
+3. Tidak ada retry mechanism
+
+→ jika gagal, user harus ulang manual
+
+---
+
+4. Tidak ada schema validation di client selain minimal check
+
+---
+
+5. receiver_target_email selalu kosong
+
+---
+
+## 10. Full Create Action Flow (Detailed)
+
+Step-by-step:
+
+1. User buka /paket
+2. Klik "Buat Serah Terima"
+3. Masuk /create
+4. Input sender + receiver
+5. Submit
+6. Data disimpan ke localStorage
+7. Redirect /package
+8. Input items
+9. (optional) ambil foto
+10. Klik:
+   - Simpan → mode save
+   - Serah Terima → mode handover
+11. Validasi items
+12. Ambil draft dari localStorage
+13. Build payload
+14. POST /api/handover/create
+15. Jika success:
+    - hapus draft
+    - redirect sesuai mode
+
+---
+
+## 11. Coverage Status
+
+Sudah jelas:
+- full create flow (UI → local → API)
+- payload structure
+- dependency antar page
+- draft lifecycle
+
+Belum terlihat:
+- implementasi API (DB mapping)
+- receive flow
+- dashboard logic
+- status transition

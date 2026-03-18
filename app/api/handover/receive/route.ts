@@ -1,101 +1,122 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 
-export async function POST(req: Request){
+type ReceiveBody = {
+  handover_id?: string
+  token?: string
+  receiver_name?: string
+  receiver_relation?: string
+  receive_method?: string
+  receiver_type?: "direct" | "proxy"
+}
 
-  try{
+export async function POST(req: Request) {
+  try {
+    const body = (await req.json()) as ReceiveBody
 
-    const body = await req.json()
+    const token = body.token?.trim()
+    const receiver_name = body.receiver_name?.trim() || ""
+    const receiver_relation = body.receiver_relation?.trim() || ""
+    const receive_method = body.receive_method?.trim() || "qr"
+    const receiver_type = body.receiver_type === "direct" ? "direct" : "proxy"
 
-    const {
-      token,
-      handover_id,
-      receiver_name,
-      receiver_relation,
-      receive_method,
-      receiver_type // 🔥 NEW
-    } = body
+    let handoverId = body.handover_id?.trim() || ""
 
-    let finalHandoverId = handover_id
-
-    if(!finalHandoverId && token){
-
-      const { data:handover, error:findError } = await supabase
-        .from("handover")
-        .select("id")
-        .eq("share_token",token)
-        .single()
-
-      if(findError || !handover){
+    // resolve handover_id from token if needed
+    if (!handoverId) {
+      if (!token) {
         return NextResponse.json(
-          { success:false, error:"handover tidak ditemukan" },
-          { status:404 }
+          { success: false, error: "handover_id atau token wajib ada" },
+          { status: 400 }
         )
       }
 
-      finalHandoverId = handover.id
+      const { data: handoverRow, error: handoverLookupError } = await supabase
+        .from("handover")
+        .select("id,status")
+        .eq("share_token", token)
+        .single()
 
+      if (handoverLookupError || !handoverRow) {
+        return NextResponse.json(
+          { success: false, error: "handover tidak ditemukan" },
+          { status: 404 }
+        )
+      }
+
+      handoverId = handoverRow.id
+    } else {
+      const { data: handoverRow, error: handoverLookupError } = await supabase
+        .from("handover")
+        .select("id,status")
+        .eq("id", handoverId)
+        .single()
+
+      if (handoverLookupError || !handoverRow) {
+        return NextResponse.json(
+          { success: false, error: "handover tidak ditemukan" },
+          { status: 404 }
+        )
+      }
     }
 
-    if(!finalHandoverId){
-      return NextResponse.json(
-        { success:false, error:"handover_id atau token wajib ada" },
-        { status:400 }
-      )
-    }
-
-    // 🔥 determine status
-    const finalStatus = receiver_type === "direct"
-      ? "accepted"
-      : "received"
-
-    // 🔥 insert event
-    const { error:insertError } = await supabase
+    // insert receive_event only
+    // DB trigger will update handover.status + received_at
+    const { error: insertError } = await supabase
       .from("receive_event")
       .insert({
-        handover_id: finalHandoverId,
+        handover_id: handoverId,
         receiver_name,
         receiver_relation,
         receive_method,
         receiver_type,
-        timestamp: new Date().toISOString()
       })
 
-    if(insertError){
-      return NextResponse.json(
-        { success:false, error:insertError.message },
-        { status:500 }
-      )
+    // idempotent handling: if already inserted once, treat as success
+    if (insertError) {
+      const message = insertError.message?.toLowerCase() || ""
+      const details = String(insertError.details || "").toLowerCase()
+
+      const looksLikeDuplicate =
+        message.includes("duplicate") ||
+        message.includes("unique") ||
+        details.includes("duplicate") ||
+        details.includes("unique")
+
+      if (!looksLikeDuplicate) {
+        return NextResponse.json(
+          { success: false, error: insertError.message || "gagal simpan penerimaan" },
+          { status: 500 }
+        )
+      }
     }
 
-    // 🔥 update handover
-    const { error:updateError } = await supabase
+    const { data: finalHandover, error: finalReadError } = await supabase
       .from("handover")
-      .update({
-        status: finalStatus,
-        received_at: new Date().toISOString()
-      })
-      .eq("id",finalHandoverId)
+      .select("id,status,received_at")
+      .eq("id", handoverId)
+      .single()
 
-    if(updateError){
+    if (finalReadError || !finalHandover) {
       return NextResponse.json(
-        { success:false, error:updateError.message },
-        { status:500 }
+        { success: false, error: "gagal membaca status handover" },
+        { status: 500 }
       )
     }
 
     return NextResponse.json({
-      success:true,
-      status: finalStatus
+      success: true,
+      handover_id: finalHandover.id,
+      status: finalHandover.status,
+      received_at: finalHandover.received_at,
     })
-
-  }catch{
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "internal server error"
 
     return NextResponse.json(
-      { success:false, error:"request gagal" },
-      { status:400 }
+      { success: false, error: message },
+      { status: 500 }
     )
-
   }
-
 }

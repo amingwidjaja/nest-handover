@@ -1,1 +1,12 @@
-{}
+{
+  "root": "./app",
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next"
+  ],
+  "entryFilePath": "app/dashboard/page.tsx"
+}
