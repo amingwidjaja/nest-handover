@@ -141,14 +141,14 @@ export default function DashboardPage(){
     }
 
     if(h.status === "accepted"){
-      router.push(`/api/handover/pdf?token=${h.share_token}`)
-    }
-    else if(h.status === "received"){
-      router.push(`/handover/${h.id}/documents`)
-    }
-    else{
-      router.push(`/handover/${h.id}`)
-    }
+  router.push(`/api/handover/pdf?token=${h.share_token}`)
+}
+else if(h.status === "received"){
+  router.push(`/receipt/${h.share_token}`)
+}
+else{
+  router.push(`/handover/${h.id}`)
+}
 
   }
 

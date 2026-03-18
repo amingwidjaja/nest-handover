@@ -69,12 +69,15 @@ export default function ReceiptPage() {
   }, [token])
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
-        Memuat...
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
+      <div className="text-center space-y-2">
+        <div className="text-sm opacity-60">Menyiapkan dokumen...</div>
+        <div className="text-xs opacity-40">Harap tunggu</div>
       </div>
-    )
-  }
+    </div>
+  )
+}
 
   if (!handover) {
     return (

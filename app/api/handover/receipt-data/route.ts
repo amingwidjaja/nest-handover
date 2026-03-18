@@ -13,27 +13,37 @@ export async function GET(req: Request) {
       )
     }
 
-    const { data, error } = await supabase
+    // ✅ STEP 1: ambil handover + items (AMAN)
+    const { data: handover, error } = await supabase
       .from("handover")
       .select(`
         id,
         sender_name,
         receiver_target_name,
         status,
-        handover_items (*),
-        receive_event (*)
+        handover_items (*)
       `)
       .eq("share_token", token)
       .single()
 
-    if (error || !data) {
+    if (error || !handover) {
       return NextResponse.json(
         { success: false, error: "data tidak ditemukan" },
         { status: 404 }
       )
     }
 
-    return NextResponse.json(data)
+    // ✅ STEP 2: ambil receive_event (OPTIONAL)
+    const { data: receive_event } = await supabase
+      .from("receive_event")
+      .select("*")
+      .eq("handover_id", handover.id)
+      .maybeSingle()
+
+    return NextResponse.json({
+      ...handover,
+      receive_event: receive_event ?? null
+    })
 
   } catch (err: any) {
     return NextResponse.json(
