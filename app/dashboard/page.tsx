@@ -87,15 +87,13 @@ export default function DashboardPage(){
     load()
   }
 
-  function formatDate(dateString:string){
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat("id-ID",{
-      day:"numeric",
-      month:"short"
-    }).format(date)
-  }
+  const pending = handovers.filter(h=>h.status === "created")
+  const received = handovers.filter(
+    h=>h.status === "received" || h.status === "accepted"
+  )
 
-  function getDayGroup(dateString:string){
+  function getDateLabel(dateString:string){
+
     const d = new Date(dateString)
     const now = new Date()
 
@@ -105,9 +103,17 @@ export default function DashboardPage(){
 
     const target = new Date(d.getFullYear(), d.getMonth(), d.getDate())
 
-    if(target.getTime() === today.getTime()) return "today"
-    if(target.getTime() === yesterday.getTime()) return "yesterday"
-    return "older"
+    if(target.getTime() === today.getTime()) return "Hari ini"
+    if(target.getTime() === yesterday.getTime()) return "Kemarin"
+
+    return new Intl.DateTimeFormat("id-ID",{
+      day:"numeric",
+      month:"short"
+    }).format(d)
+  }
+
+  function isToday(dateString:string){
+    return getDateLabel(dateString) === "Hari ini"
   }
 
   function handleClick(h:any){
@@ -130,7 +136,7 @@ export default function DashboardPage(){
 
   function row(h:any){
 
-    const date = formatDate(h.created_at)
+    const date = getDateLabel(h.created_at)
 
     const receiver = h.receiver_target_name || "-"
 
@@ -140,13 +146,13 @@ export default function DashboardPage(){
         : "-"
 
     const checked = selected.includes(h.id)
-
-    const isToday = getDayGroup(h.created_at) === "today"
+    const today = isToday(h.created_at)
 
     return(
 
       <div
         key={h.id}
+
         style={{ WebkitUserSelect:"none" }}
 
         onClick={()=>handleClick(h)}
@@ -174,13 +180,23 @@ export default function DashboardPage(){
           px-6 py-4 flex items-center justify-between text-[13px]
           cursor-pointer
           ${highlightId === h.id ? "new-row" : ""}
-          ${isToday ? "border-l-[5px] border-[#3E2723]" : ""}
+          ${checked ? "bg-[#3E2723]/10" : ""}
         `}
       >
 
-        <span className="w-14 font-mono text-[#A1887F]">
-          {date}
-        </span>
+        {/* DATE + VERTICAL LINE */}
+
+        <div className="w-16 flex items-center gap-2">
+
+          {today && (
+            <div className="w-[4px] h-6 bg-[#3E2723]/60 rounded-sm"></div>
+          )}
+
+          <span className="font-mono text-[#A1887F]">
+            {date}
+          </span>
+
+        </div>
 
         <span className="flex-1 font-medium truncate px-2">
           {receiver}
@@ -190,34 +206,11 @@ export default function DashboardPage(){
           {packageName}
         </span>
 
-        <span className="w-6 text-right">
-          {selectMode
-            ? (checked ? "☑" : "☐")
-            : (h.status === "accepted" ? "✓" : "○")
-          }
-        </span>
-
       </div>
 
     )
+
   }
-
-  function renderGroup(title:string, items:any[]){
-    if(items.length === 0) return null
-
-    return(
-      <div>
-        <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50">
-          {title}
-        </div>
-        {items.map(row)}
-      </div>
-    )
-  }
-
-  const todayItems = handovers.filter(h=>getDayGroup(h.created_at)==="today")
-  const yesterdayItems = handovers.filter(h=>getDayGroup(h.created_at)==="yesterday")
-  const olderItems = handovers.filter(h=>getDayGroup(h.created_at)==="older")
 
   return(
 
@@ -236,12 +229,29 @@ export default function DashboardPage(){
 
       </header>
 
-      {/* LIST */}
-      <section className="flex-1 overflow-y-auto">
+      {/* DALAM PROSES */}
+      <section className="flex flex-col flex-1 min-h-0 overflow-hidden border-b border-[#E0DED7]">
 
-        {renderGroup("Hari ini", todayItems)}
-        {renderGroup("Kemarin", yesterdayItems)}
-        {renderGroup("Sebelumnya", olderItems)}
+        <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50 shrink-0">
+          Dalam Proses
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {pending.map(row)}
+        </div>
+
+      </section>
+
+      {/* SUDAH DITERIMA */}
+      <section className="flex flex-col flex-1 min-h-0 overflow-hidden">
+
+        <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50 shrink-0">
+          Paket Telah Diterima
+        </div>
+
+        <div className="flex-1 overflow-y-auto opacity-60">
+          {received.map(row)}
+        </div>
 
       </section>
 
