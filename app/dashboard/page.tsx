@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
 import { Home } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -14,6 +14,8 @@ export default function DashboardPage(){
   const [selected,setSelected] = useState<string[]>([])
   const [highlightId,setHighlightId] = useState<string | null>(null)
 
+  const timerRef = useRef<any>(null)
+
   useEffect(()=>{
     load()
   },[])
@@ -25,17 +27,21 @@ export default function DashboardPage(){
     })
 
     const data = await res.json()
+
     const rows = data.handovers || []
 
     setHandovers(rows)
 
     if(rows.length){
+
       window.scrollTo({ top:0 })
+
       setHighlightId(rows[0].id)
 
       setTimeout(()=>{
         setHighlightId(null)
       },3000)
+
     }
 
   }
@@ -61,39 +67,21 @@ export default function DashboardPage(){
   async function deleteSelected(){
 
     if(selected.length === 0) return
+
     if(!confirm("Hapus paket yang dipilih?")) return
 
-    try{
-
-      const res = await fetch("/api/handover/delete",{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json"
-        },
-        body:JSON.stringify({
-          ids:selected
-        })
+    await fetch("/api/handover/delete",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        ids:selected
       })
+    })
 
-      const data = await res.json()
-
-      if(res.status === 403){
-        alert("Paket sedang dalam proses penerimaan dan tidak bisa dihapus")
-        return
-      }
-
-      if(!res.ok){
-        alert(data?.error || "Gagal menghapus")
-        return
-      }
-
-      cancelSelect()
-      load()
-
-    }catch{
-      alert("Terjadi kesalahan koneksi")
-    }
-
+    cancelSelect()
+    load()
   }
 
   const pending = handovers.filter(h=>h.status === "created")
@@ -101,21 +89,43 @@ export default function DashboardPage(){
     h=>h.status === "received" || h.status === "accepted"
   )
 
+  function formatDate(dateString:string){
+
+    const date = new Date(dateString)
+
+    return new Intl.DateTimeFormat("id-ID",{
+      day:"numeric",
+      month:"short"
+    }).format(date)
+  }
+
   function isToday(dateString:string){
     const d = new Date(dateString)
-    const t = new Date()
+    const now = new Date()
     return (
-      d.getDate() === t.getDate() &&
-      d.getMonth() === t.getMonth() &&
-      d.getFullYear() === t.getFullYear()
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
     )
   }
 
-  function formatDate(dateString:string){
-    return new Date(dateString).toLocaleDateString("id-ID",{
-      day:"numeric",
-      month:"short"
-    })
+  function handleClick(h:any){
+
+    if(selectMode){
+      toggleSelect(h.id)
+      return
+    }
+
+    if(h.status === "accepted"){
+      router.push(`/api/handover/pdf?token=${h.share_token}`)
+    }
+    else if(h.status === "received"){
+      router.push(`/handover/${h.id}/documents`)
+    }
+    else{
+      router.push(`/handover/${h.id}`)
+    }
+
   }
 
   function row(h:any){
@@ -130,34 +140,44 @@ export default function DashboardPage(){
         : "-"
 
     const checked = selected.includes(h.id)
+
     const today = isToday(h.created_at)
 
     return(
 
       <div
         key={h.id}
-        onClick={()=>{
-          if(selectMode){
-            toggleSelect(h.id)
-          }else{
-            router.push(`/handover/${h.id}`)
-          }
-        }}
+
+        onClick={()=>handleClick(h)}
+
         onContextMenu={(e)=>{
           e.preventDefault()
           if(!selectMode){
             startSelect(h.id)
           }
         }}
+
+        onTouchStart={()=>{
+          timerRef.current = setTimeout(()=>{
+            if(!selectMode){
+              startSelect(h.id)
+            }
+          },500)
+        }}
+
+        onTouchEnd={()=>{
+          clearTimeout(timerRef.current)
+        }}
+
         className={`
           px-6 py-4 flex items-center justify-between text-[13px]
-          border-b border-[#E0DED7] cursor-pointer
+          cursor-pointer
           ${highlightId === h.id ? "new-row" : ""}
-          ${today ? "border-l-2 border-[#3E2723]" : ""}
+          ${today ? "border-l-[3px] border-[#A1887F]" : ""}
         `}
       >
 
-        <span className="w-16 font-mono text-[#A1887F]">
+        <span className="w-14 font-mono text-[#A1887F]">
           {date}
         </span>
 
@@ -195,9 +215,7 @@ export default function DashboardPage(){
 
     <main className="flex flex-col min-h-full text-[#3E2723]">
 
-
       {/* HEADER */}
-
       <header className="px-6 py-8 shrink-0 flex items-center justify-between">
 
         <h1 className="text-xl font-medium tracking-tight">
@@ -210,9 +228,7 @@ export default function DashboardPage(){
 
       </header>
 
-
       {/* DALAM PROSES */}
-
       <section className="flex flex-col flex-1 min-h-0 overflow-hidden border-b border-[#E0DED7]">
 
         <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50 shrink-0">
@@ -225,37 +241,30 @@ export default function DashboardPage(){
 
       </section>
 
-
       {/* SUDAH DITERIMA */}
-
       <section className="flex flex-col flex-1 min-h-0 overflow-hidden">
 
         <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50 shrink-0">
           Paket Telah Diterima
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto opacity-60">
           {received.map(row)}
         </div>
 
       </section>
 
-
       {/* FOOTER NOTE */}
-
       <footer className="p-6 border-t border-[#E0DED7] shrink-0">
 
         <p className="text-[10px] leading-relaxed text-[#A1887F] text-center italic">
-
-          Foto akan dihapus otomatis setelah 30 hari. Paket yang dititipkan akan dianggap telah diterima oleh penerima setelah 3 hari.
-
+          Foto akan dihapus otomatis setelah 30 hari.
+          Paket yang dititipkan akan dianggap telah diterima oleh penerima setelah 3 hari.
         </p>
 
       </footer>
 
-
       {/* SELECT TOOLBAR */}
-
       {selectMode && (
 
         <div className="fixed bottom-0 left-0 right-0 bg-[#3E2723] text-white flex items-center justify-between px-6 py-4">
