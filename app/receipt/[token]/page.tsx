@@ -69,15 +69,15 @@ export default function ReceiptPage() {
   }, [token])
 
   if (loading) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
-      <div className="text-center space-y-2">
-        <div className="text-sm opacity-60">Menyiapkan dokumen...</div>
-        <div className="text-xs opacity-40">Harap tunggu</div>
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
+        <div className="text-center space-y-2">
+          <div className="text-sm opacity-60">Menyiapkan dokumen...</div>
+          <div className="text-xs opacity-40">Harap tunggu</div>
+        </div>
       </div>
-    </div>
-  )
-}
+    )
+  }
 
   if (!handover) {
     return (
@@ -89,44 +89,49 @@ export default function ReceiptPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
-      <main className="p-8 pt-16 max-w-md mx-auto w-full space-y-10">
-        <div className="text-center space-y-2">
+
+      <main className="p-6 pt-10 max-w-md mx-auto w-full space-y-6">
+
+        {/* HEADER */}
+        <div className="text-center space-y-1">
           <h1 className="text-xl font-light">
             Bukti Serah Terima Paket
           </h1>
 
           <div className="text-xs opacity-60">
-            NEST Paket
+            NEST-Paket
           </div>
         </div>
 
-        <div className="border-t border-[#E0DED7]"></div>
+        <div className="border-t border-[#E0DED7] my-2"></div>
 
-        <div className="space-y-4 text-sm">
+        {/* IDENTITAS */}
+        <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="opacity-60">Pengirim</span>
-            <span>{handover.sender_name || "-"}</span>
+            <span className="opacity-60">Pengirim:</span>
+            <span className="font-medium">{handover.sender_name || "-"}</span>
           </div>
 
           <div className="flex justify-between">
-            <span className="opacity-60">Penerima</span>
-            <span>{handover.receiver_target_name}</span>
+            <span className="opacity-60">Penerima:</span>
+            <span className="font-medium">{handover.receiver_target_name}</span>
           </div>
 
           <div className="flex justify-between">
-            <span className="opacity-60">Status</span>
-            <span>{formatStatus(handover.status)}</span>
+            <span className="opacity-60">Status:</span>
+            <span className="font-medium">{formatStatus(handover.status)}</span>
           </div>
         </div>
 
-        <div className="border-t border-[#E0DED7]"></div>
+        <div className="border-t border-[#E0DED7] my-2"></div>
 
-        <div className="space-y-4">
-          <div className="text-xs uppercase tracking-widest opacity-60">
+        {/* RINCIAN */}
+        <div className="space-y-2">
+          <div className="text-[11px] uppercase tracking-widest opacity-60">
             Rincian Paket
           </div>
 
-          <div className="space-y-2 text-sm">
+          <div className="space-y-1 text-sm">
             {handover.handover_items?.map((item: any) => (
               <div key={item.id}>
                 • {item.description}
@@ -135,73 +140,52 @@ export default function ReceiptPage() {
           </div>
         </div>
 
-        <div className="border-t border-[#E0DED7]"></div>
+        <div className="border-t border-[#E0DED7] my-2"></div>
 
-        <div className="space-y-4 text-sm">
-          <div className="text-xs uppercase tracking-widest opacity-60">
+        {/* DETAIL PENERIMAAN */}
+        <div className="space-y-2 text-sm">
+          <div className="text-[11px] uppercase tracking-widest opacity-60">
             Detail Penerimaan
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1">
             <div className="flex justify-between">
-              <span className="opacity-60">Metode</span>
+              <span className="opacity-60">Metode:</span>
               <span>{formatMetode(handover.receive_event?.receive_method)}</span>
             </div>
 
             <div className="flex justify-between">
-              <span className="opacity-60">Waktu</span>
+              <span className="opacity-60">Waktu:</span>
               <span>{formatTanggalIndonesia(handover.receive_event?.timestamp)}</span>
             </div>
 
             {handover.receive_event?.receiver_name && (
               <div className="flex justify-between">
-                <span className="opacity-60">Diterima oleh</span>
+                <span className="opacity-60">Diterima oleh:</span>
                 <span>{handover.receive_event.receiver_name}</span>
               </div>
             )}
 
             {handover.receive_event?.receiver_relation && (
               <div className="flex justify-between">
-                <span className="opacity-60">Hubungan</span>
+                <span className="opacity-60">Hubungan:</span>
                 <span>{handover.receive_event.receiver_relation}</span>
               </div>
             )}
           </div>
         </div>
 
-        <div className="border-t border-[#E0DED7]"></div>
+        <div className="border-t border-[#E0DED7] my-2"></div>
 
-        <div className="text-center space-y-3">
-
-  <div className="text-xs opacity-60">
-    Verifikasi Serah Terima
-  </div>
-
-  <img
-    src={`/api/handover/qr?token=${token}&path=/verify/${token}`}
-    className="mx-auto w-28"
-  />
-
-  <div className="text-xs opacity-60">
-    Scan QR ini untuk memverifikasi bukti serah terima
-  </div>
-
-</div>
       </main>
 
-      <div className="flex justify-between px-8 pb-8 text-sm">
+      {/* FOOTER */}
+      <div className="flex justify-center px-6 pb-6 text-sm">
         <Link href="/" className="opacity-60">
           Kembali ke Beranda
         </Link>
-
-        <a
-          href={`/api/handover/receipt?token=${token}`}
-          target="_blank"
-          className="font-medium"
-        >
-          Unduh PDF
-        </a>
       </div>
+
     </div>
   )
 }
