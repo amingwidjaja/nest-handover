@@ -10,6 +10,13 @@ type ReceiveBody = {
   receiver_type?: "direct" | "proxy"
 }
 
+const ALLOWED_METHODS = [
+  "direct_qr",
+  "direct_photo",
+  "proxy_qr",
+  "proxy_photo",
+]
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as ReceiveBody
@@ -17,12 +24,24 @@ export async function POST(req: Request) {
     const token = body.token?.trim()
     const receiver_name = body.receiver_name?.trim() || ""
     const receiver_relation = body.receiver_relation?.trim() || ""
-    const receive_method = body.receive_method?.trim() || "qr"
-    const receiver_type = body.receiver_type === "direct" ? "direct" : "proxy"
+
+    // 🔥 FIX: NO MORE "qr"
+    if (!body.receive_method || !ALLOWED_METHODS.includes(body.receive_method)) {
+      return NextResponse.json(
+        { success: false, error: "receive_method tidak valid" },
+        { status: 400 }
+      )
+    }
+
+    const receive_method = body.receive_method
+
+    // 🔥 derive receiver_type otomatis (anti mismatch)
+    const receiver_type =
+      receive_method.startsWith("direct") ? "direct" : "proxy"
 
     let handoverId = body.handover_id?.trim() || ""
 
-    // resolve handover_id from token if needed
+    // resolve handover_id
     if (!handoverId) {
       if (!token) {
         return NextResponse.json(
@@ -31,13 +50,13 @@ export async function POST(req: Request) {
         )
       }
 
-      const { data: handoverRow, error: handoverLookupError } = await supabase
+      const { data: handoverRow, error } = await supabase
         .from("handover")
         .select("id,status")
         .eq("share_token", token)
         .single()
 
-      if (handoverLookupError || !handoverRow) {
+      if (error || !handoverRow) {
         return NextResponse.json(
           { success: false, error: "handover tidak ditemukan" },
           { status: 404 }
@@ -46,13 +65,13 @@ export async function POST(req: Request) {
 
       handoverId = handoverRow.id
     } else {
-      const { data: handoverRow, error: handoverLookupError } = await supabase
+      const { data: handoverRow, error } = await supabase
         .from("handover")
         .select("id,status")
         .eq("id", handoverId)
         .single()
 
-      if (handoverLookupError || !handoverRow) {
+      if (error || !handoverRow) {
         return NextResponse.json(
           { success: false, error: "handover tidak ditemukan" },
           { status: 404 }
@@ -60,7 +79,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // insert receive_event only
+    // 🔥 insert receive_event
     const { error: insertError } = await supabase
       .from("receive_event")
       .insert({
@@ -71,45 +90,38 @@ export async function POST(req: Request) {
         receiver_type,
       })
 
-    // idempotent handling
     if (insertError) {
-      const message = insertError.message?.toLowerCase() || ""
-      const details = String(insertError.details || "").toLowerCase()
+      const msg = insertError.message?.toLowerCase() || ""
 
-      const looksLikeDuplicate =
-        message.includes("duplicate") ||
-        message.includes("unique") ||
-        details.includes("duplicate") ||
-        details.includes("unique")
-
-      if (!looksLikeDuplicate) {
+      // duplicate = idempotent (OK)
+      if (!msg.includes("duplicate") && !msg.includes("unique")) {
         return NextResponse.json(
-          { success: false, error: insertError.message || "gagal simpan penerimaan" },
+          { success: false, error: insertError.message },
           { status: 500 }
         )
       }
     }
 
-    // read final state from DB
-    const { data: finalHandover, error: finalReadError } = await supabase
+    // 🔥 read final state (trigger result)
+    const { data: finalHandover, error: finalError } = await supabase
       .from("handover")
       .select("id,status,received_at")
       .eq("id", handoverId)
       .single()
 
-    if (finalReadError || !finalHandover) {
+    if (finalError || !finalHandover) {
       return NextResponse.json(
         { success: false, error: "gagal membaca status handover" },
         { status: 500 }
       )
     }
 
-    // 🔥 trigger pdf generation (ONLY HERE, inside try)
+    // 🔥 trigger receipt only if accepted
     if (finalHandover.status === "accepted") {
       fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/handover/generate-receipt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handover_id: handoverId })
+        body: JSON.stringify({ handover_id: handoverId }),
       })
     }
 
@@ -119,7 +131,6 @@ export async function POST(req: Request) {
       status: finalHandover.status,
       received_at: finalHandover.received_at,
     })
-
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "internal server error"
