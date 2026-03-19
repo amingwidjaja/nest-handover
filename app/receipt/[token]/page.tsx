@@ -106,7 +106,7 @@ export default function ReceiptPage() {
         <div className="border-t border-[#E0DED7] my-2"></div>
 
         {/* IDENTITAS */}
-        <div className="mt-6 space-y-2 text-sm">
+        <div className="mt-5 space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="opacity-60">Pengirim:</span>
             <span className="font-medium">{handover.sender_name || "-"}</span>

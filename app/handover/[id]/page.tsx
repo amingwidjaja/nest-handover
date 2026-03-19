@@ -39,51 +39,55 @@ export default function HandoverPage() {
 
   async function handlePhoto(e:any){
 
-    if(!e.target.files) return
+  if(!e.target.files) return
 
-    const file = e.target.files[0]
-    const preview = URL.createObjectURL(file)
+  const file = e.target.files[0]
+  const preview = URL.createObjectURL(file)
 
-    if(mode === "delegate"){
-      if(!delegateName.trim() || !relation.trim()){
-        alert("Isi nama wakil & hubungan dulu")
-        return
-      }
+  // ✅ VALIDATION (delegate wajib isi)
+  if (mode === "delegate") {
+    const name = delegateName.trim()
+    const rel = relation.trim()
+
+    if (!name || !rel) {
+      alert("Nama wakil & hubungan wajib diisi")
+      return
     }
-
-    setPhoto(preview)
-    setSaving(true)
-
-    try{
-
-      const res = await fetch("/api/handover/receive",{
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({
-          handover_id:id,
-          receiver_name: mode === "direct" ? "" : delegateName,
-          receiver_relation: mode === "direct" ? "" : relation,
-          receive_method: mode === "direct" ? "direct_photo" : "proxy_photo",
-          receiver_type: mode === "direct" ? "direct" : "proxy",
-          notes
-        })
-      })
-
-      const data = await res.json()
-
-      if(data.success){
-        router.push("/dashboard")
-      }else{
-        setSaving(false)
-        alert(data.error || "Gagal")
-      }
-
-    }catch{
-      setSaving(false)
-      alert("Error koneksi")
-    }
-
   }
+
+  setPhoto(preview)
+  setSaving(true)
+
+  try{
+
+    const res = await fetch("/api/handover/receive",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        handover_id:id,
+        receiver_name: mode === "direct" ? null : delegateName.trim(),
+        receiver_relation: mode === "direct" ? null : relation.trim(),
+        receive_method: mode === "direct" ? "direct_photo" : "proxy_photo",
+        receiver_type: mode === "direct" ? "direct" : "proxy",
+        notes
+      })
+    })
+
+    const data = await res.json()
+
+    if(data.success){
+      router.push("/dashboard")
+    }else{
+      setSaving(false)
+      alert(data.error || "Gagal")
+    }
+
+  }catch{
+    setSaving(false)
+    alert("Error koneksi")
+  }
+
+}
 
   return(
 
