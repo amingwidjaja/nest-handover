@@ -1,153 +1,332 @@
 'use client'
 
-import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useState } from "react"
 import Link from "next/link"
+import { useParams, useRouter } from "next/navigation"
+import { QrCode, ChevronLeft } from "lucide-react"
+import Image from "next/image"
+import SquarePhotoInput from "@/app/components/SquarePhotoInput"
 
-export default function HandoverPage(){
+export default function HandoverPage() {
 
   const params = useParams()
   const router = useRouter()
-  const id = params.id as string
 
-  const [data,setData] = useState<any>(null)
-  const [loading,setLoading] = useState(true)
+  const id =
+    typeof params.id === "string"
+      ? params.id
+      : Array.isArray(params.id)
+        ? params.id[0]
+        : ""
 
-  useEffect(()=>{
-    load()
-  },[id])
+  const [mode,setMode] = useState("direct")
+  const [delegateName,setDelegateName] = useState("")
+  const [relation,setRelation] = useState("")
+  const [photo,setPhoto] = useState<string | null>(null)
+  const [notes,setNotes] = useState("")
+  const [saving,setSaving] = useState(false)
 
-  async function load(){
 
-    const res = await fetch(`/api/handover/detail?id=${id}`)
-    const json = await res.json()
+  async function handlePhotoCapture(file: File, preview: string){
 
-    setData(json)
-    setLoading(false)
+    if(mode === "delegate"){
+      if(!delegateName.trim() || !relation.trim()){
+        alert(
+`Isi nama wakil dan
+hubungan dengan penerima
+terlebih dahulu`
+        )
+        return
+      }
+    }
+
+    setPhoto(preview)
+    setSaving(true)
+
+    const receive_method =
+      mode === "direct"
+        ? "direct_photo"
+        : "proxy_photo"
+
+    const receiver_name =
+      mode === "direct"
+        ? ""
+        : delegateName
+
+    const receiver_relation =
+      mode === "direct"
+        ? ""
+        : relation
+
+    try{
+
+      const res = await fetch("/api/handover/receive",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body: JSON.stringify({
+          handover_id:id,
+          receiver_name,
+          receiver_relation,
+          receive_method,
+          receiver_type: mode === "direct" ? "direct" : "proxy",
+          notes
+        })
+      })
+
+      const data = await res.json()
+
+      if(data.success){
+
+        router.push("/dashboard")
+
+      }else{
+
+        setSaving(false)
+        alert(data.error || "Gagal menyimpan serah terima")
+
+      }
+
+    }catch{
+
+      setSaving(false)
+      alert("Terjadi kesalahan koneksi")
+
+    }
 
   }
 
-  if(loading){
-    return(
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
-        Memuat...
-      </div>
-    )
-  }
-
-  if(!data){
-    return(
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
-        Data tidak ditemukan
-      </div>
-    )
-  }
 
   return(
 
-    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col">
+    <div className="min-h-full bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
-      {/* HEADER */}
-      <div className="px-5 pt-6 pb-4 space-y-2">
+      <main className="p-6 pt-8">
 
-        <div className="flex justify-between items-center">
-          <h1 className="text-lg font-medium">
-            Serah Terima
-          </h1>
+        {/* 🔥 HEADER UPGRADE */}
+        <h2 className="text-2xl font-medium mb-8">
+          Serah Terima
+        </h2>
 
-          <span className="text-xs opacity-60">
-            {data.status}
-          </span>
+
+        {/* MODE SWITCH */}
+
+        <div className="flex gap-6 mb-8 border-b border-[#E0DED7] pb-3">
+
+          <button
+            onClick={()=>setMode("direct")}
+            className={`text-sm pb-3 -mb-[14px] transition ${
+              mode==="direct"
+                ? "font-medium border-b-2 border-[#3E2723]"
+                : "opacity-40"
+            }`}
+          >
+            Langsung
+          </button>
+
+          <button
+            onClick={()=>setMode("delegate")}
+            className={`text-sm pb-3 -mb-[14px] transition ${
+              mode==="delegate"
+                ? "font-medium border-b-2 border-[#3E2723]"
+                : "opacity-40"
+            }`}
+          >
+            Diwakilkan
+          </button>
+
         </div>
 
-        <div className="text-xs opacity-60">
-          {data.sender_name || "-"} → {data.receiver_target_name || "-"}
-        </div>
 
-      </div>
 
-      <div className="border-t border-[#E0DED7]" />
+        {/* INPUT FIELDS */}
 
-      {/* CONTENT */}
-      <main className="px-5 py-4 space-y-6 flex-1">
+        {mode === "delegate" ? (
 
-        {/* ITEMS */}
-        <div className="space-y-3">
+          <div className="space-y-5 mb-8">
 
-          <div className="text-xs uppercase tracking-widest opacity-60">
-            Paket
+            <div>
+
+              <div className="text-[10px] uppercase tracking-widest opacity-40 mb-1">
+                Nama Wakil
+              </div>
+
+              <input
+                value={delegateName}
+                onChange={(e)=>setDelegateName(e.target.value)}
+                className="w-full bg-transparent border-b border-[#E0DED7] py-2 outline-none focus:border-[#3E2723] transition-colors"
+              />
+
+            </div>
+
+
+            <div>
+
+              <div className="text-[10px] uppercase tracking-widest opacity-40 mb-1">
+                Hubungan
+              </div>
+
+              <input
+                value={relation}
+                onChange={(e)=>setRelation(e.target.value)}
+                className="w-full bg-transparent border-b border-[#E0DED7] py-2 outline-none focus:border-[#3E2723] transition-colors"
+              />
+
+            </div>
+
+
+            <div>
+
+              <div className="text-[10px] uppercase tracking-widest opacity-40 mb-1">
+                Catatan
+              </div>
+
+              <input
+                value={notes}
+                onChange={(e)=>setNotes(e.target.value)}
+                className="w-full bg-transparent border-b border-[#E0DED7] py-2 outline-none focus:border-[#3E2723] transition-colors"
+              />
+
+            </div>
+
           </div>
 
-          <div className="space-y-3">
+        ) : (
 
-            {data.handover_items?.map((item:any)=>(
-              <div
-                key={item.id}
-                className="flex items-center gap-3"
-              >
+          <div className="mb-8">
 
-                {/* PHOTO */}
-                <div className="w-16 h-16 bg-[#EEE] rounded-sm overflow-hidden flex-shrink-0">
+            <div className="text-[10px] uppercase tracking-widest opacity-40 mb-1">
+              Catatan
+            </div>
 
-                  {item.photo_url ? (
-                    <img
-                      src={item.photo_url}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : null}
+            <textarea
+              rows={2}
+              value={notes}
+              onChange={(e)=>setNotes(e.target.value)}
+              className="w-full bg-transparent border-b border-[#E0DED7] py-2 outline-none focus:border-[#3E2723] transition-colors resize-none"
+            />
 
-                </div>
+          </div>
 
-                {/* TEXT */}
-                <div className="text-sm">
-                  {item.description || "-"}
-                </div>
+        )}
+
+
+
+        {/* ACTION BUTTONS */}
+
+        <div className="grid grid-cols-2 gap-4 mb-6">
+
+          <Link
+            href={`/handover/${id}/qr`}
+            className="
+            aspect-square
+            border border-[#E0DED7]
+            flex flex-col items-center justify-center
+            rounded-sm
+            shadow-sm
+            active:scale-95 active:shadow-none
+            transition
+            "
+          >
+
+            <QrCode
+              size={30}
+              strokeWidth={1.5}
+              className="mb-2 opacity-80"
+            />
+
+            <span className="text-[10px] uppercase tracking-widest">
+              QR Code
+            </span>
+
+          </Link>
+
+
+
+          <SquarePhotoInput
+            onPhoto={handlePhotoCapture}
+            disabled={
+              saving ||
+              (mode === "delegate" &&
+                (!delegateName.trim() || !relation.trim()))
+            }
+          />
+
+        </div>
+
+
+
+        {/* GUIDELINE */}
+
+        {!photo && (
+
+          <p className="text-[11px] text-center text-[#A1887F] leading-relaxed mb-6">
+
+            Pilih salah satu cara:
+
+            <br/>
+
+            • Scan QR
+
+            <br/>
+
+            • Atau ambil foto
+
+          </p>
+
+        )}
+
+
+
+        {/* PHOTO PREVIEW */}
+
+        {photo && (
+
+          <div className="relative w-full aspect-square border border-[#E0DED7] rounded-sm overflow-hidden mb-8">
+
+            <Image
+              src={photo}
+              alt="Bukti Serah Terima"
+              fill
+              priority
+              className="object-cover"
+            />
+
+            {saving && (
+
+              <div className="absolute inset-0 bg-[#FAF9F6]/60 flex items-center justify-center">
+
+                <span className="text-[10px] uppercase tracking-[0.2em] font-bold animate-pulse">
+                  Menyimpan...
+                </span>
 
               </div>
-            ))}
+
+            )}
 
           </div>
 
-        </div>
+        )}
 
       </main>
 
-      {/* ACTION */}
-      <div className="px-5 pb-6 space-y-3">
+
+
+      {/* FOOTER NAV */}
+
+      <div className="flex justify-between px-6 pb-6 text-sm">
 
         <button
-          onClick={()=>router.push(`/handover/${id}/qr`)}
-          className="
-          w-full py-4
-          bg-[#3E2723] text-white
-          rounded-xl
-          shadow-md
-          active:scale-95 active:shadow-sm
-          transition
-          "
+          onClick={()=>router.back()}
+          className="opacity-40 flex items-center gap-1 active:opacity-80 transition"
         >
-          Tampilkan QR
-        </button>
 
-        <button
-          onClick={()=>router.push(`/handover/${id}/photo`)}
-          className="
-          w-full py-4
-          border border-[#E0DED7]
-          rounded-xl
-          shadow-sm
-          active:scale-95 active:shadow-none
-          transition
-          "
-        >
-          Foto Serah Terima
-        </button>
+          <ChevronLeft size={16} />
 
-        <div className="text-center pt-2">
-          <Link href="/package" className="text-xs opacity-60">
-            Kembali
-          </Link>
-        </div>
+          <span>Kembali</span>
+
+        </button>
 
       </div>
 
