@@ -126,7 +126,7 @@ export default function ReceiptPage() {
         <div className="border-t border-[#E0DED7] my-2"></div>
 
         {/* RINCIAN */}
-        <div className="space-y-2">
+        <div className="space-y-3">
 
           <div className="flex gap-3 items-start">
 
