@@ -204,7 +204,7 @@ export default function HandoverPage() {
             outline-none
             mb-6
             text-md
-            placeholder:text-[11px] placeholder:opacity-40
+            placeholder:text-[11px] placeholder:opacity-80
           "
         />
 
@@ -219,7 +219,7 @@ export default function HandoverPage() {
             flex flex-col items-center justify-center
             rounded-sm
             shadow-md
-            active:scale-85 active:shadow-sm active:bg-[#F2F1ED]
+            active:scale-70 active:shadow-sm active:bg-[#F2F1ED]
             transition
             "
           >
@@ -235,7 +235,7 @@ export default function HandoverPage() {
             flex flex-col items-center justify-center
             rounded-sm
             shadow-md
-            active:scale-85 active:shadow-sm active:bg-[#F2F1ED]
+            active:scale-70 active:shadow-sm active:bg-[#F2F1ED]
             transition
             cursor-pointer
             "
