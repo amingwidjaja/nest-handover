@@ -181,8 +181,8 @@ export default function ReceiptPage() {
 
       {/* FOOTER */}
       <div className="flex justify-center px-6 pb-6 text-sm">
-        <Link href="/" className="opacity-60">
-          Kembali ke Beranda
+        <Link href="/dashboard" className="opacity-60">
+          Kembali ke Dashboard
         </Link>
       </div>
 
