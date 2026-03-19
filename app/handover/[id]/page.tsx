@@ -100,15 +100,19 @@ export default function HandoverPage() {
         {handover && (
           <div className="space-y-1 mb-6 text-[15px]">
 
+      <div className="space-y-1 mb-6 text-[15px]">
+
       <div>
-        <div className="text-[11px] opacity-40">Pengirim: </div>
-        <div className="font-medium">{handover.sender_name || "-"}</div>
+        <span className="opacity-50">Pengirim paket: </span>
+        <span className="font-medium">{handover.sender_name || "-"}</span>
       </div>
 
       <div>
-        <div className="text-[11px] opacity-40">Penerima: </div>
-        <div className="font-medium">{handover.receiver_target_name || "-"}</div>
+        <span className="opacity-50">Penerima paket: </span>
+        <span className="font-medium">{handover.receiver_target_name || "-"}</span>
       </div>
+
+</div>
 
     </div>
         )}
@@ -144,18 +148,18 @@ export default function HandoverPage() {
 
           <button
             onClick={()=>setMode("direct")}
-            className={`text-sm pb-3 -mb-[14px] ${
+            className={`text-base pb-3 -mb-[14px] ${
               mode==="direct"
                 ? "font-medium border-b-2 border-[#3E2723]"
                 : "opacity-40"
             }`}
           >
-            Langsung
+            Penerima Langsung
           </button>
 
           <button
             onClick={()=>setMode("delegate")}
-            className={`text-sm pb-3 -mb-[14px] ${
+            className={`text-base pb-3 -mb-[14px] ${
               mode==="delegate"
                 ? "font-medium border-b-2 border-[#3E2723]"
                 : "opacity-40"
@@ -189,11 +193,19 @@ export default function HandoverPage() {
 
         )}
 
-        <textarea
-          placeholder="Catatan (opsional)"
+       <textarea
+          placeholder="Catatan:"
           value={notes}
           onChange={(e)=>setNotes(e.target.value)}
-          className="w-full border-b border-[#E0DED7] py-2 outline-none mb-6"
+          className="
+            w-full
+            border-b border-[#E0DED7]
+            py-2
+            outline-none
+            mb-6
+            text-sm
+            placeholder:text-[11px] placeholder:opacity-40
+          "
         />
 
         {/* ACTION */}
@@ -211,7 +223,7 @@ export default function HandoverPage() {
             transition
             "
           >
-            <QrCode size={26} className="mb-2"/>
+            <QrCode size={22} className="mb-2"/>
             <span className="text-[10px]">QR</span>
           </Link>
 
@@ -228,7 +240,7 @@ export default function HandoverPage() {
             cursor-pointer
             "
           >
-            <Camera size={26} className="mb-2"/>
+            <Camera size={22} className="mb-2"/>
             <span className="text-[10px]">Foto</span>
 
             <input
