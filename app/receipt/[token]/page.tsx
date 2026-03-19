@@ -126,9 +126,9 @@ export default function ReceiptPage() {
         <div className="border-t border-[#E0DED7] my-2"></div>
 
         {/* RINCIAN */}
-        <div className="space-y-6">
+        <div className="space-y-2">
 
-          <div className="flex gap-3 items-start">
+          <div className="flex gap-3 items-start mt-4">
 
             {/* FOTO */}
             <div className="w-26 aspect-square border border-[#E0DED7] rounded-sm overflow-hidden flex-shrink-0">
