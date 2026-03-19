@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 
-export async function GET(req:Request){
+export async function GET(req: Request){
 
   const { searchParams } = new URL(req.url)
   const id = searchParams.get("id")
 
   if(!id){
-    return NextResponse.json({ error:"id required" },{ status:400 })
+    return NextResponse.json(
+      { error:"id required" },
+      { status:400 }
+    )
   }
 
   const { data:handover } = await supabase
@@ -15,6 +18,13 @@ export async function GET(req:Request){
     .select("*")
     .eq("id",id)
     .single()
+
+  if(!handover){
+    return NextResponse.json(
+      { error:"not found" },
+      { status:404 }
+    )
+  }
 
   const { data:items } = await supabase
     .from("handover_items")
@@ -25,12 +35,12 @@ export async function GET(req:Request){
     .from("receive_event")
     .select("*")
     .eq("handover_id",id)
-    .single()
+    .maybeSingle()
 
   return NextResponse.json({
-    handover,
-    items,
-    receive_event
+    ...handover,
+    handover_items: items || [],
+    receive_event: receive_event || null
   })
 
 }
