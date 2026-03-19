@@ -127,17 +127,38 @@ export default function ReceiptPage() {
 
         {/* RINCIAN */}
         <div className="space-y-2">
-          <div className="text-[11px] uppercase tracking-widest opacity-60">
-            Rincian Paket
+
+          <div className="flex gap-3 items-start">
+
+            {/* FOTO */}
+            <div className="w-26 aspect-square border border-[#E0DED7] rounded-sm overflow-hidden flex-shrink-0">
+              {handover.handover_items?.[0]?.photo_url && (
+                <img
+                  src={handover.handover_items[0].photo_url}
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </div>
+
+            {/* DETAIL */}
+            <div className="flex-1">
+
+              <div className="text-[11px] uppercase tracking-widest opacity-60 mb-1">
+                Rincian Paket
+              </div>
+
+              <div className="space-y-1 text-sm">
+                {handover.handover_items?.map((item: any) => (
+                  <div key={item.id}>
+                    • {item.description}
+                  </div>
+                ))}
+              </div>
+
+            </div>
+
           </div>
 
-          <div className="space-y-1 text-sm">
-            {handover.handover_items?.map((item: any) => (
-              <div key={item.id}>
-                • {item.description}
-              </div>
-            ))}
-          </div>
         </div>
 
         <div className="border-t border-[#E0DED7] my-2"></div>
