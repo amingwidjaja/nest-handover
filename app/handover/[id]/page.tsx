@@ -100,17 +100,17 @@ export default function HandoverPage() {
         {handover && (
           <div className="space-y-1 mb-6 text-[15px]">
 
-            <div className="flex justify-between">
-              <span className="opacity-50">Pengirim</span>
-              <span className="font-medium">{handover.sender_name || "-"}</span>
-            </div>
+      <div>
+        <div className="text-[11px] opacity-40">Pengirim: </div>
+        <div className="font-medium">{handover.sender_name || "-"}</div>
+      </div>
 
-            <div className="flex justify-between">
-              <span className="opacity-50">Penerima</span>
-              <span className="font-medium">{handover.receiver_target_name || "-"}</span>
-            </div>
+      <div>
+        <div className="text-[11px] opacity-40">Penerima: </div>
+        <div className="font-medium">{handover.receiver_target_name || "-"}</div>
+      </div>
 
-          </div>
+    </div>
         )}
 
         {/* PACKAGE */}
@@ -120,9 +120,12 @@ export default function HandoverPage() {
             {handover.handover_items.map((item:any)=>(
               <div key={item.id} className="flex gap-3 items-center">
 
-                <div className="aspect-square w-20 border border-[#E0DED7] rounded-sm overflow-hidden flex-shrink-0 shadow-md">
+                <div className="aspect-square w-26 border border-[#E0DED7] rounded-sm overflow-hidden flex-shrink-0">
                   {item.photo_url && (
-                    <img src={item.photo_url} className="w-full h-full object-cover" />
+                    <img
+                      src={item.photo_url}
+                      className="w-full h-full object-cover"
+                    />
                   )}
                 </div>
 
