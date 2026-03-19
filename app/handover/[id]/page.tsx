@@ -204,7 +204,7 @@ export default function HandoverPage() {
             outline-none
             mb-6
             text-md
-            placeholder:text-[11px] placeholder:opacity-80
+            placeholder:opacity-80
           "
         />
 
@@ -214,12 +214,13 @@ export default function HandoverPage() {
           <Link
             href={`/handover/${id}/qr`}
             className="
+            w-[85%]
             aspect-square
             border border-[#E0DED7]
             flex flex-col items-center justify-center
             rounded-sm
             shadow-md
-            active:scale-70 active:shadow-sm active:bg-[#F2F1ED]
+            active:scale-95 active:shadow-sm active:bg-[#F2F1ED]
             transition
             "
           >
@@ -230,12 +231,13 @@ export default function HandoverPage() {
           {/* PHOTO BUTTON */}
           <label
             className="
+            w-[85%]
             aspect-square
             border border-[#E0DED7]
             flex flex-col items-center justify-center
             rounded-sm
             shadow-md
-            active:scale-70 active:shadow-sm active:bg-[#F2F1ED]
+            active:scale-95 active:shadow-sm active:bg-[#F2F1ED]
             transition
             cursor-pointer
             "
