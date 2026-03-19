@@ -55,8 +55,8 @@ export async function POST(req: Request) {
 
     // generate PDF
     const pdfBuffer = await renderToBuffer(
-      ReceiptDocument({ data })
-    )
+  <ReceiptDocument data={data} />
+)
 
     const fileName = `${data.id}.pdf`
 
