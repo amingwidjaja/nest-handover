@@ -25,7 +25,6 @@ export async function POST(req: Request) {
     const receiver_name = body.receiver_name?.trim() || ""
     const receiver_relation = body.receiver_relation?.trim() || ""
 
-    // 🔥 FIX: NO MORE "qr"
     if (!body.receive_method || !ALLOWED_METHODS.includes(body.receive_method)) {
       return NextResponse.json(
         { success: false, error: "receive_method tidak valid" },
@@ -35,13 +34,11 @@ export async function POST(req: Request) {
 
     const receive_method = body.receive_method
 
-    // 🔥 derive receiver_type otomatis (anti mismatch)
     const receiver_type =
       receive_method.startsWith("direct") ? "direct" : "proxy"
 
     let handoverId = body.handover_id?.trim() || ""
 
-    // resolve handover_id
     if (!handoverId) {
       if (!token) {
         return NextResponse.json(
@@ -79,7 +76,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // 🔥 insert receive_event
     const { error: insertError } = await supabase
       .from("receive_event")
       .insert({
@@ -93,7 +89,6 @@ export async function POST(req: Request) {
     if (insertError) {
       const msg = insertError.message?.toLowerCase() || ""
 
-      // duplicate = idempotent (OK)
       if (!msg.includes("duplicate") && !msg.includes("unique")) {
         return NextResponse.json(
           { success: false, error: insertError.message },
@@ -102,7 +97,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // 🔥 read final state (trigger result)
     const { data: finalHandover, error: finalError } = await supabase
       .from("handover")
       .select("id,status,received_at")
@@ -116,8 +110,12 @@ export async function POST(req: Request) {
       )
     }
 
-    // 🔥 trigger receipt only if accepted
-    if (finalHandover.status === "accepted") {
+    // 🔥 FIX: trigger PDF berdasarkan receive_method (bukan status)
+    const isDirect =
+      receive_method === "direct_qr" ||
+      receive_method === "direct_photo"
+
+    if (isDirect) {
       fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/handover/generate-receipt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
