@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
-import puppeteer from "puppeteer"
 import { supabase } from "@/lib/supabase"
+import { renderToBuffer } from "@react-pdf/renderer"
+import ReceiptDocument from "@/lib/pdf/ReceiptPDF"
 
 export async function POST(req: Request) {
   try {
@@ -13,12 +14,11 @@ export async function POST(req: Request) {
       )
     }
 
-    // 1. ambil data langsung dari DB
+    // ambil data
     const { data, error } = await supabase
       .from("handover")
       .select(`
         id,
-        share_token,
         status,
         sender_name,
         receiver_target_name,
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // 2. hanya generate kalau accepted
+    // hanya accepted
     if (data.status !== "accepted") {
       return NextResponse.json(
         { success: false, error: "handover belum accepted" },
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // 3. idempotent
+    // idempotent
     if (data.receipt_url) {
       return NextResponse.json({
         success: true,
@@ -53,55 +53,14 @@ export async function POST(req: Request) {
       })
     }
 
-    const event = data.receive_event?.[0]
+    // generate PDF
+    const pdfBuffer = await renderToBuffer(
+      ReceiptDocument({ data })
+    )
 
-    // 4. build HTML
-    const itemsHtml = (data.handover_items || [])
-      .map((i: any) => `<li>${i.description ?? "-"}</li>`)
-      .join("")
-
-    const html = `
-      <html>
-      <body style="font-family: sans-serif; padding:40px">
-
-        <h1>NEST Paket</h1>
-        <h2>Bukti Serah Terima</h2>
-
-        <p><b>Pengirim:</b> ${data.sender_name || "-"}</p>
-        <p><b>Penerima:</b> ${data.receiver_target_name || "-"}</p>
-
-        <hr/>
-
-        <h3>Isi Paket</h3>
-        <ul>${itemsHtml}</ul>
-
-        <hr/>
-
-        <p><b>Diterima oleh:</b> ${event?.receiver_name || data.receiver_target_name || "-"}</p>
-        <p><b>Metode:</b> ${event?.receive_method || "-"}</p>
-        <p><b>Waktu:</b> ${event?.created_at || "-"}</p>
-
-      </body>
-      </html>
-    `
-
-    // 5. generate PDF
-    const browser = await puppeteer.launch({
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
-    })
-
-    const page = await browser.newPage()
-    await page.setContent(html)
-
-    const pdfBuffer = await page.pdf({
-      format: "A4"
-    })
-
-    await browser.close()
-
-    // 6. upload ke storage
     const fileName = `${data.id}.pdf`
 
+    // upload
     const { error: uploadError } = await supabase.storage
       .from("receipts")
       .upload(fileName, pdfBuffer, {
@@ -116,7 +75,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // 7. ambil public URL
+    // public url
     const { data: publicUrlData } = supabase.storage
       .from("receipts")
       .getPublicUrl(fileName)
@@ -130,7 +89,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // 8. update DB
+    // update DB
     await supabase
       .from("handover")
       .update({
