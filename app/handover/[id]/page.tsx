@@ -122,22 +122,36 @@ export default function HandoverPage() {
           <div className="space-y-3 mb-8">
 
             {handover.handover_items.map((item:any)=>(
-              <div key={item.id} className="flex gap-3 items-center">
+              <div key={item.id} className="flex gap-3 items-stretch">
 
-                <div className="aspect-square w-26 border border-[#E0DED7] rounded-sm overflow-hidden flex-shrink-0">
-                  {item.photo_url && (
-                    <img
-                      src={item.photo_url}
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-                </div>
+            {/* FOTO */}
+            <div className="aspect-square w-26 border border-[#E0DED7] rounded-sm overflow-hidden flex-shrink-0">
+              {item.photo_url && (
+                <img
+                  src={item.photo_url}
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </div>
 
-                <div className="text-sm">
-                  {item.description || "-"}
-                </div>
+            {/* DETAIL BOX */}
+            <div className="
+              flex-1
+              border border-[#E0DED7]
+              rounded-sm
+              px-3 py-2
+              flex flex-col justify-center
+            ">
+              <span className="text-[11px] opacity-50 mb-1">
+                Detail paket:
+              </span>
 
-              </div>
+              <span className="text-sm">
+                {item.description || "-"}
+              </span>
+            </div>
+
+          </div>
             ))}
 
           </div>
@@ -176,14 +190,14 @@ export default function HandoverPage() {
           <div className="space-y-4 mb-6">
 
             <input
-              placeholder="Nama wakil"
+              placeholder="Nama wakil:"
               value={delegateName}
               onChange={(e)=>setDelegateName(e.target.value)}
               className="w-full border-b border-[#E0DED7] py-2 outline-none"
             />
 
             <input
-              placeholder="Hubungan"
+              placeholder="Hubungan:"
               value={relation}
               onChange={(e)=>setRelation(e.target.value)}
               className="w-full border-b border-[#E0DED7] py-2 outline-none"
