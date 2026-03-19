@@ -203,7 +203,7 @@ export default function HandoverPage() {
             py-2
             outline-none
             mb-6
-            text-sm
+            text-md
             placeholder:text-[11px] placeholder:opacity-40
           "
         />
@@ -219,11 +219,11 @@ export default function HandoverPage() {
             flex flex-col items-center justify-center
             rounded-sm
             shadow-md
-            active:scale-95 active:shadow-sm active:bg-[#F2F1ED]
+            active:scale-85 active:shadow-sm active:bg-[#F2F1ED]
             transition
             "
           >
-            <QrCode size={22} className="mb-2"/>
+            <QrCode size={26} className="mb-2"/>
             <span className="text-[10px]">QR</span>
           </Link>
 
@@ -235,12 +235,12 @@ export default function HandoverPage() {
             flex flex-col items-center justify-center
             rounded-sm
             shadow-md
-            active:scale-95 active:shadow-sm active:bg-[#F2F1ED]
+            active:scale-85 active:shadow-sm active:bg-[#F2F1ED]
             transition
             cursor-pointer
             "
           >
-            <Camera size={22} className="mb-2"/>
+            <Camera size={26} className="mb-2"/>
             <span className="text-[10px]">Foto</span>
 
             <input
