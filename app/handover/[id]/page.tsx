@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { QrCode, ChevronLeft } from "lucide-react"
+import { QrCode, ChevronLeft, Camera } from "lucide-react"
 import Image from "next/image"
-import SquarePhotoInput from "@/app/components/SquarePhotoInput"
 
 export default function HandoverPage() {
 
@@ -26,7 +25,6 @@ export default function HandoverPage() {
   const [notes,setNotes] = useState("")
   const [saving,setSaving] = useState(false)
 
-  // 🔥 NEW: load data
   const [handover,setHandover] = useState<any>(null)
 
   useEffect(()=>{
@@ -39,11 +37,16 @@ export default function HandoverPage() {
     setHandover(data)
   }
 
-  async function handlePhotoCapture(file: File, preview: string){
+  async function handlePhoto(e:any){
+
+    if(!e.target.files) return
+
+    const file = e.target.files[0]
+    const preview = URL.createObjectURL(file)
 
     if(mode === "delegate"){
       if(!delegateName.trim() || !relation.trim()){
-        alert(`Isi nama wakil dan hubungan terlebih dahulu`)
+        alert("Isi nama wakil & hubungan dulu")
         return
       }
     }
@@ -51,33 +54,16 @@ export default function HandoverPage() {
     setPhoto(preview)
     setSaving(true)
 
-    const receive_method =
-      mode === "direct"
-        ? "direct_photo"
-        : "proxy_photo"
-
-    const receiver_name =
-      mode === "direct"
-        ? ""
-        : delegateName
-
-    const receiver_relation =
-      mode === "direct"
-        ? ""
-        : relation
-
     try{
 
       const res = await fetch("/api/handover/receive",{
         method:"POST",
-        headers:{
-          "Content-Type":"application/json"
-        },
+        headers:{ "Content-Type":"application/json" },
         body: JSON.stringify({
           handover_id:id,
-          receiver_name,
-          receiver_relation,
-          receive_method,
+          receiver_name: mode === "direct" ? "" : delegateName,
+          receiver_relation: mode === "direct" ? "" : relation,
+          receive_method: mode === "direct" ? "direct_photo" : "proxy_photo",
           receiver_type: mode === "direct" ? "direct" : "proxy",
           notes
         })
@@ -96,8 +82,8 @@ export default function HandoverPage() {
       setSaving(false)
       alert("Error koneksi")
     }
-  }
 
+  }
 
   return(
 
@@ -105,41 +91,38 @@ export default function HandoverPage() {
 
       <main className="p-6 pt-6">
 
-        {/* 🔥 HEADER */}
+        {/* HEADER */}
         <h2 className="text-2xl font-medium mb-4">
           Serah Terima
         </h2>
 
-        {/* 🔥 IDENTITY */}
+        {/* IDENTITAS */}
         {handover && (
-          <div className="space-y-1 mb-6 text-sm">
+          <div className="space-y-1 mb-6 text-[15px]">
 
             <div className="flex justify-between">
-              <span className="opacity-50">Dari</span>
-              <span>{handover.sender_name || "-"}</span>
+              <span className="opacity-50">Pengirim</span>
+              <span className="font-medium">{handover.sender_name || "-"}</span>
             </div>
 
             <div className="flex justify-between">
-              <span className="opacity-50">Untuk</span>
-              <span>{handover.receiver_target_name || "-"}</span>
+              <span className="opacity-50">Penerima</span>
+              <span className="font-medium">{handover.receiver_target_name || "-"}</span>
             </div>
 
           </div>
         )}
 
-        {/* 🔥 PACKAGE */}
+        {/* PACKAGE */}
         {handover?.handover_items?.length > 0 && (
           <div className="space-y-3 mb-8">
 
             {handover.handover_items.map((item:any)=>(
               <div key={item.id} className="flex gap-3 items-center">
 
-                <div className="w-20 h-20 border border-[#E0DED7] rounded-sm overflow-hidden flex-shrink-0">
+                <div className="aspect-square w-20 border border-[#E0DED7] rounded-sm overflow-hidden flex-shrink-0 shadow-md">
                   {item.photo_url && (
-                    <img
-                      src={item.photo_url}
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={item.photo_url} className="w-full h-full object-cover" />
                   )}
                 </div>
 
@@ -181,9 +164,9 @@ export default function HandoverPage() {
         </div>
 
         {/* INPUT */}
-        {mode === "delegate" ? (
+        {mode === "delegate" && (
 
-          <div className="space-y-5 mb-6">
+          <div className="space-y-4 mb-6">
 
             <input
               placeholder="Nama wakil"
@@ -201,7 +184,7 @@ export default function HandoverPage() {
 
           </div>
 
-        ) : null}
+        )}
 
         <textarea
           placeholder="Catatan (opsional)"
@@ -211,7 +194,7 @@ export default function HandoverPage() {
         />
 
         {/* ACTION */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-3 mb-6">
 
           <Link
             href={`/handover/${id}/qr`}
@@ -225,24 +208,49 @@ export default function HandoverPage() {
             transition
             "
           >
-            <QrCode size={28} className="mb-2"/>
+            <QrCode size={26} className="mb-2"/>
             <span className="text-[10px]">QR</span>
           </Link>
 
-          <SquarePhotoInput
-            onPhoto={handlePhotoCapture}
-            disabled={
-              saving ||
-              (mode === "delegate" &&
-                (!delegateName.trim() || !relation.trim()))
-            }
-          />
+          {/* PHOTO BUTTON */}
+          <label
+            className="
+            aspect-square
+            border border-[#E0DED7]
+            flex flex-col items-center justify-center
+            rounded-sm
+            shadow-md
+            active:scale-95 active:shadow-sm active:bg-[#F2F1ED]
+            transition
+            cursor-pointer
+            "
+          >
+            <Camera size={26} className="mb-2"/>
+            <span className="text-[10px]">Foto</span>
+
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handlePhoto}
+            />
+          </label>
 
         </div>
 
-        {/* PHOTO */}
+        {/* GUIDELINE */}
+        {!photo && (
+          <p className="text-[11px] text-center text-[#A1887F] leading-relaxed mb-6">
+            Pilih salah satu cara untuk menyelesaikan serah terima
+            <br/>
+            QR atau foto saat paket diserahkan
+          </p>
+        )}
+
+        {/* PREVIEW */}
         {photo && (
-          <div className="relative w-full aspect-square border border-[#E0DED7] rounded-sm overflow-hidden mb-6">
+          <div className="relative w-full aspect-square border border-[#E0DED7] rounded-sm overflow-hidden shadow-md mb-6">
 
             <Image
               src={photo}
@@ -264,7 +272,7 @@ export default function HandoverPage() {
 
       </main>
 
-      {/* 🔥 FOOTER BUTTON FIX */}
+      {/* BACK BUTTON */}
       <div className="px-6 pb-6">
 
         <button
@@ -274,8 +282,8 @@ export default function HandoverPage() {
           py-3
           rounded-lg
           border border-[#E0DED7]
-          shadow-sm
-          active:scale-95 active:shadow-none active:bg-[#F2F1ED]
+          shadow-md
+          active:scale-95 active:shadow-sm active:bg-[#F2F1ED]
           transition
           "
         >
