@@ -140,13 +140,13 @@ export default function HandoverPage() {
               border border-[#E0DED7]
               rounded-sm
               px-3 py-2
-              flex flex-col justify-center
+              flex flex-col justify-start
             ">
-              <span className="text-[11px] opacity-50 mb-1">
+              <span className="text-md opacity-50 mb-1">
                 Detail paket:
               </span>
 
-              <span className="text-sm">
+              <span className="text-base">
                 {item.description || "-"}
               </span>
             </div>
