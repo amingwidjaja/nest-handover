@@ -98,18 +98,18 @@ export default function HandoverPage() {
 
         {/* IDENTITAS */}
         {handover && (
-          <div className="space-y-1 mb-6 text-[15px]">
+          <div className="space-y-1 mb-6 text-base">
 
-      <div className="space-y-1 mb-6 text-[15px]">
+      <div className="space-y-1 mb-6 text-base">
 
       <div>
         <span className="opacity-50">Pengirim paket: </span>
-        <span className="font-medium">{handover.sender_name || "-"}</span>
+        <span className="text-base font-medium">{handover.sender_name || "-"}</span>
       </div>
 
       <div>
         <span className="opacity-50">Penerima paket: </span>
-        <span className="font-medium">{handover.receiver_target_name || "-"}</span>
+        <span className="text-base font-medium">{handover.receiver_target_name || "-"}</span>
       </div>
 
 </div>
