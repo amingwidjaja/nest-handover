@@ -123,7 +123,7 @@ export default function ReceiptPage() {
           </div>
         </div>
 
-        <div className="border-t border-[#E0DED7] my-3"></div>
+        <div className="border-t border-[#E0DED7] my-2"></div>
 
         {/* RINCIAN */}
         <div className="space-y-2">
