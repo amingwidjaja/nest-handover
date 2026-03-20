@@ -16,15 +16,15 @@
     "next": "16.1.6",
     "puppeteer": "^24.40.0",
     "qrcode": "^1.5.4",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
     "react-qr-code": "^2.0.18"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
-    "@types/react": "^19",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^19",
     "dependency-cruiser": "^17.3.9",
     "eslint": "^9",
