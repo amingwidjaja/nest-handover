@@ -13,7 +13,6 @@ export async function GET(req: Request) {
       )
     }
 
-    // ✅ STEP 1: ambil handover + items (AMAN)
     const { data: handover, error } = await supabase
       .from("handover")
       .select(`
@@ -21,6 +20,8 @@ export async function GET(req: Request) {
         sender_name,
         receiver_target_name,
         status,
+        receipt_url,
+        receipt_status,
         handover_items (*)
       `)
       .eq("share_token", token)
@@ -33,17 +34,24 @@ export async function GET(req: Request) {
       )
     }
 
-    // ✅ STEP 2: ambil receive_event (OPTIONAL)
     const { data: receive_event } = await supabase
       .from("receive_event")
       .select("*")
       .eq("handover_id", handover.id)
       .maybeSingle()
 
-    return NextResponse.json({
+    const payload = {
       ...handover,
-      receive_event: receive_event ?? null
+      receive_event: receive_event ?? null,
+    }
+
+    console.log("[receipt-data] before return", {
+      handover_id: handover.id,
+      status: handover.status,
+      receipt_url: handover.receipt_url,
     })
+
+    return NextResponse.json(payload)
 
   } catch (err: any) {
     return NextResponse.json(
