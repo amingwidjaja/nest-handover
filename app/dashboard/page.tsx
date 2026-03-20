@@ -14,8 +14,6 @@ export default function DashboardPage(){
   const [selected,setSelected] = useState<string[]>([])
   const [highlightId,setHighlightId] = useState<string | null>(null)
 
-  const [loadingReceipt,setLoadingReceipt] = useState<string | null>(null)
-
   const timerRef = useRef<any>(null)
 
   useEffect(()=>{
@@ -135,46 +133,7 @@ export default function DashboardPage(){
     )
   }
 
-  // 🔥 FIX UTAMA: GENERATE DULU, BARU REDIRECT
-  async function handleGenerateAndOpen(h:any){
-
-    try{
-
-      setLoadingReceipt(h.id)
-
-      const res = await fetch("/api/generate-receipt",{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json"
-        },
-        body:JSON.stringify({
-          handover_id: h.id
-        })
-      })
-
-      const json = await res.json()
-
-      setLoadingReceipt(null)
-
-      if(!json.success){
-        alert(json.error || "gagal generate receipt")
-        return
-      }
-
-      if(json.receipt_url){
-        window.location.href = json.receipt_url
-        return
-      }
-
-      alert("receipt sedang diproses, coba lagi sebentar")
-
-    }catch(err){
-      setLoadingReceipt(null)
-      alert("error generate receipt")
-    }
-
-  }
-
+  // 🔥 FINAL LOGIC (NO GENERATE HERE)
   function handleClick(h:any){
 
     if(selectMode){
@@ -182,16 +141,28 @@ export default function DashboardPage(){
       return
     }
 
+    // ACCEPTED
     if(h.status === "accepted"){
-      handleGenerateAndOpen(h)
-    }
-    else if(h.status === "received"){
-      router.push(`/receipt/${h.share_token}`)
-    }
-    else{
-      router.push(`/handover/${h.id}`)
+
+      // sudah ada PDF
+      if(h.receipt_status === "done" && h.receipt_url){
+        window.location.href = h.receipt_url
+        return
+      }
+
+      // belum siap
+      alert("Bukti sedang diproses, silakan tunggu")
+      return
     }
 
+    // RECEIVED → receipt page
+    if(h.status === "received"){
+      router.push(`/receipt/${h.share_token}`)
+      return
+    }
+
+    // default
+    router.push(`/handover/${h.id}`)
   }
 
   function row(h:any){
@@ -207,7 +178,6 @@ export default function DashboardPage(){
 
     const checked = selected.includes(h.id)
     const today = isToday(h.created_at)
-    const loading = loadingReceipt === h.id
 
     return(
 
@@ -266,11 +236,9 @@ export default function DashboardPage(){
           {packageName}
         </span>
 
-        <span className="w-16 text-right text-xs">
+        <span className="w-6 text-right">
 
-          {loading ? (
-            "loading..."
-          ) : selectMode ? (
+          {selectMode ? (
             ""
           ) : (
             h.status === "accepted"
