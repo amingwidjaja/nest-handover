@@ -1,3 +1,4 @@
+import React from "react"
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { renderToBuffer } from "@react-pdf/renderer"
@@ -50,8 +51,8 @@ export async function POST(req: Request) {
       })
     }
 
-    // 🔥 CORE FIX (NO JSX, NO REACT IMPORT)
-    const element = ReceiptDocument({ data: data as any })
+    // 🔥 CORE FIX (INI YANG PENTING)
+    const element = (<ReceiptDocument data={data} />) as any
 
     const pdfBuffer = await renderToBuffer(element)
 
