@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 
 function formatTanggalIndonesia(dateString: string) {
@@ -53,6 +53,7 @@ function formatStatus(status: string) {
 
 export default function ReceiptPage() {
   const params = useParams()
+  const router = useRouter()
   const token = params.token as string
 
   const [handover, setHandover] = useState<any>(null)
@@ -70,25 +71,30 @@ export default function ReceiptPage() {
     load()
   }, [token])
 
-  // 🔥 AUTO REFRESH kalau belum done
+  // 🔥 CORE LOGIC FIX
   useEffect(() => {
     if (!handover) return
 
-    if (handover.receipt_status !== "done") {
-      const interval = setInterval(() => {
-        load()
-      }, 5000)
+    // ACCEPTED → keluar dari page ini
+    if (handover.status === "accepted") {
 
-      return () => clearInterval(interval)
+      if (handover.receipt_url) {
+        window.location.href = handover.receipt_url
+        return
+      }
+
+      alert("Bukti sedang diproses, silakan tunggu")
+      router.push("/dashboard")
+      return
     }
+
   }, [handover])
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
         <div className="text-center space-y-2">
-          <div className="text-sm opacity-60">Menyiapkan dokumen...</div>
-          <div className="text-xs opacity-40">Harap tunggu</div>
+          <div className="text-sm opacity-60">Menyiapkan data...</div>
         </div>
       </div>
     )
@@ -102,23 +108,7 @@ export default function ReceiptPage() {
     )
   }
 
-  // 🔥 BELUM SELESAI → NOTIF
-  if (handover.receipt_status !== "done") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
-        <div className="text-center space-y-3">
-          <div className="text-sm opacity-70">
-            ⏳ Bukti sedang diproses
-          </div>
-          <div className="text-xs opacity-50">
-            Halaman akan diperbarui otomatis dalam 1 menit
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // 🔥 DONE → TAMPILKAN RECEIPT
+  // ❌ HAPUS receipt_status blocking
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
