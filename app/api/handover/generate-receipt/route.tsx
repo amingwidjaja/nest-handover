@@ -14,7 +14,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // ambil data
     const { data, error } = await supabase
       .from("handover")
       .select(`
@@ -36,7 +35,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // hanya accepted
     if (data.status !== "accepted") {
       return NextResponse.json(
         { success: false, error: "handover belum accepted" },
@@ -44,7 +42,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // idempotent
     if (data.receipt_url) {
       return NextResponse.json({
         success: true,
@@ -53,16 +50,13 @@ export async function POST(req: Request) {
       })
     }
 
-    // generate PDF
-    import React from "react"
+    // 🔥 CORE FIX (NO JSX, NO REACT IMPORT)
+    const element = ReceiptDocument({ data: data as any })
 
-const pdfBuffer = await renderToBuffer(
-  React.createElement(ReceiptDocument, { data })
-)
+    const pdfBuffer = await renderToBuffer(element)
 
     const fileName = `${data.id}.pdf`
 
-    // upload
     const { error: uploadError } = await supabase.storage
       .from("receipts")
       .upload(fileName, pdfBuffer, {
@@ -77,7 +71,6 @@ const pdfBuffer = await renderToBuffer(
       )
     }
 
-    // public url
     const { data: publicUrlData } = supabase.storage
       .from("receipts")
       .getPublicUrl(fileName)
@@ -91,7 +84,6 @@ const pdfBuffer = await renderToBuffer(
       )
     }
 
-    // update DB
     await supabase
       .from("handover")
       .update({

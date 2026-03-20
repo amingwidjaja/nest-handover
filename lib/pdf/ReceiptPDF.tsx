@@ -255,5 +255,4 @@ const HandoverReceiptPDF = ({ data }: { data: HandoverData }) => {
     </Document>
   );
 };
-
 export default HandoverReceiptPDF;
