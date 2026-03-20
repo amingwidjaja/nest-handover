@@ -13,7 +13,7 @@ export async function GET(){
       receiver_target_name,
       created_at,
       received_at,
-      receipt_url,   -- 🔥 TAMBAH INI
+      receipt_url,
       handover_items (
         id,
         description,
