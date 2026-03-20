@@ -14,6 +14,8 @@ export default function DashboardPage(){
   const [selected,setSelected] = useState<string[]>([])
   const [highlightId,setHighlightId] = useState<string | null>(null)
 
+  const [loadingReceipt,setLoadingReceipt] = useState<string | null>(null)
+
   const timerRef = useRef<any>(null)
 
   useEffect(()=>{
@@ -133,6 +135,46 @@ export default function DashboardPage(){
     )
   }
 
+  // 🔥 FIX UTAMA: GENERATE DULU, BARU REDIRECT
+  async function handleGenerateAndOpen(h:any){
+
+    try{
+
+      setLoadingReceipt(h.id)
+
+      const res = await fetch("/api/generate-receipt",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          handover_id: h.id
+        })
+      })
+
+      const json = await res.json()
+
+      setLoadingReceipt(null)
+
+      if(!json.success){
+        alert(json.error || "gagal generate receipt")
+        return
+      }
+
+      if(json.receipt_url){
+        window.location.href = json.receipt_url
+        return
+      }
+
+      alert("receipt sedang diproses, coba lagi sebentar")
+
+    }catch(err){
+      setLoadingReceipt(null)
+      alert("error generate receipt")
+    }
+
+  }
+
   function handleClick(h:any){
 
     if(selectMode){
@@ -141,14 +183,14 @@ export default function DashboardPage(){
     }
 
     if(h.status === "accepted"){
-  router.push(`/api/handover/pdf?token=${h.share_token}`)
-}
-else if(h.status === "received"){
-  router.push(`/receipt/${h.share_token}`)
-}
-else{
-  router.push(`/handover/${h.id}`)
-}
+      handleGenerateAndOpen(h)
+    }
+    else if(h.status === "received"){
+      router.push(`/receipt/${h.share_token}`)
+    }
+    else{
+      router.push(`/handover/${h.id}`)
+    }
 
   }
 
@@ -165,6 +207,7 @@ else{
 
     const checked = selected.includes(h.id)
     const today = isToday(h.created_at)
+    const loading = loadingReceipt === h.id
 
     return(
 
@@ -223,9 +266,11 @@ else{
           {packageName}
         </span>
 
-        <span className="w-6 text-right">
+        <span className="w-16 text-right text-xs">
 
-          {selectMode ? (
+          {loading ? (
+            "loading..."
+          ) : selectMode ? (
             ""
           ) : (
             h.status === "accepted"
@@ -245,7 +290,6 @@ else{
 
     <main className="flex flex-col min-h-full text-[#3E2723] bg-[#FAF9F6]">
 
-      {/* HEADER */}
       <header className="px-6 py-8 shrink-0 flex items-center justify-between">
 
         <h1 className="text-xl font-medium tracking-tight">
@@ -258,7 +302,6 @@ else{
 
       </header>
 
-      {/* DALAM PROSES */}
       <section className="flex flex-col flex-1 min-h-0 overflow-hidden border-b border-[#E0DED7]">
 
         <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50 shrink-0">
@@ -271,7 +314,6 @@ else{
 
       </section>
 
-      {/* SUDAH DITERIMA */}
       <section className="flex flex-col flex-1 min-h-0 overflow-hidden">
 
         <div className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-[#A1887F] bg-[#F2F1ED]/50 shrink-0">
@@ -284,7 +326,6 @@ else{
 
       </section>
 
-      {/* FOOTER NOTE */}
       <footer className="p-6 border-t border-[#E0DED7] shrink-0">
 
         <p className="text-[10px] leading-relaxed text-[#A1887F] text-center italic">
@@ -294,7 +335,6 @@ else{
 
       </footer>
 
-      {/* SELECT TOOLBAR */}
       {selectMode && (
 
         <div className="fixed bottom-0 left-0 right-0 bg-[#3E2723] text-white flex items-center justify-between px-6 py-4">
