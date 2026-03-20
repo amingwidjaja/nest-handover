@@ -44,6 +44,8 @@ function formatStatus(status: string) {
       return "Dibuat"
     case "received":
       return "Diterima"
+    case "accepted":
+      return "Diterima & Disetujui"
     default:
       return status || "-"
   }
@@ -56,17 +58,30 @@ export default function ReceiptPage() {
   const [handover, setHandover] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
+  async function load() {
+    const res = await fetch(`/api/handover/receipt-data?token=${token}`)
+    const data = await res.json()
+
+    setHandover(data)
+    setLoading(false)
+  }
+
   useEffect(() => {
-    async function load() {
-      const res = await fetch(`/api/handover/receipt-data?token=${token}`)
-      const data = await res.json()
-
-      setHandover(data)
-      setLoading(false)
-    }
-
     load()
   }, [token])
+
+  // 🔥 AUTO REFRESH kalau belum done
+  useEffect(() => {
+    if (!handover) return
+
+    if (handover.receipt_status !== "done") {
+      const interval = setInterval(() => {
+        load()
+      }, 5000)
+
+      return () => clearInterval(interval)
+    }
+  }, [handover])
 
   if (loading) {
     return (
@@ -87,12 +102,29 @@ export default function ReceiptPage() {
     )
   }
 
+  // 🔥 BELUM SELESAI → NOTIF
+  if (handover.receipt_status !== "done") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
+        <div className="text-center space-y-3">
+          <div className="text-sm opacity-70">
+            ⏳ Bukti sedang diproses
+          </div>
+          <div className="text-xs opacity-50">
+            Halaman akan diperbarui otomatis dalam 1 menit
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 🔥 DONE → TAMPILKAN RECEIPT
+
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
       <main className="p-6 pt-10 max-w-md mx-auto w-full space-y-6">
 
-        {/* HEADER */}
         <div className="text-center space-y-1">
           <h1 className="text-xl font-light">
             Bukti Serah Terima Paket
@@ -105,7 +137,6 @@ export default function ReceiptPage() {
 
         <div className="border-t border-[#E0DED7] my-2"></div>
 
-        {/* IDENTITAS */}
         <div className="mt-5 space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="opacity-60">Pengirim:</span>
@@ -125,12 +156,10 @@ export default function ReceiptPage() {
 
         <div className="border-t border-[#E0DED7] my-1"></div>
 
-        {/* RINCIAN */}
         <div className="space-y-2">
 
           <div className="flex gap-3 items-start mt-6">
 
-            {/* FOTO */}
             <div className="w-26 aspect-square border border-[#E0DED7] rounded-sm overflow-hidden flex-shrink-0">
               {handover.handover_items?.[0]?.photo_url && (
                 <img
@@ -140,7 +169,6 @@ export default function ReceiptPage() {
               )}
             </div>
 
-            {/* DETAIL */}
             <div className="flex-1">
 
               <div className="text-[11px] uppercase tracking-widest opacity-60 mb-1">
@@ -163,7 +191,6 @@ export default function ReceiptPage() {
 
         <div className="border-t border-[#E0DED7] my-2"></div>
 
-        {/* DETAIL PENERIMAAN */}
         <div className="space-y-2 text-sm">
           <div className="text-[11px] uppercase tracking-widest opacity-60">
             Detail Penerimaan
@@ -200,7 +227,6 @@ export default function ReceiptPage() {
 
       </main>
 
-      {/* FOOTER */}
       <div className="flex justify-center px-6 pb-6 text-sm">
         <Link href="/dashboard" className="opacity-60">
           Kembali ke Dashboard

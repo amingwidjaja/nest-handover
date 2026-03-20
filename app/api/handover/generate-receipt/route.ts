@@ -1,4 +1,3 @@
-import React from "react"
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { renderToBuffer } from "@react-pdf/renderer"
@@ -23,6 +22,7 @@ export async function POST(req: Request) {
         sender_name,
         receiver_target_name,
         receipt_url,
+        receipt_status,
         handover_items (*),
         receive_event (*)
       `)
@@ -43,7 +43,13 @@ export async function POST(req: Request) {
       )
     }
 
+    // kalau sudah ada
     if (data.receipt_url) {
+      await supabase
+        .from("handover")
+        .update({ receipt_status: "done" })
+        .eq("id", data.id)
+
       return NextResponse.json({
         success: true,
         skipped: true,
@@ -51,9 +57,14 @@ export async function POST(req: Request) {
       })
     }
 
-    // 🔥 CORE FIX (INI YANG PENTING)
-    const element = (<ReceiptDocument data={data} />) as any
+    // set processing
+    await supabase
+      .from("handover")
+      .update({ receipt_status: "processing" })
+      .eq("id", data.id)
 
+    // ✅ FINAL: NO JSX, NO createElement
+    const element = ReceiptDocument({ data })
     const pdfBuffer = await renderToBuffer(element)
 
     const fileName = `${data.id}.pdf`
@@ -66,6 +77,11 @@ export async function POST(req: Request) {
       })
 
     if (uploadError) {
+      await supabase
+        .from("handover")
+        .update({ receipt_status: "pending" })
+        .eq("id", data.id)
+
       return NextResponse.json(
         { success: false, error: uploadError.message },
         { status: 500 }
@@ -79,6 +95,11 @@ export async function POST(req: Request) {
     const publicUrl = publicUrlData?.publicUrl
 
     if (!publicUrl) {
+      await supabase
+        .from("handover")
+        .update({ receipt_status: "pending" })
+        .eq("id", data.id)
+
       return NextResponse.json(
         { success: false, error: "gagal mendapatkan URL receipt" },
         { status: 500 }
@@ -89,6 +110,7 @@ export async function POST(req: Request) {
       .from("handover")
       .update({
         receipt_url: publicUrl,
+        receipt_status: "done",
         receipt_generated_at: new Date().toISOString()
       })
       .eq("id", data.id)

@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/receipt",
+      "schedule": "*/1 * * * *"
+    }
+  ]
+}
