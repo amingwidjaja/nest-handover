@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import Link from "next/link"
 
 function formatTanggalIndonesia(dateString: string) {
@@ -53,7 +53,6 @@ function formatStatus(status: string) {
 
 export default function ReceiptPage() {
   const params = useParams()
-  const router = useRouter()
   const token = params.token as string
 
   const [handover, setHandover] = useState<any>(null)
@@ -70,25 +69,6 @@ export default function ReceiptPage() {
   useEffect(() => {
     load()
   }, [token])
-
-  // 🔥 CORE LOGIC FIX
-  useEffect(() => {
-    if (!handover) return
-
-    // ACCEPTED → keluar dari page ini
-    if (handover.status === "accepted") {
-
-      if (handover.receipt_url) {
-        window.location.href = handover.receipt_url
-        return
-      }
-
-      alert("Bukti sedang diproses, silakan tunggu")
-      router.push("/dashboard")
-      return
-    }
-
-  }, [handover])
 
   if (loading) {
     return (
@@ -107,8 +87,6 @@ export default function ReceiptPage() {
       </div>
     )
   }
-
-  // ❌ HAPUS receipt_status blocking
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">

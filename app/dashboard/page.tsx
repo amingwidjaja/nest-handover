@@ -133,7 +133,7 @@ export default function DashboardPage(){
     )
   }
 
-  // 🔥 FINAL LOGIC (NO GENERATE HERE)
+  // 🔥 ONLY CHANGE HERE
   function handleClick(h:any){
 
     if(selectMode){
@@ -141,21 +141,19 @@ export default function DashboardPage(){
       return
     }
 
-    // ACCEPTED
+    // ACCEPTED → langsung cek receipt_url
     if(h.status === "accepted"){
 
-      // sudah ada PDF
-      if(h.receipt_status === "done" && h.receipt_url){
-        window.location.href = h.receipt_url
+      if(h.receipt_url){
+        window.open(h.receipt_url, "_blank")
         return
       }
 
-      // belum siap
       alert("Bukti sedang diproses, silakan tunggu")
       return
     }
 
-    // RECEIVED → receipt page
+    // RECEIVED → tetap seperti sekarang
     if(h.status === "received"){
       router.push(`/receipt/${h.share_token}`)
       return
