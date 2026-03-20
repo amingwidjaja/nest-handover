@@ -110,12 +110,8 @@ export async function POST(req: Request) {
       )
     }
 
-    // 🔥 FIX: trigger PDF berdasarkan receive_method (bukan status)
-    const isDirect =
-      receive_method === "direct_qr" ||
-      receive_method === "direct_photo"
-
-    if (isDirect) {
+    // ✅ FIX: trigger PDF berdasarkan DB state (status)
+    if (finalHandover.status === "accepted") {
       fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/handover/generate-receipt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
