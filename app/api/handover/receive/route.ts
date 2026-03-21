@@ -154,6 +154,11 @@ export async function POST(req: Request) {
       )
     }
 
+    console.error("[receive] handoverRow", {
+      status: handoverRow.status,
+      receive_method,
+    })
+
     // =========================
     // GUARD (ANTI DUPLICATE)
     // =========================
@@ -195,6 +200,7 @@ export async function POST(req: Request) {
         })
 
       if (upErr) {
+        console.error("[receive] storage upload error", upErr)
         return NextResponse.json(
           { success: false, error: upErr.message },
           { status: 500 }
@@ -232,10 +238,10 @@ export async function POST(req: Request) {
         gps_lat,
         gps_lng,
         gps_accuracy,
-        received_at: new Date(),
       })
 
     if (insertError) {
+      console.error("[receive] insert receive_event error", insertError)
       return NextResponse.json(
         { success: false, error: insertError.message },
         { status: 500 }
@@ -267,6 +273,8 @@ export async function POST(req: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "internal server error"
+
+    console.error("[receive] unhandled exception", error)
 
     return NextResponse.json(
       { success: false, error: message },
