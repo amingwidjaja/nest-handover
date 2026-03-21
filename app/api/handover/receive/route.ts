@@ -31,6 +31,7 @@ function receiverTypeFromMethod(receive_method: string): "direct" | "proxy" {
 
 export async function POST(req: Request) {
   try {
+    const admin = getSupabaseAdmin()
     const contentType = req.headers.get("content-type") || ""
 
     let receive_method: string
@@ -224,7 +225,7 @@ export async function POST(req: Request) {
     // =========================
     // INSERT EVENT
     // =========================
-    const { error: insertError } = await supabase
+    const { error: insertError } = await admin
       .from("receive_event")
       .insert({
         id: receive_event_id,
