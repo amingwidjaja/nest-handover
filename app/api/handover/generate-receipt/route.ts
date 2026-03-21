@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     const fileName = `${data.id}.pdf`
 
     const { error: uploadError } = await supabase.storage
-      .from("receipts")
+      .from("nest-evidence")
       .upload(fileName, pdfBuffer, {
         contentType: "application/pdf",
         upsert: false
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
     }
 
     const { data: publicUrlData } = supabase.storage
-      .from("receipts")
+      .from("nest-evidence")
       .getPublicUrl(fileName)
 
     const publicUrl = publicUrlData?.publicUrl

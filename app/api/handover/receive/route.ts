@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server"
+import { randomUUID } from "crypto"
 import { supabase } from "@/lib/supabase"
+import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
-type ReceiveBody = {
+export const runtime = "nodejs"
+
+type JsonReceiveBody = {
   handover_id?: string
   token?: string
-  receiver_name?: string
-  receiver_relation?: string
+  receiver_name?: string | null
+  receiver_relation?: string | null
   receive_method?: string
   receiver_type?: "direct" | "proxy"
 }
@@ -17,86 +21,230 @@ const ALLOWED_METHODS = [
   "proxy_photo",
 ]
 
+function isPhotoMethod(m: string) {
+  return m === "direct_photo" || m === "proxy_photo"
+}
+
+function receiverTypeFromMethod(receive_method: string): "direct" | "proxy" {
+  return receive_method.startsWith("direct") ? "direct" : "proxy"
+}
+
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as ReceiveBody
+    const contentType = req.headers.get("content-type") || ""
 
-    const token = body.token?.trim()
-    const receiver_name = body.receiver_name?.trim() || ""
-    const receiver_relation = body.receiver_relation?.trim() || ""
+    let receive_method: string
+    let receiver_name = ""
+    let receiver_relation = ""
+    let photoFile: File | null = null
+    let gps_lat: number | null = null
+    let gps_lng: number | null = null
+    let gps_accuracy: number | null = null
+    let handoverIdInput = ""
+    let tokenInput = ""
 
-    if (!body.receive_method || !ALLOWED_METHODS.includes(body.receive_method)) {
+    // =========================
+    // PARSE INPUT
+    // =========================
+    if (contentType.includes("multipart/form-data")) {
+      const form = await req.formData()
+
+      handoverIdInput = String(form.get("handover_id") || "").trim()
+      tokenInput = String(form.get("token") || "").trim()
+      receive_method = String(form.get("receive_method") || "").trim()
+
+      receiver_name = String(form.get("receiver_name") ?? "")
+      receiver_relation = String(form.get("receiver_relation") ?? "")
+
+      const latRaw = form.get("gps_lat")
+      const lngRaw = form.get("gps_lng")
+      const accRaw = form.get("gps_accuracy")
+
+      if (latRaw) {
+        const n = Number(latRaw)
+        if (!Number.isNaN(n)) gps_lat = n
+      }
+      if (lngRaw) {
+        const n = Number(lngRaw)
+        if (!Number.isNaN(n)) gps_lng = n
+      }
+      if (accRaw) {
+        const n = Number(accRaw)
+        if (!Number.isNaN(n)) gps_accuracy = n
+      }
+
+      const f = form.get("photo")
+      if (f instanceof File && f.size > 0) {
+        photoFile = f
+      }
+    } else {
+      const body = (await req.json()) as JsonReceiveBody
+
+      handoverIdInput = body.handover_id?.trim() || ""
+      tokenInput = body.token?.trim() || ""
+      receive_method = body.receive_method?.trim() || ""
+
+      receiver_name = body.receiver_name?.trim() || ""
+      receiver_relation = body.receiver_relation?.trim() || ""
+    }
+
+    if (!receive_method || !ALLOWED_METHODS.includes(receive_method)) {
       return NextResponse.json(
         { success: false, error: "receive_method tidak valid" },
         { status: 400 }
       )
     }
 
-    const receive_method = body.receive_method
+    const receiver_type = receiverTypeFromMethod(receive_method)
 
-    const receiver_type =
-      receive_method.startsWith("direct") ? "direct" : "proxy"
+    if (isPhotoMethod(receive_method)) {
+      if (!photoFile) {
+        return NextResponse.json(
+          { success: false, error: "foto wajib untuk serah terima foto" },
+          { status: 400 }
+        )
+      }
+      if (gps_lat == null || gps_lng == null) {
+        return NextResponse.json(
+          { success: false, error: "GPS wajib untuk serah terima foto" },
+          { status: 400 }
+        )
+      }
+    }
 
-    let handoverId = body.handover_id?.trim() || ""
+    // =========================
+    // RESOLVE HANDOVER
+    // =========================
+    let handoverId = handoverIdInput
 
     if (!handoverId) {
-      if (!token) {
+      if (!tokenInput) {
         return NextResponse.json(
           { success: false, error: "handover_id atau token wajib ada" },
           { status: 400 }
         )
       }
 
-      const { data: handoverRow, error } = await supabase
+      const { data: row, error } = await supabase
         .from("handover")
-        .select("id,status")
-        .eq("share_token", token)
+        .select("id")
+        .eq("share_token", tokenInput)
         .single()
 
-      if (error || !handoverRow) {
+      if (error || !row) {
         return NextResponse.json(
           { success: false, error: "handover tidak ditemukan" },
           { status: 404 }
         )
       }
 
-      handoverId = handoverRow.id
-    } else {
-      const { data: handoverRow, error } = await supabase
-        .from("handover")
-        .select("id,status")
-        .eq("id", handoverId)
-        .single()
-
-      if (error || !handoverRow) {
-        return NextResponse.json(
-          { success: false, error: "handover tidak ditemukan" },
-          { status: 404 }
-        )
-      }
+      handoverId = row.id
     }
 
-    const { error: insertError } = await supabase
-      .from("receive_event")
-      .insert({
-        handover_id: handoverId,
-        receiver_name,
-        receiver_relation,
-        receive_method,
-        receiver_type,
-      })
+    const { data: handoverRow, error: hoErr } = await supabase
+      .from("handover")
+      .select("id,tenant_id,status")
+      .eq("id", handoverId)
+      .single()
 
-    if (insertError) {
-      const msg = insertError.message?.toLowerCase() || ""
+    if (hoErr || !handoverRow) {
+      return NextResponse.json(
+        { success: false, error: "handover tidak ditemukan" },
+        { status: 404 }
+      )
+    }
 
-      if (!msg.includes("duplicate") && !msg.includes("unique")) {
+    // =========================
+    // GUARD (ANTI DUPLICATE)
+    // =========================
+    if (handoverRow.status === "received") {
+      return NextResponse.json(
+        { success: false, error: "handover sudah diterima" },
+        { status: 400 }
+      )
+    }
+
+    if (handoverRow.status === "accepted") {
+      return NextResponse.json(
+        { success: false, error: "handover sudah selesai" },
+        { status: 400 }
+      )
+    }
+
+    const tenant_id = handoverRow.tenant_id
+
+    // =========================
+    // UPLOAD PHOTO
+    // =========================
+    let photo_url: string | null = null
+    const receive_event_id = randomUUID()
+
+    if (isPhotoMethod(receive_method) && photoFile) {
+      const admin = getSupabaseAdmin()
+
+      const path = `${tenant_id}/handover/${handoverId}/receive/${receive_event_id}.jpg`
+
+      const bytes = await photoFile.arrayBuffer()
+      const buffer = Buffer.from(bytes)
+
+      const { error: upErr } = await admin.storage
+        .from("nest-evidence")
+        .upload(path, buffer, {
+          contentType: photoFile.type || "image/jpeg",
+          upsert: false,
+        })
+
+      if (upErr) {
         return NextResponse.json(
-          { success: false, error: insertError.message },
+          { success: false, error: upErr.message },
+          { status: 500 }
+        )
+      }
+
+      const { data } = admin.storage
+        .from("nest-evidence")
+        .getPublicUrl(path)
+
+      photo_url = data?.publicUrl || null
+
+      if (!photo_url) {
+        return NextResponse.json(
+          { success: false, error: "gagal mendapatkan URL foto" },
           { status: 500 }
         )
       }
     }
 
+    // =========================
+    // INSERT EVENT
+    // =========================
+    const { error: insertError } = await supabase
+      .from("receive_event")
+      .insert({
+        id: receive_event_id,
+        handover_id: handoverId,
+        tenant_id,
+        receiver_name,
+        receiver_relation,
+        receive_method,
+        receiver_type,
+        photo_url,
+        gps_lat,
+        gps_lng,
+        gps_accuracy,
+        received_at: new Date(),
+      })
+
+    if (insertError) {
+      return NextResponse.json(
+        { success: false, error: insertError.message },
+        { status: 500 }
+      )
+    }
+
+    // =========================
+    // FETCH RESULT
+    // =========================
     const { data: finalHandover, error: finalError } = await supabase
       .from("handover")
       .select("id,status,received_at")
@@ -108,15 +256,6 @@ export async function POST(req: Request) {
         { success: false, error: "gagal membaca status handover" },
         { status: 500 }
       )
-    }
-
-    // ✅ FIX: trigger PDF berdasarkan DB state (status)
-    if (finalHandover.status === "accepted") {
-      fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/handover/generate-receipt`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handover_id: handoverId }),
-      })
     }
 
     return NextResponse.json({

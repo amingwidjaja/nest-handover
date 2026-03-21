@@ -19,7 +19,7 @@ serve(async () => {
 
   await supabase
     .storage
-    .from("handover-photos")
+    .from("nest-evidence")
     .remove(files)
 
   return new Response("cleanup done")

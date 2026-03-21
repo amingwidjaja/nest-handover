@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, type ChangeEvent } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { QrCode, ChevronLeft, Camera } from "lucide-react"
+import { QrCode, Camera } from "lucide-react"
 import Image from "next/image"
 
 export default function HandoverPage() {
@@ -28,8 +28,8 @@ export default function HandoverPage() {
   const [handover,setHandover] = useState<any>(null)
 
   useEffect(()=>{
-    load()
-  },[])
+    if (id) load()
+  },[id])
 
   async function load(){
     const res = await fetch(`/api/handover/detail?id=${id}`)
@@ -37,57 +37,94 @@ export default function HandoverPage() {
     setHandover(data)
   }
 
-  async function handlePhoto(e:any){
-
-  if(!e.target.files) return
-
-  const file = e.target.files[0]
-  const preview = URL.createObjectURL(file)
-
-  // ✅ VALIDATION (delegate wajib isi)
-  if (mode === "delegate") {
-    const name = delegateName.trim()
-    const rel = relation.trim()
-
-    if (!name || !rel) {
-      alert("Nama wakil & hubungan wajib diisi")
-      return
-    }
-  }
-
-  setPhoto(preview)
-  setSaving(true)
-
-  try{
-
-    const res = await fetch("/api/handover/receive",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        handover_id:id,
-        receiver_name: mode === "direct" ? null : delegateName.trim(),
-        receiver_relation: mode === "direct" ? null : relation.trim(),
-        receive_method: mode === "direct" ? "direct_photo" : "proxy_photo",
-        receiver_type: mode === "direct" ? "direct" : "proxy",
-        notes
+  function getCurrentPosition(): Promise<GeolocationPosition> {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Geolocation tidak didukung"))
+        return
+      }
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
       })
     })
-
-    const data = await res.json()
-
-    if(data.success){
-      router.push("/dashboard")
-    }else{
-      setSaving(false)
-      alert(data.error || "Gagal")
-    }
-
-  }catch{
-    setSaving(false)
-    alert("Error koneksi")
   }
 
-}
+  async function handlePhoto(e: ChangeEvent<HTMLInputElement>) {
+    if (saving) return
+    if (!e.target.files?.length) return
+
+    const file = e.target.files[0]
+    const preview = URL.createObjectURL(file)
+
+    // VALIDATION
+    if (mode === "delegate") {
+      const name = delegateName.trim()
+      const rel = relation.trim()
+
+      if (!name || !rel) {
+        alert("Nama wakil & hubungan wajib diisi")
+        return
+      }
+    }
+
+    setSaving(true)
+
+    try {
+      let pos: GeolocationPosition
+
+      try {
+        pos = await getCurrentPosition()
+      } catch {
+        setSaving(false)
+        alert("GPS diperlukan untuk bukti foto. Izinkan akses lokasi.")
+        return
+      }
+
+      const form = new FormData()
+      form.append("handover_id", id)
+      form.append(
+        "receive_method",
+        mode === "direct" ? "direct_photo" : "proxy_photo"
+      )
+      form.append(
+        "receiver_name",
+        mode === "direct" ? "" : delegateName.trim()
+      )
+      form.append(
+        "receiver_relation",
+        mode === "direct" ? "" : relation.trim()
+      )
+      form.append("photo", file, file.name || "photo.jpg")
+      form.append("gps_lat", String(pos.coords.latitude))
+      form.append("gps_lng", String(pos.coords.longitude))
+
+      if (pos.coords.accuracy != null) {
+        form.append("gps_accuracy", String(pos.coords.accuracy))
+      }
+
+      const res = await fetch("/api/handover/receive", {
+        method: "POST",
+        body: form,
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        setPhoto(preview)
+        router.push("/dashboard")
+      } else {
+        setSaving(false)
+        alert(data.error || "Gagal menyimpan")
+      }
+
+    } catch {
+      setSaving(false)
+      alert("Error koneksi")
+    } finally {
+      // reset input file supaya bisa upload file sama lagi
+      e.target.value = ""
+    }
+  }
 
   return(
 
@@ -104,21 +141,17 @@ export default function HandoverPage() {
         {handover && (
           <div className="space-y-1 mb-6 text-base">
 
-      <div className="space-y-1 mb-6 text-base">
+            <div>
+              <span className="opacity-50">Pengirim paket: </span>
+              <span className="text-base font-medium">{handover.sender_name || "-"}</span>
+            </div>
 
-      <div>
-        <span className="opacity-50">Pengirim paket: </span>
-        <span className="text-base font-medium">{handover.sender_name || "-"}</span>
-      </div>
+            <div>
+              <span className="opacity-50">Penerima paket: </span>
+              <span className="text-base font-medium">{handover.receiver_target_name || "-"}</span>
+            </div>
 
-      <div>
-        <span className="opacity-50">Penerima paket: </span>
-        <span className="text-base font-medium">{handover.receiver_target_name || "-"}</span>
-      </div>
-
-</div>
-
-    </div>
+          </div>
         )}
 
         {/* PACKAGE */}
@@ -128,34 +161,28 @@ export default function HandoverPage() {
             {handover.handover_items.map((item:any)=>(
               <div key={item.id} className="flex gap-3 items-stretch">
 
-            {/* FOTO */}
-            <div className="aspect-square w-26 border border-[#E0DED7] rounded-sm overflow-hidden flex-shrink-0">
-              {item.photo_url && (
-                <img
-                  src={item.photo_url}
-                  className="w-full h-full object-cover"
-                />
-              )}
-            </div>
+                {/* FOTO */}
+                <div className="aspect-square w-26 border border-[#E0DED7] rounded-sm overflow-hidden flex-shrink-0">
+                  {item.photo_url && (
+                    <img
+                      src={item.photo_url}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </div>
 
-            {/* DETAIL BOX */}
-            <div className="
-              flex-1
-              border border-[#E0DED7]
-              rounded-sm
-              px-3 py-2
-              flex flex-col justify-start
-            ">
-              <span className="text-md opacity-50 mb-1">
-                Detail paket:
-              </span>
+                {/* DETAIL */}
+                <div className="flex-1 border border-[#E0DED7] rounded-sm px-3 py-2 flex flex-col justify-start">
+                  <span className="text-md opacity-50 mb-1">
+                    Detail paket:
+                  </span>
 
-              <span className="text-base">
-                {item.description || "-"}
-              </span>
-            </div>
+                  <span className="text-base">
+                    {item.description || "-"}
+                  </span>
+                </div>
 
-          </div>
+              </div>
             ))}
 
           </div>
@@ -211,7 +238,7 @@ export default function HandoverPage() {
 
         )}
 
-       <textarea
+        <textarea
           placeholder="Catatan:"
           value={notes}
           onChange={(e)=>setNotes(e.target.value)}
@@ -232,32 +259,31 @@ export default function HandoverPage() {
           <Link
             href={`/handover/${id}/qr`}
             className="
-            w-[85%]
-            aspect-square
-            border border-[#E0DED7]
-            flex flex-col items-center justify-center
-            rounded-sm
-            shadow-md
-            active:scale-95 active:shadow-sm active:bg-[#F2F1ED]
-            transition
+              w-[85%]
+              aspect-square
+              border border-[#E0DED7]
+              flex flex-col items-center justify-center
+              rounded-sm
+              shadow-md
+              active:scale-95 active:shadow-sm active:bg-[#F2F1ED]
+              transition
             "
           >
             <QrCode size={26} className="mb-2"/>
             <span className="text-[10px]">QR</span>
           </Link>
 
-          {/* PHOTO BUTTON */}
           <label
             className="
-            w-[85%]
-            aspect-square
-            border border-[#E0DED7]
-            flex flex-col items-center justify-center
-            rounded-sm
-            shadow-md
-            active:scale-95 active:shadow-sm active:bg-[#F2F1ED]
-            transition
-            cursor-pointer
+              w-[85%]
+              aspect-square
+              border border-[#E0DED7]
+              flex flex-col items-center justify-center
+              rounded-sm
+              shadow-md
+              active:scale-95 active:shadow-sm active:bg-[#F2F1ED]
+              transition
+              cursor-pointer
             "
           >
             <Camera size={26} className="mb-2"/>
@@ -307,19 +333,19 @@ export default function HandoverPage() {
 
       </main>
 
-      {/* BACK BUTTON */}
+      {/* BACK */}
       <div className="px-6 pb-6">
 
         <button
           onClick={()=>router.back()}
           className="
-          w-full
-          py-3
-          rounded-lg
-          border border-[#E0DED7]
-          shadow-md
-          active:scale-95 active:shadow-sm active:bg-[#F2F1ED]
-          transition
+            w-full
+            py-3
+            rounded-lg
+            border border-[#E0DED7]
+            shadow-md
+            active:scale-95 active:shadow-sm active:bg-[#F2F1ED]
+            transition
           "
         >
           Kembali

@@ -55,7 +55,7 @@ Deno.serve(async () => {
     const fileName = `${data.id}.pdf`
 
     const { error: uploadError } = await supabase.storage
-      .from("receipts")
+      .from("nest-evidence")
       .upload(fileName, pdfBuffer, {
         contentType: "application/pdf",
         upsert: true
@@ -66,7 +66,7 @@ Deno.serve(async () => {
     }
 
     const { data: publicUrlData } = supabase.storage
-      .from("receipts")
+      .from("nest-evidence")
       .getPublicUrl(fileName)
 
     const publicUrl = publicUrlData?.publicUrl
