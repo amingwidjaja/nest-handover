@@ -2,14 +2,14 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Camera, Home, ArrowRight, Save, Loader2 } from "lucide-react"
+import { Camera, Home, ChevronRight } from "lucide-react"
 import imageCompression from "browser-image-compression"
 import Link from "next/link"
 
 export default function PackagePage() {
   const router = useRouter()
-  
-  // Kita kurangi baris barang menjadi 2 agar lebih compact
+
+  // Dikurangi menjadi 2 baris agar hemat ruang (anti-scroll)
   const [items, setItems] = useState(["", ""])
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -24,25 +24,20 @@ export default function PackagePage() {
   async function handlePhoto(file: File) {
     const options = {
       maxSizeMB: 0.6,
-      maxWidthOrHeight: 1600,
+      maxWidthOrHeight: 1200, // Ukuran di-reduce sedikit untuk efisiensi
       useWebWorker: true
     }
-    try {
-      const compressed = await imageCompression(file, options)
-      if (preview) URL.revokeObjectURL(preview)
-      setPhotoFile(compressed)
-      setPreview(URL.createObjectURL(compressed))
-    } catch (err) {
-      console.error("Gagal kompres foto")
-    }
+    const compressed = await imageCompression(file, options)
+    if (preview) URL.revokeObjectURL(preview)
+    setPhotoFile(compressed)
+    setPreview(URL.createObjectURL(compressed))
   }
 
   async function createHandover(mode: "save" | "handover") {
     if (!items[0].trim()) {
-      alert("Mohon isi deskripsi barang utama.")
+      alert("Minimal isi 1 barang")
       return
     }
-
     if (saving) return
     setSaving(true)
 
@@ -51,7 +46,7 @@ export default function PackagePage() {
     const receiver_target_phone = localStorage.getItem("draft_receiver_contact") || ""
 
     if (!sender_name || !receiver_target_name) {
-      alert("Data pengirim/penerima hilang. Kembali ke awal.")
+      alert("Data belum lengkap. Mulai dari halaman awal.")
       router.push("/create")
       return
     }
@@ -72,14 +67,12 @@ export default function PackagePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       })
-
       const data = await res.json()
       if (!data.success) {
         setSaving(false)
-        alert("Gagal memproses.")
+        alert("Gagal membuat handover")
         return
       }
-
       localStorage.removeItem("draft_sender_name")
       localStorage.removeItem("draft_sender_contact")
       localStorage.removeItem("draft_receiver_name")
@@ -88,45 +81,40 @@ export default function PackagePage() {
       router.push(mode === "save" ? "/paket" : `/handover/${data.handover_id}`)
     } catch {
       setSaving(false)
-      alert("Gangguan koneksi")
+      alert("Terjadi kesalahan koneksi")
     }
   }
 
   return (
-    <div className="min-h-screen bg-[var(--paper)] text-[var(--ink)] flex flex-col font-sans">
-      <main className="p-8 max-w-md mx-auto w-full flex-1 flex flex-col">
+    <div className="h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col overflow-hidden">
+      <main className="px-8 py-8 flex-1 flex flex-col max-w-md mx-auto w-full">
         
         {/* HEADER */}
-        <div className="flex justify-between items-center mb-10">
-          <div className="space-y-1">
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--accent-light)]">
-              Step 02 / Barang
-            </h2>
-            <h1 className="text-xl font-light italic uppercase tracking-tighter">Isi Paket</h1>
-          </div>
-          <Link href="/paket" className="p-2 bg-white rounded-full border border-[var(--line)] shadow-sm active:scale-90 transition-transform">
-            <Home size={18} strokeWidth={1.5} />
+        <div className="flex justify-between items-start mb-6">
+          <h2 className="text-lg font-medium uppercase tracking-[0.2em] opacity-60">
+            Daftar Barang
+          </h2>
+          <Link href="/paket">
+            <Home size={20} strokeWidth={1.5} className="opacity-60" />
           </Link>
         </div>
 
-        {/* ITEMS INPUT (Refined to 2 Rows) */}
-        <div className="space-y-4 mb-10">
+        {/* ITEMS - Dirapatkan (Line-input style) */}
+        <div className="space-y-1 mb-6">
           {items.map((item, i) => (
-            <div key={i} className="relative group">
-               <span className="absolute -left-4 top-2 text-[8px] font-mono opacity-30 italic">0{i+1}</span>
-               <textarea
-                value={item}
-                onChange={(e) => handleItemChange(i, e.target.value)}
-                className="w-full bg-transparent border-b border-[var(--line)] focus:border-[var(--ink)] outline-none py-2 text-sm resize-none placeholder:text-[var(--accent-light)] placeholder:opacity-50 transition-colors"
-                rows={2}
-                placeholder={i === 0 ? "Deskripsi barang utama..." : "Tambahan (opsional)..."}
-              />
-            </div>
+            <textarea
+              key={i}
+              value={item}
+              onChange={(e) => handleItemChange(i, e.target.value)}
+              className="w-full bg-transparent border-b border-[#E0DED7] focus:border-[#3E2723] outline-none py-2 text-sm resize-none placeholder:opacity-30 transition-all"
+              rows={1}
+              placeholder={i === 0 ? "Ketik nama barang utama..." : "Barang tambahan (opsional)"}
+            />
           ))}
         </div>
 
-        {/* PHOTO AREA */}
-        <div className="flex-1">
+        {/* PHOTO - Ukuran diperkecil agar tidak scroll */}
+        <div className="flex-1 flex flex-col min-h-0">
           <input
             type="file"
             accept="image/*"
@@ -134,7 +122,7 @@ export default function PackagePage() {
             id="cameraInput"
             className="hidden"
             onChange={(e) => {
-              if (!e.target.files?.[0]) return
+              if (!e.target.files) return
               handlePhoto(e.target.files[0])
             }}
           />
@@ -142,63 +130,49 @@ export default function PackagePage() {
           {!preview ? (
             <label
               htmlFor="cameraInput"
-              className="w-full aspect-[4/3] border border-dashed border-[var(--line)] flex flex-col items-center justify-center rounded-sm bg-white/50 active:bg-[#F2F1ED] transition-colors cursor-pointer group"
+              className="w-full flex-1 border border-dashed border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED] transition-colors"
             >
-              <div className="p-4 bg-[var(--paper)] rounded-full border border-[var(--line)] group-active:scale-90 transition-transform mb-3">
-                <Camera className="text-[var(--accent-light)]" size={24} strokeWidth={1.5} />
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--accent-light)]">Ambil Foto Paket</span>
+              <Camera className="text-[#A1887F] mb-2" size={24} strokeWidth={1.5} />
+              <span className="text-[10px] text-[#A1887F] uppercase tracking-widest font-bold">
+                Ambil Foto Paket
+              </span>
             </label>
           ) : (
-            <div className="space-y-3">
-              <div className="relative overflow-hidden rounded-sm border border-[var(--line)] shadow-sm">
-                <img src={preview} className="w-full object-cover max-h-[300px]" alt="Preview" />
-              </div>
-              <label htmlFor="cameraInput" className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent-light)] cursor-pointer active:opacity-50">
-                <RotateCcw size={12} /> Ambil Ulang
+            <div className="relative flex-1 min-h-0">
+              <img
+                src={preview}
+                className="w-full h-full object-cover rounded-sm border border-[#E0DED7]"
+              />
+              <label
+                htmlFor="cameraInput"
+                className="absolute bottom-3 right-3 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full text-[9px] uppercase tracking-widest font-bold shadow-sm border border-[#E0DED7]"
+              >
+                Ganti Foto
               </label>
             </div>
           )}
         </div>
 
-        {/* NEW ACTION BUTTONS (Muji Style Blocking) */}
-        <div className="mt-12 space-y-3">
+        {/* ACTION BUTTONS - UI dipertegas */}
+        <div className="mt-8 grid grid-cols-2 gap-4 items-center">
           <button
-            onClick={() => createHandover("handover")}
-            disabled={saving}
-            className="w-full bg-[var(--ink)] text-[var(--paper)] py-5 text-[10px] font-bold uppercase tracking-[0.3em] flex justify-between items-center px-8 active:scale-[0.98] transition-all disabled:opacity-50"
+            onClick={() => createHandover("save")}
+            className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 hover:opacity-100 transition-opacity text-left"
           >
-            {saving ? (
-              <Loader2 className="animate-spin mx-auto" size={16} />
-            ) : (
-              <>
-                Lanjut Serah Terima
-                <ArrowRight size={16} />
-              </>
-            )}
+            Simpan Draft
           </button>
 
           <button
-            onClick={() => createHandover("save")}
+            onClick={() => createHandover("handover")}
             disabled={saving}
-            className="w-full border border-[var(--line)] text-[var(--ink)] py-4 text-[10px] font-bold uppercase tracking-[0.3em] flex justify-center items-center gap-2 active:bg-zinc-50 transition-colors"
+            className="bg-[#3E2723] text-[#FAF9F6] py-4 px-6 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] flex justify-between items-center shadow-md active:scale-95 transition-all"
           >
-            <Save size={14} />
-            Simpan Draft
+            {saving ? "..." : "Serah Terima"}
+            <ChevronRight size={14} />
           </button>
         </div>
 
       </main>
     </div>
-  )
-}
-
-// Icon helper for "Ambil Ulang"
-function RotateCcw({ size }: { size: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-      <path d="M3 3v5h5" />
-    </svg>
   )
 }
