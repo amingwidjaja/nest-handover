@@ -24,24 +24,23 @@ export async function POST(req: Request){
 
     const admin = getSupabaseAdmin()
 
-    await admin.from("receive_event").insert({
-      handover_id,
-      receive_method,
-      receiver_name,
-      receiver_relation,
-      gps_lat,
-      gps_lng,
-      gps_accuracy,
-      photo_url
-    })
-
-    await admin
-      .from("handover")
-      .update({
-        status: "received",
-        received_at: new Date().toISOString()
+    const { error } = await admin
+      .from("receive_event")
+      .insert({
+        handover_id,
+        receive_method,
+        receiver_name,
+        receiver_relation,
+        gps_lat,
+        gps_lng,
+        gps_accuracy,
+        photo_url
       })
-      .eq("id", handover_id)
+
+    if(error){
+      console.log("INSERT ERROR:", error)
+      return NextResponse.json({ success:false, error:"insert failed" })
+    }
 
     return NextResponse.json({ success:true })
 
