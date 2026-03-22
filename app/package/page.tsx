@@ -9,7 +9,8 @@ import Link from "next/link"
 export default function PackagePage() {
   const router = useRouter()
 
-  const [items, setItems] = useState(["", ""])
+  // Ditambah jadi 3 baris sesuai request
+  const [items, setItems] = useState(["", "", ""])
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -45,7 +46,7 @@ export default function PackagePage() {
     const receiver_target_phone = localStorage.getItem("draft_receiver_contact") || ""
 
     if (!sender_name || !receiver_target_name) {
-      alert("Data belum lengkap. Mulai dari halaman awal.")
+      alert("Data belum lengkap. Mulai dari awal.")
       router.push("/create")
       return
     }
@@ -86,6 +87,21 @@ export default function PackagePage() {
 
   return (
     <div className="h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col overflow-hidden font-sans">
+      
+      {/* ANTI-ZOOM FIX: Kita tambahkan style global khusus di page ini */}
+      <style jsx global>{`
+        /* Mencegah zoom otomatis di iOS Safari tapi tetap menjaga visual font kecil */
+        input, textarea {
+          font-size: 16px !important;
+        }
+        @media screen and (max-width: 768px) {
+          .line-input {
+            font-size: 14px !important; /* Visual tetap 14px, tapi sistem 'dibohongi' */
+            transform: scale(1);
+          }
+        }
+      `}</style>
+
       <main className="px-8 py-6 flex-1 flex flex-col max-w-md mx-auto w-full">
         
         {/* HEADER */}
@@ -98,22 +114,22 @@ export default function PackagePage() {
           </Link>
         </div>
 
-        {/* ITEMS - Super Compact Layout */}
-        <div className="space-y-0 mb-6">
+        {/* ITEMS - 3 Rows Compact */}
+        <div className="space-y-0 mb-4">
           {items.map((item, i) => (
             <textarea
               key={i}
               value={item}
               onChange={(e) => handleItemChange(i, e.target.value)}
-              className="w-full bg-transparent border-b border-[#E0DED7] focus:border-[#3E2723] outline-none py-2 text-sm resize-none placeholder:opacity-20 transition-all leading-tight"
+              className="w-full bg-transparent border-b border-[#E0DED7] focus:border-[#3E2723] outline-none py-2 text-[14px] resize-none placeholder:opacity-20 transition-all leading-tight line-input"
               rows={1}
-              placeholder={i === 0 ? "Ketik nama barang utama..." : "Barang tambahan (opsional)"}
+              placeholder={i === 0 ? "Ketik nama barang utama..." : `Barang tambahan ${i+1}`}
             />
           ))}
         </div>
 
-        {/* PHOTO AREA - Flex-Grow to fill space */}
-        <div className="flex-1 flex flex-col min-h-0 mb-8">
+        {/* PHOTO AREA */}
+        <div className="flex-1 flex flex-col min-h-0 mb-6">
           <input
             type="file"
             accept="image/*"
@@ -153,9 +169,8 @@ export default function PackagePage() {
         </div>
 
         {/* BALANCED ACTION BUTTONS */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-2 gap-3 mb-2">
           
-          {/* SIMPAN DRAFT (Outline) */}
           <button
             onClick={() => createHandover("save")}
             disabled={saving}
@@ -165,7 +180,6 @@ export default function PackagePage() {
             <span>Simpan Draft</span>
           </button>
 
-          {/* SERAH TERIMA (Solid) */}
           <button
             onClick={() => createHandover("handover")}
             disabled={saving}
