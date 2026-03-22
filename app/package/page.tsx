@@ -2,14 +2,13 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Camera, Home, ChevronRight } from "lucide-react"
+import { Camera, Home, ChevronRight, ChevronLeft } from "lucide-react"
 import imageCompression from "browser-image-compression"
 import Link from "next/link"
 
 export default function PackagePage() {
   const router = useRouter()
 
-  // Dikurangi menjadi 2 baris agar hemat ruang (anti-scroll)
   const [items, setItems] = useState(["", ""])
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -24,7 +23,7 @@ export default function PackagePage() {
   async function handlePhoto(file: File) {
     const options = {
       maxSizeMB: 0.6,
-      maxWidthOrHeight: 1200, // Ukuran di-reduce sedikit untuk efisiensi
+      maxWidthOrHeight: 1200,
       useWebWorker: true
     }
     const compressed = await imageCompression(file, options)
@@ -86,35 +85,35 @@ export default function PackagePage() {
   }
 
   return (
-    <div className="h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col overflow-hidden">
-      <main className="px-8 py-8 flex-1 flex flex-col max-w-md mx-auto w-full">
+    <div className="h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col overflow-hidden font-sans">
+      <main className="px-8 py-6 flex-1 flex flex-col max-w-md mx-auto w-full">
         
         {/* HEADER */}
-        <div className="flex justify-between items-start mb-6">
+        <div className="flex justify-between items-start mb-4">
           <h2 className="text-lg font-medium uppercase tracking-[0.2em] opacity-60">
             Daftar Barang
           </h2>
-          <Link href="/paket">
+          <Link href="/paket" className="p-1 active:scale-90 transition-transform">
             <Home size={20} strokeWidth={1.5} className="opacity-60" />
           </Link>
         </div>
 
-        {/* ITEMS - Dirapatkan (Line-input style) */}
-        <div className="space-y-1 mb-6">
+        {/* ITEMS - Super Compact Layout */}
+        <div className="space-y-0 mb-6">
           {items.map((item, i) => (
             <textarea
               key={i}
               value={item}
               onChange={(e) => handleItemChange(i, e.target.value)}
-              className="w-full bg-transparent border-b border-[#E0DED7] focus:border-[#3E2723] outline-none py-2 text-sm resize-none placeholder:opacity-30 transition-all"
+              className="w-full bg-transparent border-b border-[#E0DED7] focus:border-[#3E2723] outline-none py-2 text-sm resize-none placeholder:opacity-20 transition-all leading-tight"
               rows={1}
               placeholder={i === 0 ? "Ketik nama barang utama..." : "Barang tambahan (opsional)"}
             />
           ))}
         </div>
 
-        {/* PHOTO - Ukuran diperkecil agar tidak scroll */}
-        <div className="flex-1 flex flex-col min-h-0">
+        {/* PHOTO AREA - Flex-Grow to fill space */}
+        <div className="flex-1 flex flex-col min-h-0 mb-8">
           <input
             type="file"
             accept="image/*"
@@ -130,22 +129,22 @@ export default function PackagePage() {
           {!preview ? (
             <label
               htmlFor="cameraInput"
-              className="w-full flex-1 border border-dashed border-[#E0DED7] flex flex-col items-center justify-center rounded-sm active:bg-[#F2F1ED] transition-colors"
+              className="w-full flex-1 border border-dashed border-[#E0DED7] flex flex-col items-center justify-center rounded-sm bg-white/30 active:bg-[#F2F1ED] transition-colors"
             >
               <Camera className="text-[#A1887F] mb-2" size={24} strokeWidth={1.5} />
-              <span className="text-[10px] text-[#A1887F] uppercase tracking-widest font-bold">
+              <span className="text-[9px] text-[#A1887F] uppercase tracking-[0.3em] font-bold">
                 Ambil Foto Paket
               </span>
             </label>
           ) : (
-            <div className="relative flex-1 min-h-0">
+            <div className="relative flex-1 min-h-0 group">
               <img
                 src={preview}
-                className="w-full h-full object-cover rounded-sm border border-[#E0DED7]"
+                className="w-full h-full object-cover rounded-sm border border-[#E0DED7] shadow-sm"
               />
               <label
                 htmlFor="cameraInput"
-                className="absolute bottom-3 right-3 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full text-[9px] uppercase tracking-widest font-bold shadow-sm border border-[#E0DED7]"
+                className="absolute bottom-3 right-3 bg-white/90 backdrop-blur px-3 py-2 rounded-sm text-[8px] uppercase tracking-[0.2em] font-bold shadow-sm border border-[#E0DED7] active:scale-95 transition-transform"
               >
                 Ganti Foto
               </label>
@@ -153,23 +152,29 @@ export default function PackagePage() {
           )}
         </div>
 
-        {/* ACTION BUTTONS - UI dipertegas */}
-        <div className="mt-8 grid grid-cols-2 gap-4 items-center">
+        {/* BALANCED ACTION BUTTONS */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          
+          {/* SIMPAN DRAFT (Outline) */}
           <button
             onClick={() => createHandover("save")}
-            className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 hover:opacity-100 transition-opacity text-left"
+            disabled={saving}
+            className="border border-[#E0DED7] text-[#3E2723] py-4 px-5 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] flex justify-between items-center active:bg-zinc-50 transition-all disabled:opacity-30"
           >
-            Simpan Draft
+            <ChevronLeft size={14} />
+            <span>Simpan Draft</span>
           </button>
 
+          {/* SERAH TERIMA (Solid) */}
           <button
             onClick={() => createHandover("handover")}
             disabled={saving}
-            className="bg-[#3E2723] text-[#FAF9F6] py-4 px-6 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] flex justify-between items-center shadow-md active:scale-95 transition-all"
+            className="bg-[#3E2723] text-[#FAF9F6] py-4 px-5 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] flex justify-between items-center shadow-md active:scale-[0.97] transition-all disabled:opacity-50"
           >
-            {saving ? "..." : "Serah Terima"}
+            <span>Serah Terima</span>
             <ChevronRight size={14} />
           </button>
+
         </div>
 
       </main>
