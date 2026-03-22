@@ -4,272 +4,235 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import { RotateCcw, ChevronRight } from "lucide-react"
-import "leaflet/dist/leaflet.css"
+import 'mapbox-gl/dist/mapbox-gl.css'
 
-// 🔥 Dynamic Leaflet Wrapper (STABLE)
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+
+const DEFAULT_COORDS = {
+  lat: -6.2,
+  lng: 106.8
+}
+
 const MapWrapper = dynamic(
-  () => import("react-leaflet").then((mod) => {
-    const { MapContainer, TileLayer, Marker, useMap } = mod
+  () =>
+  import("react-map-gl" as any).then((mod: any) => {
+  const { Map, Marker } = mod
 
-    const L = require("leaflet")
+    return function MapboxComponent({ coords }: any) {
 
-    // 🔥 Fix marker icon
-    delete L.Icon.Default.prototype._getIconUrl
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    })
+      if (!MAPBOX_TOKEN) {
+        return (
+          <div className="flex items-center justify-center h-full text-xs text-red-500">
+            Token Map tidak tersedia
+          </div>
+        )
+      }
 
-    function Recenter({ lat, lng }: { lat: number; lng: number }) {
-      const map = useMap()
-      useEffect(() => {
-        map.setView([lat, lng])
-      }, [lat, lng, map])
-      return null
-    }
-
-    return function LeafletMap({ coords }: any) {
       return (
-        <MapContainer
-          center={[coords.lat, coords.lng]}
-          zoom={16}
-          style={{ height: "100%", width: "100%" }}
+        <Map
+          key={`${coords.lat}-${coords.lng}`}
+          mapboxAccessToken={MAPBOX_TOKEN}
+          initialViewState={{
+            longitude: coords.lng,
+            latitude: coords.lat,
+            zoom: 16
+          }}
+          mapStyle="mapbox://styles/mapbox/light-v11"
+          style={{ width: '100%', height: '100%' }}
         >
-          <TileLayer
-            attribution="© OpenStreetMap"
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <Marker position={[coords.lat, coords.lng]} />
-          <Recenter lat={coords.lat} lng={coords.lng} />
-        </MapContainer>
+          <Marker longitude={coords.lng} latitude={coords.lat} anchor="center">
+            <div className="relative flex items-center justify-center">
+              <div className="w-8 h-8 bg-black/10 rounded-full animate-ping absolute" />
+              <div className="w-4 h-4 bg-black rounded-full border-2 border-white shadow-lg z-10" />
+            </div>
+          </Marker>
+        </Map>
       )
     }
   }),
   {
     ssr: false,
     loading: () => (
-      <div className="h-full flex items-center justify-center text-gray-300">
-        Membuka peta...
+      <div className="h-full flex items-center justify-center bg-zinc-50 text-[10px] font-mono text-zinc-400 tracking-widest uppercase">
+        Inisialisasi Peta...
       </div>
     )
   }
 )
 
-export default function LocationPage(){
-
+export default function LocationPage() {
   const params = useParams()
   const router = useRouter()
   const id = params.id as string
 
-  const [coords,setCoords] = useState<{lat:number,lng:number,accuracy:number} | null>(null)
-  const [loading,setLoading] = useState(true)
-  const [error,setError] = useState(false)
+  const [coords, setCoords] = useState(DEFAULT_COORDS)
+  const [realCoords, setRealCoords] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
-  useEffect(()=>{
+  useEffect(() => {
     getLocation()
-  },[])
+  }, [])
 
-  // 🔥 GPS FUNCTION (ANTI STUCK VERSION)
-  function getLocation(){
-
-    console.log("📡 Checking GPS...")
-
+  function getLocation() {
     setLoading(true)
     setError(false)
 
     if (!navigator.geolocation) {
-      console.error("❌ Geolocation not supported")
       setError(true)
       setLoading(false)
       return
     }
 
-    let resolved = false
+    let finished = false
 
-    const fallback = setTimeout(() => {
-      if (!resolved) {
-        console.warn("⚠️ GPS fallback triggered")
+    const timeout = setTimeout(() => {
+      if (!finished) {
         setError(true)
         setLoading(false)
       }
-    }, 12000)
+    }, 10000)
 
     navigator.geolocation.getCurrentPosition(
-      (pos)=>{
-        resolved = true
-        clearTimeout(fallback)
+      (pos) => {
+        finished = true
+        clearTimeout(timeout)
 
-        console.log("📍 GPS Success:", pos.coords)
-
-        setCoords({
+        const newCoords = {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
           accuracy: pos.coords.accuracy
-        })
+        }
 
+        setCoords(newCoords)
+        setRealCoords(newCoords)
         setLoading(false)
       },
-      (err)=>{
-        resolved = true
-        clearTimeout(fallback)
-
-        console.error("❌ GPS Error:", err)
+      () => {
+        finished = true
+        clearTimeout(timeout)
 
         setError(true)
         setLoading(false)
       },
       {
         enableHighAccuracy: true,
-        timeout: 15000,
+        timeout: 8000,
         maximumAge: 0
       }
     )
   }
 
-  async function submitLocation(){
-
-    if(coords){
-      try{
-        await fetch("/api/handover/receive/location",{
-          method:"POST",
-          headers:{
-            "Content-Type":"application/json"
-          },
-          body: JSON.stringify({
-            handover_id: id,
-            gps_lat: coords.lat,
-            gps_lng: coords.lng,
-            gps_accuracy: coords.accuracy
-          })
-        })
-      }catch(err){
-        console.log(err)
-      }
+  // 🔥 INI YANG KITA TAMBAH
+  async function submitLocation() {
+    if (!coords) {
+      alert("Lokasi belum tersedia")
+      return
     }
 
-    router.replace(`/handover/${id}/success`)
-  }
+    try {
+      const res = await fetch("/api/receive/location/confirm", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          handover_id: id,
+          lat: coords.lat,
+          lng: coords.lng,
+          accuracy: coords.accuracy
+        })
+      })
 
-  function skip(){
-    router.replace(`/handover/${id}/success`)
+      const data = await res.json()
+
+      if (!res.ok) {
+        alert(data.error || "Gagal menyimpan lokasi")
+        return
+      }
+
+      if (!data.isValid) {
+        alert(`Lokasi di luar area (${data.distance}m)`)
+        return
+      }
+
+      alert("Lokasi berhasil divalidasi")
+
+      router.replace(`/handover/${id}/success`)
+
+    } catch (err) {
+      alert("Terjadi kesalahan")
+    }
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white max-w-md mx-auto border-x">
+    <div className="flex flex-col h-screen bg-white max-w-md mx-auto border-x border-zinc-100 font-sans text-zinc-900">
 
-      {/* HEADER */}
-      <div className="p-4 border-b">
+      <div className="p-6 border-b border-zinc-100">
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-[10px] font-bold tracking-[0.2em] text-zinc-300 uppercase">
+            Sistem / GPS / V.03
+          </span>
+          <div className="flex items-center gap-2">
+            <span className={`w-1.5 h-1.5 rounded-full ${
+              loading ? 'bg-zinc-200 animate-pulse' :
+              realCoords ? 'bg-black' :
+              'bg-red-500'
+            }`} />
+            <span className="text-[10px] font-bold uppercase tracking-widest">
+              {loading ? 'Mencari' : realCoords ? 'Terkunci' : 'Default'}
+            </span>
+          </div>
+        </div>
+        <h1 className="text-2xl font-light tracking-tight italic uppercase">
+          Validasi Lokasi
+        </h1>
+      </div>
 
-  <div className="flex justify-between items-center mb-2">
-
-    <span className="text-xs uppercase text-gray-400">
-      Step 02/02
-    </span>
-
-    {/* 🔥 GPS STATUS */}
-    <span className="text-xs font-bold flex items-center gap-1">
-
-      {loading && (
-        <>
-          <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
-          PENCARIAN SIGNAL GPS
-        </>
-      )}
-
-      {!loading && coords && (
-        <>
-          <span className="w-2 h-2 bg-green-600 rounded-full"></span>
-          GPS DIKUNCI
-        </>
-      )}
-
-      {!loading && error && (
-        <>
-          <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-          PENCARIAN GPS GAGAL
-        </>
-      )}
-
-    </span>
-
-  </div>
-
-  <h1 className="text-xl font-bold">
-    Konfirmasi Lokasi
-  </h1>
-
-</div>
-
-      {/* MAP */}
-      <div className="flex-1 relative bg-gray-50">
-
-        {coords && !loading && (
-          <MapWrapper coords={coords} />
-        )}
+      <div className="flex-1 relative bg-zinc-50 overflow-hidden">
+        <MapWrapper coords={coords} />
 
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
-            <div className="flex flex-col items-center gap-2">
-              <RotateCcw className="animate-spin" size={24} />
-              Mendeteksi lokasi (maks 12 detik)...
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <RotateCcw className="animate-spin" size={20} />
+              <span className="text-[10px] tracking-[0.3em] uppercase text-zinc-400">
+                Mengunci Sinyal...
+              </span>
             </div>
           </div>
         )}
-
-        {error && !loading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-red-400 text-sm text-center p-6">
-            GPS tidak tersedia / izin ditolak
-            <button
-              onClick={getLocation}
-              className="mt-4 underline"
-            >
-              Coba Lagi
-            </button>
-          </div>
-        )}
-
       </div>
 
-      {/* INFO */}
-      {coords && (
-        <div className="p-4 text-sm border-t space-y-1">
-          <div>Lat: {coords.lat.toFixed(6)}</div>
-          <div>Lng: {coords.lng.toFixed(6)}</div>
-          <div className="text-xs text-gray-400">
-            Akurasi ±{Math.round(coords.accuracy)} meter
-          </div>
-        </div>
-      )}
+      <div className="px-6 py-3 border-y border-zinc-100 bg-zinc-50/50 flex justify-between text-[9px] font-mono text-zinc-500 uppercase">
+        <span>Lat // {coords.lat.toFixed(6)}</span>
+        <span>Lng // {coords.lng.toFixed(6)}</span>
+      </div>
 
-      {/* ACTION */}
-      <div className="p-4 space-y-3">
-
-        <button
-          onClick={submitLocation}
-          className="w-full bg-black text-white py-4 flex justify-between items-center px-4"
+      <div className="p-6 space-y-4">
+        <button 
+          onClick={submitLocation}   // 🔥 INI SAJA YANG BERUBAH
+          className="w-full bg-black text-white py-5 text-xs font-bold tracking-[0.2em] uppercase flex justify-between items-center px-6 active:scale-[0.98]"
         >
-          GUNAKAN LOKASI INI
-          <ChevronRight size={20} />
+          Konfirmasi Lokasi
+          <ChevronRight size={16} />
         </button>
 
         <button
           onClick={getLocation}
-          className="w-full border-2 border-black py-3 flex justify-center items-center gap-2"
+          className="w-full border border-zinc-200 py-4 text-[10px] font-bold tracking-[0.2em] uppercase flex justify-center gap-2 hover:bg-zinc-50"
         >
-          <RotateCcw size={18} />
-          COBA CARI SIGNAL GPS
+          <RotateCcw size={12} />
+          Perbarui Sinyal
         </button>
 
         <button
-          onClick={skip}
-          className="w-full text-sm text-gray-400 underline"
+          onClick={() => router.replace(`/handover/${id}/success`)}
+          className="w-full text-[9px] text-zinc-400 uppercase tracking-[0.3em]"
         >
-          Lewati (Lanjutkan tanpa bukti lokasi)
+          Lewati Validasi
         </button>
-
       </div>
-
     </div>
   )
 }
