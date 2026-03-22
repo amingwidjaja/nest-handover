@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
-import { RotateCcw, ChevronRight, MapPin } from "lucide-react"
+import { RotateCcw, ChevronRight, MapPin, SignalHigh } from "lucide-react"
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -28,7 +28,7 @@ const MapWrapper = dynamic<any>(
       return function MapboxComponent({ coords }: { coords: Coords }) {
         if (!MAPBOX_TOKEN) {
           return (
-            <div className="flex items-center justify-center h-full text-[10px] font-mono text-red-800 uppercase tracking-widest px-10 text-center font-bold bg-[#F4F1EA]">
+            <div className="flex items-center justify-center h-full text-[10px] font-mono text-red-800 uppercase tracking-widest px-10 text-center font-bold bg-[var(--paper)]">
               SISTEM: TOKEN TIDAK AKTIF
             </div>
           )
@@ -48,8 +48,8 @@ const MapWrapper = dynamic<any>(
           >
             <Marker longitude={coords.lng} latitude={coords.lat} anchor="center">
               <div className="relative flex items-center justify-center">
-                <div className="w-10 h-10 bg-[#7F5539]/20 rounded-full animate-ping absolute" />
-                <div className="w-5 h-5 bg-[#7F5539] rounded-full border-2 border-[#F4F1EA] shadow-xl z-10" />
+                <div className="w-10 h-10 bg-[#3E2723]/20 rounded-full animate-ping absolute" />
+                <div className="w-5 h-5 bg-[#3E2723] rounded-full border-2 border-[var(--paper)] shadow-xl z-10" />
               </div>
             </Marker>
           </Map>
@@ -59,7 +59,7 @@ const MapWrapper = dynamic<any>(
   {
     ssr: false,
     loading: () => (
-      <div className="h-full flex items-center justify-center bg-[#F4F1EA] text-[10px] font-mono text-[#9C6644] tracking-[0.2em] uppercase font-bold">
+      <div className="h-full flex items-center justify-center bg-[var(--paper)] text-[10px] font-mono text-[#A1887F] tracking-[0.2em] uppercase font-bold">
         MENYIAPKAN RADAR...
       </div>
     )
@@ -94,7 +94,7 @@ export default function LocationPage() {
       return
     }
 
-    // iPhone sering butuh pancingan watchPosition
+    // Menggunakan watchPosition untuk monitoring aktif
     watchId.current = navigator.geolocation.watchPosition(
       (pos) => {
         const newCoords = {
@@ -116,7 +116,7 @@ export default function LocationPage() {
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 15000,
         maximumAge: 0
       }
     )
@@ -145,59 +145,59 @@ export default function LocationPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#F4F1EA] max-w-md mx-auto border-x border-[#DDB892] font-sans text-[#432818] antialiased">
+    <div className="flex flex-col h-screen bg-[var(--paper)] max-w-md mx-auto border-x border-[var(--line)] font-sans text-[var(--ink)] antialiased">
       
-      {/* HEADER - MUJI DARK BROWN */}
-      <div className="p-6 border-b-2 border-[#7F5539] bg-white">
+      {/* HEADER - MUJI STYLE */}
+      <div className="p-6 border-b border-[var(--line)] bg-white">
         <div className="flex justify-between items-center mb-4">
-          <span className="text-[10px] font-black tracking-[0.2em] text-[#9C6644] uppercase">
-            NEST / UNIT / MUJI-V1
+          <span className="text-[10px] font-bold tracking-[0.2em] text-[#A1887F] uppercase">
+            NEST / UNIT / GPS-MUJI
           </span>
           <div className="flex items-center gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full ${
-              loading ? 'bg-[#DDB892] animate-pulse' :
-              realCoords ? (coords.accuracy && coords.accuracy < 50 ? 'bg-green-700' : 'bg-orange-600') :
-              'bg-red-700'
+            <span className={`w-2 h-2 rounded-full ${
+              loading ? 'bg-orange-300 animate-pulse' :
+              realCoords ? 'bg-green-600' :
+              'bg-red-600'
             }`} />
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#7F5539]">
-              {loading ? 'PENCARIAN' : realCoords ? 'STABIL' : 'OFFLINE'}
+            <span className="text-[10px] font-bold uppercase tracking-widest">
+              {loading ? 'PENCARIAN' : realCoords ? 'TERKUNCI' : 'OFFLINE'}
             </span>
           </div>
         </div>
-        <h1 className="text-2xl font-black tracking-tighter uppercase italic leading-none text-[#7F5539]">
+        <h1 className="text-2xl font-light tracking-tight uppercase italic leading-none text-[#3E2723]">
           Validasi Lokasi
         </h1>
       </div>
 
       {/* MAP AREA */}
-      <div className="flex-1 relative bg-[#EDEADF] overflow-hidden">
+      <div className="flex-1 relative bg-[var(--line)] overflow-hidden">
         <MapWrapper coords={coords} />
 
         {/* LOADING & ERROR OVERLAY */}
         {(loading || (errorMsg && !realCoords)) && (
-          <div className="absolute inset-0 bg-[#F4F1EA]/90 z-20 flex items-center justify-center p-10 text-center">
-            <div className="flex flex-col items-center gap-5">
+          <div className="absolute inset-0 bg-[var(--paper)]/90 z-20 flex items-center justify-center p-10 text-center">
+            <div className="flex flex-col items-center gap-6">
                {loading ? (
                  <>
-                  <div className="w-12 h-12 border-4 border-[#DDB892] border-t-[#7F5539] rounded-full animate-spin"></div>
+                  <div className="w-10 h-10 border-2 border-[var(--line)] border-t-[#3E2723] rounded-full animate-spin"></div>
                   <div className="space-y-1">
-                    <span className="block text-[10px] tracking-[0.4em] uppercase text-[#7F5539] font-black">
-                      MENGUNCI SINYAL...
+                    <span className="block text-[10px] tracking-[0.4em] uppercase text-[#3E2723] font-bold">
+                      MENGHUBUNGKAN...
                     </span>
-                    <span className="block text-[8px] text-[#9C6644] uppercase tracking-widest">
-                      Gerakkan HP sedikit jika macet
+                    <span className="block text-[8px] text-[#A1887F] uppercase tracking-widest">
+                      Pastikan GPS Aktif
                     </span>
                   </div>
                  </>
                ) : (
                  <>
-                  <MapPin className="text-red-700 mb-2" size={32} />
-                  <span className="text-xs font-black text-red-800 tracking-tight uppercase px-4 py-2 bg-red-50">{errorMsg}</span>
+                  <SignalHigh className="text-red-800 mb-2 opacity-30" size={40} />
+                  <span className="text-[10px] font-bold text-red-800 tracking-widest uppercase px-4 py-2 border border-red-200">{errorMsg}</span>
                   <button 
-                    onClick={() => { window.location.reload() }} 
-                    className="px-8 py-4 bg-[#7F5539] text-[#F4F1EA] text-[10px] font-black uppercase tracking-[0.3em] shadow-lg active:scale-95"
+                    onClick={startTracking} 
+                    className="px-8 py-4 bg-[#3E2723] text-[var(--paper)] text-[10px] font-bold uppercase tracking-[0.3em] shadow-sm active:scale-95 transition-transform"
                   >
-                    AKTIFKAN GPS MANUAL
+                    AKTIFKAN SENSOR
                   </button>
                  </>
                )}
@@ -206,16 +206,16 @@ export default function LocationPage() {
         )}
       </div>
 
-      {/* DATA STRIP - MUJI DARK BLOCKING */}
-      <div className="px-6 py-5 border-y-2 border-[#7F5539] bg-[#7F5539] flex justify-between text-[10px] font-mono text-[#EDEADF] uppercase tracking-widest">
+      {/* DATA STRIP - MUJI BLOCKING */}
+      <div className="px-6 py-5 border-y border-[var(--line)] bg-[#3E2723] flex justify-between text-[10px] font-mono text-[var(--paper)] uppercase tracking-widest">
         <div className="flex flex-col">
-          <span className="text-[#DDB892] text-[8px] mb-1 font-bold">LATITUDE</span>
-          <span className="font-bold text-white text-xs">{coords.lat.toFixed(6)}</span>
+          <span className="text-[#A1887F] text-[8px] mb-1 font-bold">LATITUDE</span>
+          <span className="font-bold text-white tracking-tighter text-xs">{coords.lat.toFixed(6)}</span>
         </div>
         <div className="flex flex-col text-right">
-          <span className="text-[#DDB892] text-[8px] mb-1 font-bold">AKURASI</span>
+          <span className="text-[#A1887F] text-[8px] mb-1 font-bold">AKURASI</span>
           <span className={`font-bold text-xs ${coords.accuracy && coords.accuracy < 50 ? 'text-green-300' : 'text-orange-300'}`}>
-            ± {Math.round(coords.accuracy || 0)} METER
+            ± {Math.round(coords.accuracy || 0)} M
           </span>
         </div>
       </div>
@@ -225,17 +225,17 @@ export default function LocationPage() {
         <button 
           onClick={submitLocation}
           disabled={loading || !realCoords}
-          className="w-full bg-[#7F5539] text-[#F4F1EA] py-6 text-sm font-black tracking-[0.3em] uppercase flex justify-between items-center px-8 active:scale-[0.97] transition-all disabled:bg-[#EDEADF] disabled:text-[#DDB892]"
+          className="w-full bg-[#3E2723] text-[var(--paper)] py-6 text-xs font-bold tracking-[0.3em] uppercase flex justify-between items-center px-8 active:scale-[0.98] transition-all disabled:bg-[var(--line)] disabled:text-[#A1887F]"
         >
-          {loading ? 'MENUNGGU SATELIT...' : 'KONFIRMASI LOKASI'}
-          {!loading && <ChevronRight size={20} strokeWidth={3} />}
+          {loading ? 'MENUNGGU SINYAL...' : 'KONFIRMASI LOKASI'}
+          {!loading && <ChevronRight size={18} strokeWidth={2} />}
         </button>
 
         <button
           onClick={() => router.replace(`/handover/${id}/success`)}
-          className="w-full text-[10px] text-[#9C6644] border border-[#DDB892] py-3 uppercase tracking-[0.3em] font-bold text-center"
+          className="w-full text-[9px] text-[#A1887F] border border-[var(--line)] py-3 uppercase tracking-[0.3em] font-bold text-center"
         >
-          LEWATI VALIDASI
+          BYPASS VALIDASI
         </button>
       </div>
     </div>
