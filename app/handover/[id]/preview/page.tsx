@@ -25,7 +25,7 @@ export default function PreviewPage(){
 
     setPhoto(stored)
 
-  },[])
+  },[id, router])
 
   function handleRetake(){
     router.replace(`/handover/${id}`)
@@ -39,13 +39,16 @@ export default function PreviewPage(){
 
     try{
 
-      // convert base64 → image
+      console.log("STEP 1: START PROCESS")
+
       const img = document.createElement("img")
       img.src = photo
 
       await new Promise<void>((resolve)=>{
         img.onload = () => resolve()
       })
+
+      console.log("STEP 2: IMAGE LOADED")
 
       const size = Math.min(img.width,img.height)
       const sx = (img.width - size)/2
@@ -81,12 +84,15 @@ export default function PreviewPage(){
         return
       }
 
+      console.log("STEP 3: IMAGE READY")
+
       const finalFile = new File([blob],"photo.jpg",{ type:"image/jpeg" })
 
-      // GPS
       const pos = await new Promise<GeolocationPosition>((resolve,reject)=>{
         navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true})
       })
+
+      console.log("STEP 4: GPS OK")
 
       const meta = JSON.parse(
         sessionStorage.getItem(`handover_${id}_meta`) || "{}"
@@ -111,14 +117,29 @@ export default function PreviewPage(){
         form.append("gps_accuracy", String(pos.coords.accuracy))
       }
 
+      console.log("STEP 5: BEFORE FETCH")
+
       const res = await fetch("/api/handover/receive",{
         method:"POST",
-        body:form
+        body:form,
       })
 
-      const data = await res.json()
+      console.log("STEP 6: FETCH SENT")
+
+      const text = await res.text()
+
+      console.log("STEP 7: RESPONSE TEXT", text)
+
+      let data: any = {}
+      try{
+        data = JSON.parse(text)
+      }catch{
+        console.log("RESPONSE NOT JSON")
+      }
 
       if(data.success){
+
+        console.log("STEP 8: SUCCESS")
 
         sessionStorage.removeItem(`handover_${id}_photo`)
         sessionStorage.removeItem(`handover_${id}_meta`)
@@ -130,7 +151,10 @@ export default function PreviewPage(){
         setSaving(false)
       }
 
-    }catch{
+    }catch(err){
+
+      console.log("ERROR:", err)
+
       alert("Error koneksi")
       setSaving(false)
     }
