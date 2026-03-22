@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Camera, Home, ChevronRight, ChevronLeft } from "lucide-react"
 import imageCompression from "browser-image-compression"
@@ -8,6 +8,16 @@ import Link from "next/link"
 
 export default function PackagePage() {
   const router = useRouter()
+
+// FORCE DISABLE ZOOM (Pemicu Utama Safari)
+  useEffect(() => {
+    // Cari meta viewport yang sudah ada
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (meta) {
+      // Tambahkan user-scalable=no secara paksa
+      meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0');
+    }
+  }, []);
 
   // Ditambah jadi 3 baris sesuai request
   const [items, setItems] = useState(["", "", ""])
