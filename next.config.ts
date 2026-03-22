@@ -1,7 +1,7 @@
-import type { NextConfig } from "next";
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Ini penting agar Mapbox diproses dengan benar oleh Next.js
+  transpilePackages: ['react-map-gl', 'mapbox-gl'],
+}
 
-const nextConfig: NextConfig = {
-  /* config options here */
-};
-
-export default nextConfig;
+module.exports = nextConfig

@@ -6,6 +6,7 @@ import dynamic from "next/dynamic"
 import { RotateCcw, ChevronRight } from "lucide-react"
 import 'mapbox-gl/dist/mapbox-gl.css'
 
+// Mengambil token dari environment variable Vercel
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
 type Coords = {
@@ -20,43 +21,43 @@ const DEFAULT_COORDS: Coords = {
   accuracy: 0
 }
 
-const MapWrapper = dynamic(
+// 🔥 FIXED DYNAMIC IMPORT (Vercel Build Safe)
+const MapWrapper = dynamic<any>(
   () =>
-  import("react-map-gl" as any).then((mod: any) => {
-  const { Map, Marker } = mod
+    import("react-map-gl").then((mod) => {
+      const { Map, Marker } = mod
 
-    return function MapboxComponent({ coords }: any) {
+      return function MapboxComponent({ coords }: { coords: Coords }) {
+        if (!MAPBOX_TOKEN) {
+          return (
+            <div className="flex items-center justify-center h-full text-[10px] font-mono text-red-500 uppercase tracking-widest px-10 text-center">
+              Token Mapbox tidak ditemukan di Environment Variables
+            </div>
+          )
+        }
 
-      if (!MAPBOX_TOKEN) {
         return (
-          <div className="flex items-center justify-center h-full text-xs text-red-500">
-            Token Map tidak tersedia
-          </div>
+          <Map
+            key={`${coords.lat}-${coords.lng}`}
+            mapboxAccessToken={MAPBOX_TOKEN}
+            initialViewState={{
+              longitude: coords.lng,
+              latitude: coords.lat,
+              zoom: 16
+            }}
+            mapStyle="mapbox://styles/mapbox/light-v11"
+            style={{ width: '100%', height: '100%' }}
+          >
+            <Marker longitude={coords.lng} latitude={coords.lat} anchor="center">
+              <div className="relative flex items-center justify-center">
+                <div className="w-8 h-8 bg-black/10 rounded-full animate-ping absolute" />
+                <div className="w-4 h-4 bg-black rounded-full border-2 border-white shadow-lg z-10" />
+              </div>
+            </Marker>
+          </Map>
         )
       }
-
-      return (
-        <Map
-          key={`${coords.lat}-${coords.lng}`}
-          mapboxAccessToken={MAPBOX_TOKEN}
-          initialViewState={{
-            longitude: coords.lng,
-            latitude: coords.lat,
-            zoom: 16
-          }}
-          mapStyle="mapbox://styles/mapbox/light-v11"
-          style={{ width: '100%', height: '100%' }}
-        >
-          <Marker longitude={coords.lng} latitude={coords.lat} anchor="center">
-            <div className="relative flex items-center justify-center">
-              <div className="w-8 h-8 bg-black/10 rounded-full animate-ping absolute" />
-              <div className="w-4 h-4 bg-black rounded-full border-2 border-white shadow-lg z-10" />
-            </div>
-          </Marker>
-        </Map>
-      )
-    }
-  }),
+    }),
   {
     ssr: false,
     loading: () => (
@@ -73,7 +74,7 @@ export default function LocationPage() {
   const id = params.id as string
 
   const [coords, setCoords] = useState<Coords>(DEFAULT_COORDS)
-  const [realCoords, setRealCoords] = useState<any>(null)
+  const [realCoords, setRealCoords] = useState<Coords | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
@@ -85,7 +86,7 @@ export default function LocationPage() {
     setLoading(true)
     setError(false)
 
-    if (!navigator.geolocation) {
+    if (typeof window !== "undefined" && !navigator.geolocation) {
       setError(true)
       setLoading(false)
       return
@@ -98,7 +99,7 @@ export default function LocationPage() {
         setError(true)
         setLoading(false)
       }
-    }, 10000)
+    }, 12000)
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -118,31 +119,27 @@ export default function LocationPage() {
       () => {
         finished = true
         clearTimeout(timeout)
-
         setError(true)
         setLoading(false)
       },
       {
         enableHighAccuracy: true,
-        timeout: 8000,
+        timeout: 10000,
         maximumAge: 0
       }
     )
   }
 
-  // 🔥 INI YANG KITA TAMBAH
   async function submitLocation() {
-    if (!coords) {
-      alert("Lokasi belum tersedia")
+    if (!realCoords) {
+      alert("Sinyal GPS belum terkunci. Silakan coba lagi.")
       return
     }
 
     try {
       const res = await fetch("/api/receive/location/confirm", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           handover_id: id,
           lat: coords.lat,
@@ -163,22 +160,21 @@ export default function LocationPage() {
         return
       }
 
-      alert("Lokasi berhasil divalidasi")
-
       router.replace(`/handover/${id}/success`)
 
     } catch (err) {
-      alert("Terjadi kesalahan")
+      alert("Terjadi kesalahan koneksi server.")
     }
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white max-w-md mx-auto border-x border-zinc-100 font-sans text-zinc-900">
+    <div className="flex flex-col h-screen bg-white max-w-md mx-auto border-x border-zinc-100 font-sans text-zinc-900 antialiased">
 
+      {/* HEADER */}
       <div className="p-6 border-b border-zinc-100">
         <div className="flex justify-between items-center mb-4">
           <span className="text-[10px] font-bold tracking-[0.2em] text-zinc-300 uppercase">
-            Sistem / GPS / V.03
+            System / GPS / V.03
           </span>
           <div className="flex items-center gap-2">
             <span className={`w-1.5 h-1.5 rounded-full ${
@@ -187,61 +183,62 @@ export default function LocationPage() {
               'bg-red-500'
             }`} />
             <span className="text-[10px] font-bold uppercase tracking-widest">
-              {loading ? 'Mencari' : realCoords ? 'Terkunci' : 'Default'}
+              {loading ? 'Locating' : realCoords ? 'Locked' : 'Failed'}
             </span>
           </div>
         </div>
-        <h1 className="text-2xl font-light tracking-tight italic uppercase">
-          Validasi Lokasi
+        <h1 className="text-2xl font-light tracking-tight italic uppercase leading-none">
+          Confirm Location
         </h1>
       </div>
 
+      {/* MAP AREA */}
       <div className="flex-1 relative bg-zinc-50 overflow-hidden">
         <MapWrapper coords={coords} />
 
         {loading && (
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
-              <RotateCcw className="animate-spin" size={20} />
-              <span className="text-[10px] tracking-[0.3em] uppercase text-zinc-400">
-                Mengunci Sinyal...
+              <RotateCcw className="animate-spin text-zinc-900" size={20} strokeWidth={1.5} />
+              <span className="text-[10px] tracking-[0.3em] uppercase text-zinc-400 font-medium">
+                Syncing Satellite...
               </span>
             </div>
           </div>
         )}
       </div>
 
-      <div className="px-6 py-3 border-y border-zinc-100 bg-zinc-50/50 flex justify-between text-[9px] font-mono text-zinc-500 uppercase">
-        <span>Lat // {coords.lat.toFixed(6)}</span>
-        <span>Lng // {coords.lng.toFixed(6)}</span>
+      {/* DATA FOOTER */}
+      <div className="px-6 py-3 border-y border-zinc-100 bg-zinc-50/50 flex justify-between text-[9px] font-mono text-zinc-400 uppercase tracking-tighter">
+        <span>LAT // {coords.lat.toFixed(6)}</span>
+        <span>LNG // {coords.lng.toFixed(6)}</span>
       </div>
 
-      <div className="p-6 space-y-4">
+      {/* ACTIONS */}
+      <div className="p-6 space-y-4 bg-white">
         <button 
-          onClick={submitLocation}   // 🔥 INI SAJA YANG BERUBAH
-          className="w-full bg-black text-white py-5 text-xs font-bold tracking-[0.2em] uppercase flex justify-between items-center px-6 active:scale-[0.98]"
+          onClick={submitLocation}
+          className="w-full bg-black text-white py-5 text-xs font-bold tracking-[0.2em] uppercase flex justify-between items-center px-6 active:scale-[0.98] transition-transform"
         >
-          Konfirmasi Lokasi
+          Authorize Location
           <ChevronRight size={16} />
         </button>
 
         <button
           onClick={getLocation}
-          className="w-full border border-zinc-200 py-4 text-[10px] font-bold tracking-[0.2em] uppercase flex justify-center gap-2 hover:bg-zinc-50"
+          className="w-full border border-zinc-200 py-4 text-[10px] font-bold tracking-[0.2em] uppercase flex justify-center gap-2 hover:bg-zinc-50 transition-colors"
         >
           <RotateCcw size={12} />
-          Perbarui Sinyal
+          Refresh Signal
         </button>
 
         <button
           onClick={() => router.replace(`/handover/${id}/success`)}
-          className="w-full text-[9px] text-zinc-400 uppercase tracking-[0.3em]"
+          className="w-full text-[9px] text-zinc-300 uppercase tracking-[0.3em] font-medium pt-2 text-center"
         >
-          Lewati Validasi
+          Skip Authentication
         </button>
       </div>
     </div>
   )
 }
-
-// trigger deploy
