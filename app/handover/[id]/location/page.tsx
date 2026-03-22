@@ -21,7 +21,7 @@ const DEFAULT_COORDS: Coords = {
   accuracy: 0
 }
 
-// 🔥 FIXED DYNAMIC IMPORT (Vercel Build Safe)
+// 🔥 KOMPONEN PETA (Disesuaikan untuk Vercel & Mapbox v2/v7)
 const MapWrapper = dynamic<any>(
   () =>
     import("react-map-gl").then((mod) => {
@@ -31,7 +31,7 @@ const MapWrapper = dynamic<any>(
         if (!MAPBOX_TOKEN) {
           return (
             <div className="flex items-center justify-center h-full text-[10px] font-mono text-red-500 uppercase tracking-widest px-10 text-center">
-              Token Mapbox tidak ditemukan di Environment Variables
+              Token Mapbox tidak ditemukan di sistem.
             </div>
           )
         }
@@ -62,7 +62,7 @@ const MapWrapper = dynamic<any>(
     ssr: false,
     loading: () => (
       <div className="h-full flex items-center justify-center bg-zinc-50 text-[10px] font-mono text-zinc-400 tracking-widest uppercase">
-        Inisialisasi Peta...
+        Memuat Sistem Peta...
       </div>
     )
   }
@@ -76,7 +76,7 @@ export default function LocationPage() {
   const [coords, setCoords] = useState<Coords>(DEFAULT_COORDS)
   const [realCoords, setRealCoords] = useState<Coords | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => {
     getLocation()
@@ -84,47 +84,38 @@ export default function LocationPage() {
 
   function getLocation() {
     setLoading(true)
-    setError(false)
+    setErrorMsg(null)
 
     if (typeof window !== "undefined" && !navigator.geolocation) {
-      setError(true)
+      setErrorMsg("Perangkat tidak mendukung GPS")
       setLoading(false)
       return
     }
 
-    let finished = false
-
-    const timeout = setTimeout(() => {
-      if (!finished) {
-        setError(true)
-        setLoading(false)
-      }
-    }, 12000)
-
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        finished = true
-        clearTimeout(timeout)
-
         const newCoords = {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
           accuracy: pos.coords.accuracy
         }
-
         setCoords(newCoords)
         setRealCoords(newCoords)
         setLoading(false)
       },
-      () => {
-        finished = true
-        clearTimeout(timeout)
-        setError(true)
+      (err) => {
         setLoading(false)
+        if (err.code === 1) {
+          setErrorMsg("Izin lokasi ditolak. Cek pengaturan privasi iPhone Anda.")
+        } else if (err.code === 2) {
+          setErrorMsg("Sinyal GPS hilang atau tidak tersedia.")
+        } else {
+          setErrorMsg("Gagal mengunci lokasi (Timeout).")
+        }
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 15000, // 15 detik untuk iPhone
         maximumAge: 0
       }
     )
@@ -132,7 +123,7 @@ export default function LocationPage() {
 
   async function submitLocation() {
     if (!realCoords) {
-      alert("Sinyal GPS belum terkunci. Silakan coba lagi.")
+      alert("Sinyal GPS belum terkunci sempurna.")
       return
     }
 
@@ -151,19 +142,19 @@ export default function LocationPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        alert(data.error || "Gagal menyimpan lokasi")
+        alert(data.error || "Gagal memproses data lokasi.")
         return
       }
 
       if (!data.isValid) {
-        alert(`Lokasi di luar area (${data.distance}m)`)
+        alert(`Lokasi di luar jangkauan area (${data.distance}m)`)
         return
       }
 
       router.replace(`/handover/${id}/success`)
 
     } catch (err) {
-      alert("Terjadi kesalahan koneksi server.")
+      alert("Gangguan koneksi ke server NEST.")
     }
   }
 
@@ -174,7 +165,7 @@ export default function LocationPage() {
       <div className="p-6 border-b border-zinc-100">
         <div className="flex justify-between items-center mb-4">
           <span className="text-[10px] font-bold tracking-[0.2em] text-zinc-300 uppercase">
-            System / GPS / V.03
+            Sistem / GPS / V.03
           </span>
           <div className="flex items-center gap-2">
             <span className={`w-1.5 h-1.5 rounded-full ${
@@ -183,12 +174,12 @@ export default function LocationPage() {
               'bg-red-500'
             }`} />
             <span className="text-[10px] font-bold uppercase tracking-widest">
-              {loading ? 'Locating' : realCoords ? 'Locked' : 'Failed'}
+              {loading ? 'Mencari' : realCoords ? 'Terkunci' : 'Gagal'}
             </span>
           </div>
         </div>
         <h1 className="text-2xl font-light tracking-tight italic uppercase leading-none">
-          Confirm Location
+          Konfirmasi Lokasi
         </h1>
       </div>
 
@@ -196,13 +187,24 @@ export default function LocationPage() {
       <div className="flex-1 relative bg-zinc-50 overflow-hidden">
         <MapWrapper coords={coords} />
 
-        {loading && (
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center">
+        {(loading || errorMsg) && (
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center p-10 text-center">
             <div className="flex flex-col items-center gap-3">
-              <RotateCcw className="animate-spin text-zinc-900" size={20} strokeWidth={1.5} />
-              <span className="text-[10px] tracking-[0.3em] uppercase text-zinc-400 font-medium">
-                Syncing Satellite...
-              </span>
+              {loading ? (
+                <>
+                  <RotateCcw className="animate-spin text-zinc-900" size={20} strokeWidth={1.5} />
+                  <span className="text-[10px] tracking-[0.3em] uppercase text-zinc-400 font-medium">
+                    Sinkronisasi Satelit...
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-xs font-medium text-red-500 mb-2">{errorMsg}</span>
+                  <button onClick={getLocation} className="text-[10px] font-bold border-b border-black pb-1 uppercase tracking-widest">
+                    Coba Lagi
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -218,9 +220,10 @@ export default function LocationPage() {
       <div className="p-6 space-y-4 bg-white">
         <button 
           onClick={submitLocation}
-          className="w-full bg-black text-white py-5 text-xs font-bold tracking-[0.2em] uppercase flex justify-between items-center px-6 active:scale-[0.98] transition-transform"
+          className="w-full bg-black text-white py-5 text-xs font-bold tracking-[0.2em] uppercase flex justify-between items-center px-6 active:scale-[0.98] transition-transform disabled:opacity-30"
+          disabled={loading || !!errorMsg}
         >
-          Authorize Location
+          Otorisasi Lokasi
           <ChevronRight size={16} />
         </button>
 
@@ -229,14 +232,14 @@ export default function LocationPage() {
           className="w-full border border-zinc-200 py-4 text-[10px] font-bold tracking-[0.2em] uppercase flex justify-center gap-2 hover:bg-zinc-50 transition-colors"
         >
           <RotateCcw size={12} />
-          Refresh Signal
+          Perbarui Sinyal
         </button>
 
         <button
           onClick={() => router.replace(`/handover/${id}/success`)}
           className="w-full text-[9px] text-zinc-300 uppercase tracking-[0.3em] font-medium pt-2 text-center"
         >
-          Skip Authentication
+          Lewati Validasi
         </button>
       </div>
     </div>
