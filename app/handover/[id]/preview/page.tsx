@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
 
@@ -12,6 +12,9 @@ export default function PreviewPage(){
 
   const [photo,setPhoto] = useState<string | null>(null)
   const [saving,setSaving] = useState(false)
+
+  // 🔥 GPS ready sebelum user klik confirm
+  const gpsRef = useRef<GeolocationPosition | null>(null)
 
   useEffect(()=>{
 
@@ -25,10 +28,26 @@ export default function PreviewPage(){
 
     setPhoto(stored)
 
+    // 🔥 ambil GPS di background
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        gpsRef.current = pos
+        console.log("[preview] GPS ready")
+      },
+      (err) => {
+        console.log("[preview] GPS error:", err.message)
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 8000
+      }
+    )
+
   },[id, router])
 
   function handleRetake(){
-    router.replace(`/handover/${id}`)
+    // 🔥 force reload biar camera UI muncul lagi
+    window.location.href = `/handover/${id}`
   }
 
   async function handleConfirm(){
@@ -86,17 +105,34 @@ export default function PreviewPage(){
 
       console.log("STEP 3: IMAGE READY")
 
-      const finalFile = new File([blob],"photo.jpg",{ type:"image/jpeg" })
+      // 🔥 pakai GPS dari mount
+      let pos = gpsRef.current
 
-      const pos = await new Promise<GeolocationPosition>((resolve,reject)=>{
-        navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true})
-      })
+      // 🔥 fallback kalau belum ready
+      if(!pos){
+        console.log("STEP 3b: GPS fallback")
+
+        try{
+          pos = await new Promise<GeolocationPosition>((resolve, reject)=>{
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 8000
+            })
+          })
+        }catch{
+          alert("GPS diperlukan untuk bukti foto")
+          setSaving(false)
+          return
+        }
+      }
 
       console.log("STEP 4: GPS OK")
 
       const meta = JSON.parse(
         sessionStorage.getItem(`handover_${id}_meta`) || "{}"
       )
+
+      const finalFile = new File([blob],"photo.jpg",{ type:"image/jpeg" })
 
       const form = new FormData()
 
@@ -128,14 +164,12 @@ export default function PreviewPage(){
 
       const text = await res.text()
 
-      console.log("STEP 7: RESPONSE TEXT", text)
+      console.log("STEP 7: RESPONSE", text)
 
       let data: any = {}
       try{
         data = JSON.parse(text)
-      }catch{
-        console.log("RESPONSE NOT JSON")
-      }
+      }catch{}
 
       if(data.success){
 
@@ -215,6 +249,5 @@ export default function PreviewPage(){
       </main>
 
     </div>
-
   )
 }
