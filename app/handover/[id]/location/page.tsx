@@ -6,7 +6,6 @@ import dynamic from "next/dynamic"
 import { RotateCcw, ChevronRight } from "lucide-react"
 import 'mapbox-gl/dist/mapbox-gl.css'
 
-// Mengambil token dari environment variable Vercel
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
 type Coords = {
@@ -21,7 +20,6 @@ const DEFAULT_COORDS: Coords = {
   accuracy: 0
 }
 
-// 🔥 KOMPONEN PETA (Disesuaikan untuk Vercel & Mapbox v2/v7)
 const MapWrapper = dynamic<any>(
   () =>
     import("react-map-gl").then((mod) => {
@@ -30,8 +28,8 @@ const MapWrapper = dynamic<any>(
       return function MapboxComponent({ coords }: { coords: Coords }) {
         if (!MAPBOX_TOKEN) {
           return (
-            <div className="flex items-center justify-center h-full text-[10px] font-mono text-red-500 uppercase tracking-widest px-10 text-center">
-              Token Mapbox tidak ditemukan di sistem.
+            <div className="flex items-center justify-center h-full text-[10px] font-mono text-red-600 uppercase tracking-widest px-10 text-center font-bold">
+              ERROR: TOKEN MAPBOX TIDAK TERDETEKSI
             </div>
           )
         }
@@ -50,8 +48,8 @@ const MapWrapper = dynamic<any>(
           >
             <Marker longitude={coords.lng} latitude={coords.lat} anchor="center">
               <div className="relative flex items-center justify-center">
-                <div className="w-8 h-8 bg-black/10 rounded-full animate-ping absolute" />
-                <div className="w-4 h-4 bg-black rounded-full border-2 border-white shadow-lg z-10" />
+                <div className="w-10 h-10 bg-black/20 rounded-full animate-ping absolute" />
+                <div className="w-5 h-5 bg-black rounded-full border-2 border-white shadow-xl z-10" />
               </div>
             </Marker>
           </Map>
@@ -61,8 +59,8 @@ const MapWrapper = dynamic<any>(
   {
     ssr: false,
     loading: () => (
-      <div className="h-full flex items-center justify-center bg-zinc-50 text-[10px] font-mono text-zinc-400 tracking-widest uppercase">
-        Memuat Sistem Peta...
+      <div className="h-full flex items-center justify-center bg-zinc-100 text-[10px] font-mono text-zinc-500 tracking-[0.2em] uppercase font-bold">
+        Memuat Engine Peta...
       </div>
     )
   }
@@ -87,11 +85,12 @@ export default function LocationPage() {
     setErrorMsg(null)
 
     if (typeof window !== "undefined" && !navigator.geolocation) {
-      setErrorMsg("Perangkat tidak mendukung GPS")
+      setErrorMsg("PERANGKAT TIDAK MENDUKUNG GPS")
       setLoading(false)
       return
     }
 
+    // iPhone tweak: kadangkala high accuracy butuh pancingan
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const newCoords = {
@@ -99,31 +98,31 @@ export default function LocationPage() {
           lng: pos.coords.longitude,
           accuracy: pos.coords.accuracy
         }
-        setCoords(newCoords)
-        setRealCoords(newCoords)
-        setLoading(false)
+        setCoords(newCoords);
+        setRealCoords(newCoords);
+        setLoading(false);
       },
       (err) => {
-        setLoading(false)
+        setLoading(false);
         if (err.code === 1) {
-          setErrorMsg("Izin lokasi ditolak. Cek pengaturan privasi iPhone Anda.")
+          setErrorMsg("IZIN LOKASI DITOLAK (CEK SETTING IPHONE)");
         } else if (err.code === 2) {
-          setErrorMsg("Sinyal GPS hilang atau tidak tersedia.")
+          setErrorMsg("SINYAL GPS TIDAK TERDETEKSI");
         } else {
-          setErrorMsg("Gagal mengunci lokasi (Timeout).")
+          setErrorMsg("TIMEOUT: GAGAL MENGUNCI POSISI");
         }
       },
       {
         enableHighAccuracy: true,
-        timeout: 15000, // 15 detik untuk iPhone
-        maximumAge: 0
+        timeout: 20000,      // Perpanjang ke 20 detik
+        maximumAge: 30000    // Gunakan cache jika tersedia dalam 30 detik terakhir
       }
     )
   }
 
   async function submitLocation() {
     if (!realCoords) {
-      alert("Sinyal GPS belum terkunci sempurna.")
+      alert("⚠️ Sinyal GPS belum terkunci.");
       return
     }
 
@@ -140,68 +139,64 @@ export default function LocationPage() {
       })
 
       const data = await res.json()
-
-      if (!res.ok) {
-        alert(data.error || "Gagal memproses data lokasi.")
-        return
-      }
-
-      if (!data.isValid) {
-        alert(`Lokasi di luar jangkauan area (${data.distance}m)`)
-        return
-      }
+      if (!res.ok) { alert(data.error || "Gagal memproses lokasi."); return; }
+      if (!data.isValid) { alert(`LOKASI DILUAR RADIUS (${data.distance}m)`); return; }
 
       router.replace(`/handover/${id}/success`)
-
     } catch (err) {
-      alert("Gangguan koneksi ke server NEST.")
+      alert("GANGGUAN KONEKSI SERVER NEST");
     }
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white max-w-md mx-auto border-x border-zinc-100 font-sans text-zinc-900 antialiased">
+    <div className="flex flex-col h-screen bg-white max-w-md mx-auto border-x border-zinc-200 font-sans text-zinc-900 antialiased">
 
-      {/* HEADER */}
-      <div className="p-6 border-b border-zinc-100">
+      {/* HEADER - High Contrast */}
+      <div className="p-6 border-b-2 border-zinc-900 bg-white">
         <div className="flex justify-between items-center mb-4">
-          <span className="text-[10px] font-bold tracking-[0.2em] text-zinc-300 uppercase">
-            Sistem / GPS / V.03
+          <span className="text-[10px] font-black tracking-[0.2em] text-zinc-500 uppercase">
+            NEST / UNIT / GPS-V3
           </span>
           <div className="flex items-center gap-2">
-            <span className={`w-1.5 h-1.5 rounded-full ${
-              loading ? 'bg-zinc-200 animate-pulse' :
-              realCoords ? 'bg-black' :
-              'bg-red-500'
+            <span className={`w-2 h-2 rounded-full ${
+              loading ? 'bg-yellow-400 animate-pulse' :
+              realCoords ? 'bg-green-600' :
+              'bg-red-600'
             }`} />
-            <span className="text-[10px] font-bold uppercase tracking-widest">
-              {loading ? 'Mencari' : realCoords ? 'Terkunci' : 'Gagal'}
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-800">
+              {loading ? 'Searching' : realCoords ? 'Stable' : 'Offline'}
             </span>
           </div>
         </div>
-        <h1 className="text-2xl font-light tracking-tight italic uppercase leading-none">
-          Konfirmasi Lokasi
+        <h1 className="text-2xl font-black tracking-tighter uppercase leading-none">
+          Validasi Lokasi
         </h1>
       </div>
 
       {/* MAP AREA */}
-      <div className="flex-1 relative bg-zinc-50 overflow-hidden">
+      <div className="flex-1 relative bg-zinc-200 overflow-hidden">
         <MapWrapper coords={coords} />
 
         {(loading || errorMsg) && (
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center p-10 text-center">
-            <div className="flex flex-col items-center gap-3">
+          <div className="absolute inset-0 bg-white/90 backdrop-blur-md z-20 flex items-center justify-center p-10 text-center">
+            <div className="flex flex-col items-center gap-4">
               {loading ? (
                 <>
-                  <RotateCcw className="animate-spin text-zinc-900" size={20} strokeWidth={1.5} />
-                  <span className="text-[10px] tracking-[0.3em] uppercase text-zinc-400 font-medium">
-                    Sinkronisasi Satelit...
+                  <div className="w-12 h-1 bg-zinc-100 overflow-hidden relative">
+                    <div className="absolute inset-0 bg-black animate-[slide_1.5s_infinite]" style={{width: '30%'}}></div>
+                  </div>
+                  <span className="text-[10px] tracking-[0.4em] uppercase text-zinc-600 font-black">
+                    Menghubungkan ke Satelit...
                   </span>
                 </>
               ) : (
                 <>
-                  <span className="text-xs font-medium text-red-500 mb-2">{errorMsg}</span>
-                  <button onClick={getLocation} className="text-[10px] font-bold border-b border-black pb-1 uppercase tracking-widest">
-                    Coba Lagi
+                  <span className="text-xs font-bold text-red-600 mb-2 tracking-tight uppercase">{errorMsg}</span>
+                  <button 
+                    onClick={getLocation} 
+                    className="px-6 py-3 bg-black text-white text-[10px] font-black uppercase tracking-[0.2em]"
+                  >
+                    Refresh Sinyal
                   </button>
                 </>
               )}
@@ -210,38 +205,43 @@ export default function LocationPage() {
         )}
       </div>
 
-      {/* DATA FOOTER */}
-      <div className="px-6 py-3 border-y border-zinc-100 bg-zinc-50/50 flex justify-between text-[9px] font-mono text-zinc-400 uppercase tracking-tighter">
-        <span>LAT // {coords.lat.toFixed(6)}</span>
-        <span>LNG // {coords.lng.toFixed(6)}</span>
+      {/* DATA STRIP - High Contrast Mono */}
+      <div className="px-6 py-4 border-y-2 border-zinc-900 bg-zinc-900 flex justify-between text-[10px] font-mono text-zinc-300 uppercase tracking-widest">
+        <div className="flex flex-col">
+          <span className="text-zinc-500 text-[8px]">Latitude</span>
+          <span className="font-bold text-white">{coords.lat.toFixed(6)}</span>
+        </div>
+        <div className="flex flex-col text-right">
+          <span className="text-zinc-500 text-[8px]">Longitude</span>
+          <span className="font-bold text-white">{coords.lng.toFixed(6)}</span>
+        </div>
       </div>
 
       {/* ACTIONS */}
       <div className="p-6 space-y-4 bg-white">
         <button 
           onClick={submitLocation}
-          className="w-full bg-black text-white py-5 text-xs font-bold tracking-[0.2em] uppercase flex justify-between items-center px-6 active:scale-[0.98] transition-transform disabled:opacity-30"
+          className="w-full bg-black text-white py-6 text-sm font-black tracking-[0.3em] uppercase flex justify-between items-center px-8 active:scale-[0.97] transition-all disabled:opacity-20"
           disabled={loading || !!errorMsg}
         >
-          Otorisasi Lokasi
-          <ChevronRight size={16} />
-        </button>
-
-        <button
-          onClick={getLocation}
-          className="w-full border border-zinc-200 py-4 text-[10px] font-bold tracking-[0.2em] uppercase flex justify-center gap-2 hover:bg-zinc-50 transition-colors"
-        >
-          <RotateCcw size={12} />
-          Perbarui Sinyal
+          Konfirmasi Lokasi
+          <ChevronRight size={20} strokeWidth={3} />
         </button>
 
         <button
           onClick={() => router.replace(`/handover/${id}/success`)}
-          className="w-full text-[9px] text-zinc-300 uppercase tracking-[0.3em] font-medium pt-2 text-center"
+          className="w-full text-[10px] text-zinc-500 border border-zinc-200 py-3 uppercase tracking-[0.3em] font-black text-center"
         >
-          Lewati Validasi
+          Bypass Validasi
         </button>
       </div>
+
+      <style jsx>{`
+        @keyframes slide {
+          0% { left: -30%; }
+          100% { left: 130%; }
+        }
+      `}</style>
     </div>
   )
 }
