@@ -44,7 +44,7 @@ export default function SuccessPage(){
       <div className="flex justify-center pb-10">
 
         <Link
-          href="/log"
+          href="/dashboard"
           className="text-sm font-medium border border-[#3E2723] px-8 py-3 rounded-sm active:bg-[#3E2723] active:text-white transition"
         >
           Buka Log Book
