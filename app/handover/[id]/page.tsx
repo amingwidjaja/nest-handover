@@ -65,25 +65,45 @@ export default function HandoverPage() {
     }
   }
 
-  // convert ke base64 (untuk sessionStorage)
-  const reader = new FileReader()
+  const img = document.createElement("img")
+  img.src = URL.createObjectURL(file)
 
-  reader.onload = () => {
+  img.onload = () => {
+
+    const size = Math.min(img.width, img.height)
+    const sx = (img.width - size) / 2
+    const sy = (img.height - size) / 2
+
+    const MAX_SIZE = 1200
+    const targetSize = size > MAX_SIZE ? MAX_SIZE : size
+
+    const canvas = document.createElement("canvas")
+    canvas.width = targetSize
+    canvas.height = targetSize
+
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    ctx.drawImage(
+      img,
+      sx, sy, size, size,
+      0, 0, targetSize, targetSize
+    )
+
+    // 🔥 compress BEFORE storage
+    const base64 = canvas.toDataURL("image/jpeg", 0.8)
 
     const key = `handover_${id}_photo`
-    sessionStorage.setItem(key, reader.result as string)
+    sessionStorage.setItem(key, base64)
 
-    // simpan metadata tambahan
     sessionStorage.setItem(`handover_${id}_meta`, JSON.stringify({
       mode,
       delegateName,
       relation
     }))
 
-    router.push(`/handover/${id}/preview`)
+    router.replace(`/handover/${id}/preview`)
   }
-
-  reader.readAsDataURL(file)
 }
 
   // ===== STEP 2: PROCESS + UPLOAD =====
