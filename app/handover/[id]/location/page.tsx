@@ -8,9 +8,16 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
-const DEFAULT_COORDS = {
+type Coords = {
+  lat: number
+  lng: number
+  accuracy?: number
+}
+
+const DEFAULT_COORDS: Coords = {
   lat: -6.2,
-  lng: 106.8
+  lng: 106.8,
+  accuracy: 0
 }
 
 const MapWrapper = dynamic(
@@ -65,7 +72,7 @@ export default function LocationPage() {
   const router = useRouter()
   const id = params.id as string
 
-  const [coords, setCoords] = useState(DEFAULT_COORDS)
+  const [coords, setCoords] = useState<Coords>(DEFAULT_COORDS)
   const [realCoords, setRealCoords] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -140,7 +147,7 @@ export default function LocationPage() {
           handover_id: id,
           lat: coords.lat,
           lng: coords.lng,
-          accuracy: coords.accuracy
+          accuracy: coords.accuracy || 0
         })
       })
 
