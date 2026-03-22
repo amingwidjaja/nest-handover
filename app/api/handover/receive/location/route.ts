@@ -9,19 +9,12 @@ export async function POST(req: Request){
 
     const {
       handover_id,
-      receive_method,
-      receiver_type,
-      receiver_name,
-      receiver_relation,
-      photo_url
+      gps_lat,
+      gps_lng,
+      gps_accuracy
     } = body
 
-    if(
-      !handover_id ||
-      !photo_url ||
-      !receive_method ||
-      !receiver_type
-    ){
+    if(!handover_id){
       return NextResponse.json({
         success:false,
         error:"invalid payload"
@@ -32,17 +25,15 @@ export async function POST(req: Request){
 
     const { error } = await admin
       .from("receive_event")
-      .insert({
-        handover_id,
-        receive_method,
-        receiver_type,
-        receiver_name,
-        receiver_relation,
-        photo_url
+      .update({
+        gps_lat,
+        gps_lng,
+        gps_accuracy
       })
+      .eq("handover_id", handover_id)
 
     if(error){
-      console.log("INSERT ERROR:", error)
+      console.log(error)
       return NextResponse.json({
         success:false,
         error:error.message

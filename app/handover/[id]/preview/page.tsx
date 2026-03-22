@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
 import { createClient } from "@supabase/supabase-js"
@@ -19,8 +19,6 @@ export default function PreviewPage(){
   const [photo,setPhoto] = useState<string | null>(null)
   const [saving,setSaving] = useState(false)
 
-  const gpsRef = useRef<GeolocationPosition | null>(null)
-
   useEffect(()=>{
 
     const stored = sessionStorage.getItem(`handover_${id}_photo`)
@@ -31,12 +29,6 @@ export default function PreviewPage(){
     }
 
     setPhoto(stored)
-
-    navigator.geolocation.getCurrentPosition(
-      (pos)=> gpsRef.current = pos,
-      ()=>{},
-      { enableHighAccuracy:true, timeout:8000 }
-    )
 
   },[id, router])
 
@@ -84,7 +76,7 @@ export default function PreviewPage(){
       const file = new File([blob],"photo.jpg",{ type:"image/jpeg" })
 
       // =========================
-      // 2. Upload ke Supabase
+      // 2. Upload
       // =========================
       const path = `paket/public/handover/${id}/${Date.now()}.jpg`
 
@@ -108,26 +100,17 @@ export default function PreviewPage(){
       const photo_url = data.publicUrl
 
       // =========================
-      // 3. GPS
-      // =========================
-      let pos = gpsRef.current
-
-      if(!pos){
-        pos = await new Promise<GeolocationPosition>((resolve, reject)=>{
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy:true,
-            timeout:8000
-          })
-        })
-      }
-
-      // =========================
-      // 4. Kirim JSON ke API
+      // 3. META
       // =========================
       const meta = JSON.parse(
         sessionStorage.getItem(`handover_${id}_meta`) || "{}"
       )
 
+      const receiver_type = meta.mode === "direct" ? "direct" : "proxy"
+
+      // =========================
+      // 4. INSERT (NO GPS)
+      // =========================
       const res = await fetch("/api/handover/receive",{
         method:"POST",
         headers:{
@@ -136,11 +119,9 @@ export default function PreviewPage(){
         body: JSON.stringify({
           handover_id: id,
           receive_method: meta.mode === "direct" ? "direct_photo" : "proxy_photo",
+          receiver_type,
           receiver_name: meta.mode === "direct" ? "" : meta.delegateName || "",
           receiver_relation: meta.mode === "direct" ? "" : meta.relation || "",
-          gps_lat: pos.coords.latitude,
-          gps_lng: pos.coords.longitude,
-          gps_accuracy: pos.coords.accuracy,
           photo_url
         })
       })
@@ -152,9 +133,11 @@ export default function PreviewPage(){
       }
 
       sessionStorage.removeItem(`handover_${id}_photo`)
-      sessionStorage.removeItem(`handover_${id}_meta`)
 
-      router.replace(`/handover/${id}/success`)
+      // =========================
+      // 5. NEXT STEP → GPS PAGE
+      // =========================
+      router.replace(`/handover/${id}/location`)
 
     }catch(err){
       console.log(err)
