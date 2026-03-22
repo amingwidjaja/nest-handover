@@ -51,26 +51,40 @@ export default function HandoverPage() {
   }
 
   // ===== STEP 1: CAPTURE ONLY (NO UPLOAD) =====
-  async function handlePhoto(e: ChangeEvent<HTMLInputElement>) {
+ async function handlePhoto(e: ChangeEvent<HTMLInputElement>) {
 
-    if (!e.target.files?.length) return
+  if (!e.target.files?.length) return
 
-    const file = e.target.files[0]
-    e.target.value = ""
+  const file = e.target.files[0]
+  e.target.value = ""
 
-    // validation delegate
-    if (mode === "delegate") {
-      if (!delegateName.trim() || !relation.trim()) {
-        alert("Nama wakil & hubungan wajib diisi")
-        return
-      }
+  if (mode === "delegate") {
+    if (!delegateName.trim() || !relation.trim()) {
+      alert("Nama wakil & hubungan wajib diisi")
+      return
     }
-
-    const preview = URL.createObjectURL(file)
-
-    setPhoto(preview)
-    setRawFile(file)
   }
+
+  // convert ke base64 (untuk sessionStorage)
+  const reader = new FileReader()
+
+  reader.onload = () => {
+
+    const key = `handover_${id}_photo`
+    sessionStorage.setItem(key, reader.result as string)
+
+    // simpan metadata tambahan
+    sessionStorage.setItem(`handover_${id}_meta`, JSON.stringify({
+      mode,
+      delegateName,
+      relation
+    }))
+
+    router.push(`/handover/${id}/preview`)
+  }
+
+  reader.readAsDataURL(file)
+}
 
   // ===== STEP 2: PROCESS + UPLOAD =====
   async function handleConfirm(){
