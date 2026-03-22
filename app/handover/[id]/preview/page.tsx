@@ -3,6 +3,12 @@
 import { useEffect, useState, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
+import { createClient } from "@supabase/supabase-js"
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 export default function PreviewPage(){
 
@@ -13,13 +19,11 @@ export default function PreviewPage(){
   const [photo,setPhoto] = useState<string | null>(null)
   const [saving,setSaving] = useState(false)
 
-  // 🔥 GPS ready sebelum user klik confirm
   const gpsRef = useRef<GeolocationPosition | null>(null)
 
   useEffect(()=>{
 
-    const key = `handover_${id}_photo`
-    const stored = sessionStorage.getItem(key)
+    const stored = sessionStorage.getItem(`handover_${id}_photo`)
 
     if(!stored){
       router.replace(`/handover/${id}`)
@@ -28,25 +32,15 @@ export default function PreviewPage(){
 
     setPhoto(stored)
 
-    // 🔥 ambil GPS di background
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        gpsRef.current = pos
-        console.log("[preview] GPS ready")
-      },
-      (err) => {
-        console.log("[preview] GPS error:", err.message)
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 8000
-      }
+      (pos)=> gpsRef.current = pos,
+      ()=>{},
+      { enableHighAccuracy:true, timeout:8000 }
     )
 
   },[id, router])
 
   function handleRetake(){
-    // 🔥 force reload biar camera UI muncul lagi
     window.location.href = `/handover/${id}`
   }
 
@@ -58,145 +52,118 @@ export default function PreviewPage(){
 
     try{
 
-      console.log("STEP 1: START PROCESS")
-
+      // =========================
+      // 1. Convert & crop
+      // =========================
       const img = document.createElement("img")
       img.src = photo
 
       await new Promise<void>((resolve)=>{
-        img.onload = () => resolve()
+        img.onload = ()=>resolve()
       })
-
-      console.log("STEP 2: IMAGE LOADED")
 
       const size = Math.min(img.width,img.height)
       const sx = (img.width - size)/2
       const sy = (img.height - size)/2
 
-      const MAX_SIZE = 1200
-      const targetSize = size > MAX_SIZE ? MAX_SIZE : size
-
       const canvas = document.createElement("canvas")
-      canvas.width = targetSize
-      canvas.height = targetSize
+      canvas.width = 1200
+      canvas.height = 1200
 
       const ctx = canvas.getContext("2d")
-      if(!ctx){
-        alert("Gagal memproses gambar")
-        setSaving(false)
-        return
-      }
+      if(!ctx) throw new Error("canvas error")
 
-      ctx.drawImage(
-        img,
-        sx, sy, size, size,
-        0, 0, targetSize, targetSize
-      )
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, 1200, 1200)
 
       const blob: Blob | null = await new Promise(resolve=>{
         canvas.toBlob(resolve,"image/jpeg",0.8)
       })
 
-      if(!blob){
-        alert("Gagal compress gambar")
-        setSaving(false)
-        return
+      if(!blob) throw new Error("compress error")
+
+      const file = new File([blob],"photo.jpg",{ type:"image/jpeg" })
+
+      // =========================
+      // 2. Upload ke Supabase
+      // =========================
+      const path = `paket/public/handover/${id}/${Date.now()}.jpg`
+
+      const { error: uploadError } = await supabase
+        .storage
+        .from("nest-evidence")
+        .upload(path, file, {
+          contentType: "image/jpeg"
+        })
+
+      if(uploadError){
+        console.log(uploadError)
+        throw new Error("upload gagal")
       }
 
-      console.log("STEP 3: IMAGE READY")
+      const { data } = supabase
+        .storage
+        .from("nest-evidence")
+        .getPublicUrl(path)
 
-      // 🔥 pakai GPS dari mount
+      const photo_url = data.publicUrl
+
+      // =========================
+      // 3. GPS
+      // =========================
       let pos = gpsRef.current
 
-      // 🔥 fallback kalau belum ready
       if(!pos){
-        console.log("STEP 3b: GPS fallback")
-
-        try{
-          pos = await new Promise<GeolocationPosition>((resolve, reject)=>{
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 8000
-            })
+        pos = await new Promise<GeolocationPosition>((resolve, reject)=>{
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy:true,
+            timeout:8000
           })
-        }catch{
-          alert("GPS diperlukan untuk bukti foto")
-          setSaving(false)
-          return
-        }
+        })
       }
 
-      console.log("STEP 4: GPS OK")
-
+      // =========================
+      // 4. Kirim JSON ke API
+      // =========================
       const meta = JSON.parse(
         sessionStorage.getItem(`handover_${id}_meta`) || "{}"
       )
 
-      const finalFile = new File([blob],"photo.jpg",{ type:"image/jpeg" })
-
-      const form = new FormData()
-
-      form.append("handover_id", id)
-      form.append(
-        "receive_method",
-        meta.mode === "direct" ? "direct_photo" : "proxy_photo"
-      )
-      form.append("receiver_name", meta.mode === "direct" ? "" : meta.delegateName || "")
-      form.append("receiver_relation", meta.mode === "direct" ? "" : meta.relation || "")
-
-      form.append("photo", finalFile)
-
-      form.append("gps_lat", String(pos.coords.latitude))
-      form.append("gps_lng", String(pos.coords.longitude))
-
-      if(pos.coords.accuracy != null){
-        form.append("gps_accuracy", String(pos.coords.accuracy))
-      }
-
-      console.log("STEP 5: BEFORE FETCH")
-
       const res = await fetch("/api/handover/receive",{
         method:"POST",
-        body:form,
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body: JSON.stringify({
+          handover_id: id,
+          receive_method: meta.mode === "direct" ? "direct_photo" : "proxy_photo",
+          receiver_name: meta.mode === "direct" ? "" : meta.delegateName || "",
+          receiver_relation: meta.mode === "direct" ? "" : meta.relation || "",
+          gps_lat: pos.coords.latitude,
+          gps_lng: pos.coords.longitude,
+          gps_accuracy: pos.coords.accuracy,
+          photo_url
+        })
       })
 
-      console.log("STEP 6: FETCH SENT")
+      const result = await res.json()
 
-      const text = await res.text()
-
-      console.log("STEP 7: RESPONSE", text)
-
-      let data: any = {}
-      try{
-        data = JSON.parse(text)
-      }catch{}
-
-      if(data.success){
-
-        console.log("STEP 8: SUCCESS")
-
-        sessionStorage.removeItem(`handover_${id}_photo`)
-        sessionStorage.removeItem(`handover_${id}_meta`)
-
-        router.replace(`/handover/${id}/success`)
-
-      }else{
-        alert(data.error || "Gagal")
-        setSaving(false)
+      if(!result.success){
+        throw new Error(result.error || "fail")
       }
 
+      sessionStorage.removeItem(`handover_${id}_photo`)
+      sessionStorage.removeItem(`handover_${id}_meta`)
+
+      router.replace(`/handover/${id}/success`)
+
     }catch(err){
-
-      console.log("ERROR:", err)
-
-      alert("Error koneksi")
+      console.log(err)
+      alert("Gagal menyimpan")
       setSaving(false)
     }
-
   }
 
   return(
-
     <div className="min-h-full bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
 
       <main className="p-6 pt-6">
