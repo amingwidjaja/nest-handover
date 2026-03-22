@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
-import { useMap } from "react-leaflet"
 import { RotateCcw, ChevronRight } from "lucide-react"
 import L from "leaflet"
+import "leaflet/dist/leaflet.css"
 
 // 🔥 Fix marker icon (WAJIB)
 if (typeof window !== 'undefined') {
@@ -17,19 +17,40 @@ if (typeof window !== 'undefined') {
   })
 }
 
-// 🔥 dynamic import (Next safe)
-const MapContainer = dynamic(() => import("react-leaflet").then(m => m.MapContainer), { ssr: false })
-const TileLayer = dynamic(() => import("react-leaflet").then(m => m.TileLayer), { ssr: false })
-const Marker = dynamic(() => import("react-leaflet").then(m => m.Marker), { ssr: false })
+// 🔥 Map Component (LOCAL, CLIENT ONLY)
+function ActualMap({ coords }: { coords: { lat: number, lng: number } }) {
 
-// 🔥 Recenter component
-function Recenter({ lat, lng }: { lat: number, lng: number }) {
-  const map = (useMap as any)()
-  useEffect(() => {
-    map.setView([lat, lng])
-  }, [lat, lng, map])
-  return null
+  const { MapContainer, TileLayer, Marker, useMap } = require("react-leaflet")
+
+  function Recenter() {
+    const map = useMap()
+    useEffect(() => {
+      map.setView([coords.lat, coords.lng])
+    }, [coords, map])
+    return null
+  }
+
+  return (
+    <MapContainer
+      center={[coords.lat, coords.lng]}
+      zoom={16}
+      style={{ height: "100%", width: "100%" }}
+    >
+      <TileLayer
+        attribution='© OpenStreetMap'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <Marker position={[coords.lat, coords.lng]} />
+      <Recenter />
+    </MapContainer>
+  )
 }
+
+// 🔥 Dynamic wrapper (1x saja)
+const MapWrapper = dynamic(
+  () => Promise.resolve(ActualMap),
+  { ssr: false }
+)
 
 export default function LocationPage(){
 
@@ -97,13 +118,6 @@ export default function LocationPage(){
     router.replace(`/handover/${id}/success`)
   }
 
-  // 🔥 Accuracy color logic
-  function getAccuracyColor(acc: number){
-    if(acc <= 20) return "text-green-600"
-    if(acc <= 100) return "text-yellow-500"
-    return "text-red-500"
-  }
-
   return (
     <div className="flex flex-col h-screen bg-white max-w-md mx-auto border-x">
 
@@ -123,33 +137,25 @@ export default function LocationPage(){
         </h1>
       </div>
 
-      {/* MAP */}
-      <div className="flex-1">
+      {/* MAP AREA */}
+      <div className="flex-1 relative">
 
-        {coords && (
-          <MapContainer
-            center={[coords.lat, coords.lng]}
-            zoom={16}
-            style={{ height: "100%", width: "100%" }}
-          >
-            <TileLayer
-              attribution='© OpenStreetMap'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <Marker position={[coords.lat, coords.lng]} />
-            <Recenter lat={coords.lat} lng={coords.lng} />
-          </MapContainer>
+        {coords && !loading && (
+          <MapWrapper coords={coords} />
         )}
 
         {loading && (
-          <div className="h-full flex items-center justify-center text-sm text-gray-400">
-            Mendeteksi lokasi...
+          <div className="absolute inset-0 z-[1000] bg-white flex items-center justify-center text-sm text-gray-400">
+            <div className="flex flex-col items-center gap-2">
+              <RotateCcw className="animate-spin" size={24} />
+              Mendeteksi lokasi...
+            </div>
           </div>
         )}
 
-        {error && (
-          <div className="h-full flex flex-col items-center justify-center text-red-400 text-sm">
-            GPS tidak tersedia
+        {error && !loading && (
+          <div className="h-full flex flex-col items-center justify-center text-red-400 text-sm p-4 text-center">
+            GPS tidak tersedia atau izin ditolak
           </div>
         )}
 
@@ -160,7 +166,7 @@ export default function LocationPage(){
         <div className="p-4 text-sm border-t space-y-1">
           <div>Lat: {coords.lat.toFixed(6)}</div>
           <div>Lng: {coords.lng.toFixed(6)}</div>
-          <div className={`text-xs ${getAccuracyColor(coords.accuracy)}`}>
+          <div className="text-xs text-gray-400">
             Akurasi ±{Math.round(coords.accuracy)} meter
           </div>
         </div>
