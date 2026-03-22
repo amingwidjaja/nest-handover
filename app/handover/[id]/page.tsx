@@ -3,7 +3,7 @@
 import { useState, useEffect, type ChangeEvent } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { QrCode, ChevronLeft, Camera } from "lucide-react"
+import { QrCode, Camera } from "lucide-react"
 import Image from "next/image"
 
 export default function HandoverPage() {
@@ -22,6 +22,7 @@ export default function HandoverPage() {
   const [delegateName,setDelegateName] = useState("")
   const [relation,setRelation] = useState("")
   const [photo,setPhoto] = useState<string | null>(null)
+  const [rawFile,setRawFile] = useState<File | null>(null)
   const [notes,setNotes] = useState("")
   const [saving,setSaving] = useState(false)
 
@@ -49,58 +50,92 @@ export default function HandoverPage() {
     })
   }
 
+  // ===== STEP 1: CAPTURE ONLY (NO UPLOAD) =====
   async function handlePhoto(e: ChangeEvent<HTMLInputElement>) {
-    console.log("[handlePhoto] start", {
-      filesLength: e.target.files?.length ?? 0,
-      mode,
-    })
-    if (!e.target.files?.length) {
-      console.log("[handlePhoto] stop: no files (early return)")
-      return
-    }
+
+    if (!e.target.files?.length) return
 
     const file = e.target.files[0]
     e.target.value = ""
-    console.log("[handlePhoto] after file selected", {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    })
-    const preview = URL.createObjectURL(file)
 
-    // ✅ VALIDATION (delegate wajib isi)
+    // validation delegate
     if (mode === "delegate") {
-      const name = delegateName.trim()
-      const rel = relation.trim()
-
-      if (!name || !rel) {
-        console.log("[handlePhoto] stop: delegate fields empty (early return)")
+      if (!delegateName.trim() || !relation.trim()) {
         alert("Nama wakil & hubungan wajib diisi")
         return
       }
     }
 
+    const preview = URL.createObjectURL(file)
+
     setPhoto(preview)
+    setRawFile(file)
+  }
+
+  // ===== STEP 2: PROCESS + UPLOAD =====
+  async function handleConfirm(){
+
+    if(!rawFile) return
+
     setSaving(true)
 
-    try {
+    try{
+
+      // GPS
       let pos: GeolocationPosition
-      console.log("[handlePhoto] before GPS call")
-      try {
+      try{
         pos = await getCurrentPosition()
-        console.log("[handlePhoto] after GPS success", {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
-        })
-      } catch (gpsErr) {
-        console.log("[handlePhoto] stop: GPS rejected or failed", gpsErr)
+      }catch{
         setSaving(false)
         alert("GPS diperlukan untuk bukti foto. Izinkan akses lokasi.")
         return
       }
 
-      console.log("[handlePhoto] before fetch")
+      // ===== PROCESS IMAGE =====
+      const img = document.createElement("img")
+      img.src = URL.createObjectURL(rawFile)
+
+      await new Promise<void>((resolve)=>{
+        img.onload = () => resolve()
+      })
+
+      const size = Math.min(img.width,img.height)
+      const sx = (img.width - size)/2
+      const sy = (img.height - size)/2
+
+      const MAX_SIZE = 1200
+      const targetSize = size > MAX_SIZE ? MAX_SIZE : size
+
+      const canvas = document.createElement("canvas")
+      canvas.width = targetSize
+      canvas.height = targetSize
+
+      const ctx = canvas.getContext("2d")
+      if(!ctx){
+        setSaving(false)
+        alert("Gagal memproses gambar")
+        return
+      }
+
+      ctx.drawImage(
+        img,
+        sx, sy, size, size,
+        0, 0, targetSize, targetSize
+      )
+
+      const blob: Blob | null = await new Promise(resolve=>{
+        canvas.toBlob(resolve,"image/jpeg",0.8)
+      })
+
+      if(!blob){
+        setSaving(false)
+        alert("Gagal compress gambar")
+        return
+      }
+
+      const finalFile = new File([blob],"photo.jpg",{ type:"image/jpeg" })
+
+      // ===== UPLOAD =====
       const form = new FormData()
       form.append("handover_id", id)
       form.append(
@@ -115,40 +150,38 @@ export default function HandoverPage() {
         "receiver_relation",
         mode === "direct" ? "" : relation.trim()
       )
-      form.append("photo", file, file.name || "photo.jpg")
+      form.append("photo", finalFile)
       form.append("gps_lat", String(pos.coords.latitude))
       form.append("gps_lng", String(pos.coords.longitude))
+
       if (pos.coords.accuracy != null) {
         form.append("gps_accuracy", String(pos.coords.accuracy))
       }
 
       const res = await fetch("/api/handover/receive", {
-        method: "POST",
-        body: form,
-      })
-
-      console.log("[handlePhoto] after fetch response", {
-        status: res.status,
-        ok: res.ok,
+        method:"POST",
+        body:form
       })
 
       const data = await res.json()
 
-      console.log("[handlePhoto] after res.json()", {
-        success: data?.success,
-        error: data?.error,
-      })
-
-      if (data.success) {
+      if(data.success){
         router.push("/dashboard")
-      } else {
+      }else{
         setSaving(false)
         alert(data.error || "Gagal")
       }
-    } catch {
+
+    }catch{
       setSaving(false)
       alert("Error koneksi")
     }
+
+  }
+
+  function handleRetake(){
+    setPhoto(null)
+    setRawFile(null)
   }
 
   return(
@@ -157,81 +190,55 @@ export default function HandoverPage() {
 
       <main className="p-6 pt-6">
 
-        {/* HEADER */}
         <h2 className="text-2xl font-medium mb-4">
           Serah Terima
         </h2>
 
-        {/* IDENTITAS */}
         {handover && (
           <div className="space-y-1 mb-6 text-base">
 
-      <div className="space-y-1 mb-6 text-base">
+            <div>
+              <span className="opacity-50">Pengirim paket: </span>
+              <span className="text-base font-medium">{handover.sender_name || "-"}</span>
+            </div>
 
-      <div>
-        <span className="opacity-50">Pengirim paket: </span>
-        <span className="text-base font-medium">{handover.sender_name || "-"}</span>
-      </div>
+            <div>
+              <span className="opacity-50">Penerima paket: </span>
+              <span className="text-base font-medium">{handover.receiver_target_name || "-"}</span>
+            </div>
 
-      <div>
-        <span className="opacity-50">Penerima paket: </span>
-        <span className="text-base font-medium">{handover.receiver_target_name || "-"}</span>
-      </div>
-
-</div>
-
-    </div>
+          </div>
         )}
 
-        {/* PACKAGE */}
         {handover?.handover_items?.length > 0 && (
           <div className="space-y-3 mb-8">
 
             {handover.handover_items.map((item:any)=>(
               <div key={item.id} className="flex gap-3 items-stretch">
 
-            {/* FOTO */}
-            <div className="aspect-square w-26 border border-[#E0DED7] rounded-sm overflow-hidden flex-shrink-0">
-              {item.photo_url && (
-                <img
-                  src={item.photo_url}
-                  className="w-full h-full object-cover"
-                />
-              )}
-            </div>
+                <div className="aspect-square w-26 border border-[#E0DED7] rounded-sm overflow-hidden flex-shrink-0">
+                  {item.photo_url && (
+                    <img src={item.photo_url} className="w-full h-full object-cover"/>
+                  )}
+                </div>
 
-            {/* DETAIL BOX */}
-            <div className="
-              flex-1
-              border border-[#E0DED7]
-              rounded-sm
-              px-3 py-2
-              flex flex-col justify-start
-            ">
-              <span className="text-md opacity-50 mb-1">
-                Detail paket:
-              </span>
+                <div className="flex-1 border border-[#E0DED7] rounded-sm px-3 py-2">
+                  <span className="text-md opacity-50 mb-1 block">Detail paket:</span>
+                  <span className="text-base">{item.description || "-"}</span>
+                </div>
 
-              <span className="text-base">
-                {item.description || "-"}
-              </span>
-            </div>
-
-          </div>
+              </div>
             ))}
 
           </div>
         )}
 
-        {/* MODE */}
         <div className="flex gap-6 mb-6 border-b border-[#E0DED7] pb-3">
 
           <button
             onClick={()=>setMode("direct")}
             className={`text-base pb-3 -mb-[14px] ${
-              mode==="direct"
-                ? "font-medium border-b-2 border-[#3E2723]"
-                : "opacity-40"
+              mode==="direct" ? "font-medium border-b-2 border-[#3E2723]" : "opacity-40"
             }`}
           >
             Penerima Langsung
@@ -240,9 +247,7 @@ export default function HandoverPage() {
           <button
             onClick={()=>setMode("delegate")}
             className={`text-base pb-3 -mb-[14px] ${
-              mode==="delegate"
-                ? "font-medium border-b-2 border-[#3E2723]"
-                : "opacity-40"
+              mode==="delegate" ? "font-medium border-b-2 border-[#3E2723]" : "opacity-40"
             }`}
           >
             Diwakilkan
@@ -250,147 +255,94 @@ export default function HandoverPage() {
 
         </div>
 
-        {/* INPUT */}
         {mode === "delegate" && (
-
           <div className="space-y-4 mb-6">
-
             <input
               placeholder="Nama wakil:"
               value={delegateName}
               onChange={(e)=>setDelegateName(e.target.value)}
               className="w-full border-b border-[#E0DED7] py-2 outline-none"
             />
-
             <input
               placeholder="Hubungan:"
               value={relation}
               onChange={(e)=>setRelation(e.target.value)}
               className="w-full border-b border-[#E0DED7] py-2 outline-none"
             />
-
           </div>
-
         )}
 
-       <textarea
+        <textarea
           placeholder="Catatan:"
           value={notes}
           onChange={(e)=>setNotes(e.target.value)}
-          className="
-            w-full
-            border-b border-[#E0DED7]
-            py-2
-            outline-none
-            mb-6
-            text-md
-            placeholder:opacity-80
-          "
+          className="w-full border-b border-[#E0DED7] py-2 outline-none mb-6 text-md"
         />
 
-        {/* ACTION */}
         <div className="grid grid-cols-2 gap-3 mb-6">
 
           <Link
             href={`/handover/${id}/qr`}
-            className="
-            w-[85%]
-            aspect-square
-            border border-[#E0DED7]
-            flex flex-col items-center justify-center
-            rounded-sm
-            shadow-md
-            active:scale-95 active:shadow-sm active:bg-[#F2F1ED]
-            transition
-            "
+            className="w-[85%] aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm shadow-md"
           >
             <QrCode size={26} className="mb-2"/>
             <span className="text-[10px]">QR</span>
           </Link>
 
-          {/* PHOTO BUTTON */}
-          <label
-            className="
-            w-[85%]
-            aspect-square
-            border border-[#E0DED7]
-            flex flex-col items-center justify-center
-            rounded-sm
-            shadow-md
-            active:scale-95 active:shadow-sm active:bg-[#F2F1ED]
-            transition
-            cursor-pointer
-            "
-          >
-            <Camera size={26} className="mb-2"/>
-            <span className="text-[10px]">Foto</span>
+          {/* PHOTO BOX */}
+          {!photo && (
+            <label className="w-[85%] aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm shadow-md cursor-pointer">
+              <Camera size={26} className="mb-2"/>
+              <span className="text-[10px]">Foto</span>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handlePhoto}
+              />
+            </label>
+          )}
 
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={handlePhoto}
-            />
-          </label>
+          {photo && (
+            <div className="relative w-[85%] aspect-square border border-[#E0DED7] rounded-sm overflow-hidden shadow-md">
+
+              <Image src={photo} alt="Preview" fill className="object-cover"/>
+
+              {!saving && (
+                <div className="absolute bottom-2 left-2 right-2 flex gap-2">
+                  <button onClick={handleRetake} className="flex-1 bg-white text-xs py-1 rounded">
+                    Retake
+                  </button>
+                  <button onClick={handleConfirm} className="flex-1 bg-[#3E2723] text-white text-xs py-1 rounded">
+                    Confirm
+                  </button>
+                </div>
+              )}
+
+              {saving && (
+                <div className="absolute inset-0 bg-[#FAF9F6]/60 flex items-center justify-center">
+                  <span className="text-xs animate-pulse">Menyimpan...</span>
+                </div>
+              )}
+
+            </div>
+          )}
 
         </div>
 
-        {/* GUIDELINE */}
-        {!photo && (
-          <p className="text-[11px] text-center text-[#A1887F] leading-relaxed mb-6">
-            Pilih salah satu cara untuk menyelesaikan serah terima
-            <br/>
-            QR atau foto saat paket diserahkan
-          </p>
-        )}
-
-        {/* PREVIEW */}
-        {photo && (
-          <div className="relative w-full aspect-square border border-[#E0DED7] rounded-sm overflow-hidden shadow-md mb-6">
-
-            <Image
-              src={photo}
-              alt="Bukti"
-              fill
-              className="object-cover"
-            />
-
-            {saving && (
-              <div className="absolute inset-0 bg-[#FAF9F6]/60 flex items-center justify-center">
-                <span className="text-xs animate-pulse">
-                  Menyimpan...
-                </span>
-              </div>
-            )}
-
-          </div>
-        )}
-
       </main>
 
-      {/* BACK BUTTON */}
       <div className="px-6 pb-6">
-
         <button
           onClick={()=>router.back()}
-          className="
-          w-full
-          py-3
-          rounded-lg
-          border border-[#E0DED7]
-          shadow-md
-          active:scale-95 active:shadow-sm active:bg-[#F2F1ED]
-          transition
-          "
+          className="w-full py-3 rounded-lg border border-[#E0DED7] shadow-md"
         >
           Kembali
         </button>
-
       </div>
 
     </div>
 
   )
-
 }
