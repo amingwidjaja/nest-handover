@@ -50,7 +50,7 @@ const MapWrapper = dynamic(
     ssr: false,
     loading: () => (
       <div className="h-full flex items-center justify-center text-gray-300">
-        Loading map...
+        Membuka peta...
       </div>
     )
   }
@@ -160,10 +160,46 @@ export default function LocationPage(){
 
       {/* HEADER */}
       <div className="p-4 border-b">
-        <h1 className="text-xl font-bold">
-          Confirm Location
-        </h1>
-      </div>
+
+  <div className="flex justify-between items-center mb-2">
+
+    <span className="text-xs uppercase text-gray-400">
+      Step 02/02
+    </span>
+
+    {/* 🔥 GPS STATUS */}
+    <span className="text-xs font-bold flex items-center gap-1">
+
+      {loading && (
+        <>
+          <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
+          PENCARIAN SIGNAL GPS
+        </>
+      )}
+
+      {!loading && coords && (
+        <>
+          <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+          GPS DIKUNCI
+        </>
+      )}
+
+      {!loading && error && (
+        <>
+          <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+          PENCARIAN GPS GAGAL
+        </>
+      )}
+
+    </span>
+
+  </div>
+
+  <h1 className="text-xl font-bold">
+    Konfirmasi Lokasi
+  </h1>
+
+</div>
 
       {/* MAP */}
       <div className="flex-1 relative bg-gray-50">
