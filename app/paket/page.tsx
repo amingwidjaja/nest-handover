@@ -65,7 +65,7 @@ export default function HomePage() {
         </h1>
 
         <Link
-          href="/create"
+          href="/handover/create"
           className="block w-full max-w-xs mx-auto py-4 bg-[#3E2723] text-[#FAF9F6] rounded-sm font-medium"
         >
           Buat Serah Terima

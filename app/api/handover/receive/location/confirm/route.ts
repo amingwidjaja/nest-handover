@@ -8,11 +8,6 @@ const supabase = createClient(
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
 
-const TARGET = {
-  lat: -6.2,
-  lng: 106.8166
-} as const
-
 const MAX_RADIUS = 100
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -53,6 +48,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Data koordinat atau ID tidak lengkap" }, { status: 400 })
     }
 
+    const { data: handover, error: handoverErr } = await supabase
+      .from("handover")
+      .select("destination_lat, destination_lng")
+      .eq("id", handover_id)
+      .maybeSingle()
+
+    if (handoverErr) {
+      console.error("Supabase select handover:", handoverErr)
+      throw new Error(`Database Error: ${handoverErr.message}`)
+    }
+
+    if (!handover) {
+      return NextResponse.json({ error: "Handover tidak ditemukan" }, { status: 404 })
+    }
+
+    const destLat = parseCoord(handover.destination_lat)
+    const destLng = parseCoord(handover.destination_lng)
+
+    if (destLat == null || destLng == null) {
+      return NextResponse.json(
+        { error: "Lokasi tujuan belum diatur", success: false, isValid: false },
+        { status: 400 }
+      )
+    }
+
     let address = ""
     try {
       const geo = await fetch(
@@ -64,7 +84,7 @@ export async function POST(req: Request) {
       address = "Gagal mengambil alamat"
     }
 
-    const distance = getDistance(lat, lng, TARGET.lat, TARGET.lng)
+    const distance = getDistance(lat, lng, destLat, destLng)
     const isValid = distance <= MAX_RADIUS
 
     const acc = typeof accuracy === "number" && Number.isFinite(accuracy) ? accuracy : Number(accuracy) || 0

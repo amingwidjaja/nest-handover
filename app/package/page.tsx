@@ -57,11 +57,15 @@ export default function PackagePage() {
 
     if (!sender_name || !receiver_target_name) {
       alert("Data belum lengkap. Mulai dari awal.")
-      router.push("/create")
+      router.push("/handover/create")
       return
     }
 
-    const payload = {
+    const destination_address = localStorage.getItem("draft_destination_address") || ""
+    const destLatRaw = localStorage.getItem("draft_destination_lat")
+    const destLngRaw = localStorage.getItem("draft_destination_lng")
+
+    const payload: Record<string, unknown> = {
       sender_name,
       receiver_target_name,
       receiver_target_phone,
@@ -69,6 +73,18 @@ export default function PackagePage() {
       items: items
         .filter(i => i.trim() !== "")
         .map(i => ({ description: i }))
+    }
+
+    if (destination_address.trim()) {
+      payload.destination_address = destination_address
+    }
+    if (destLatRaw != null && destLatRaw !== "" && destLngRaw != null && destLngRaw !== "") {
+      const dlat = Number(destLatRaw)
+      const dlng = Number(destLngRaw)
+      if (Number.isFinite(dlat) && Number.isFinite(dlng)) {
+        payload.destination_lat = dlat
+        payload.destination_lng = dlng
+      }
     }
 
     try {
@@ -87,6 +103,9 @@ export default function PackagePage() {
       localStorage.removeItem("draft_sender_contact")
       localStorage.removeItem("draft_receiver_name")
       localStorage.removeItem("draft_receiver_contact")
+      localStorage.removeItem("draft_destination_address")
+      localStorage.removeItem("draft_destination_lat")
+      localStorage.removeItem("draft_destination_lng")
 
       router.push(mode === "save" ? "/paket" : `/handover/${data.handover_id}`)
     } catch {
