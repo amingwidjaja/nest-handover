@@ -17,20 +17,23 @@ export default function Home() {
 
       <div className="max-w-6xl mx-auto px-6 py-20 md:py-32 relative z-10">
         
-        {/* HERO SECTION */}
-        <header className="mb-28 md:mb-36">
-          <div className="inline-block px-3 py-1 border border-[#2A2A2A] text-[10px] tracking-[0.4em] uppercase opacity-60 mb-10 font-mono rounded-full bg-[#111]">
-            Experience Since '76 · Jakarta
-          </div>
-          
-          <h1 className="text-6xl md:text-8xl font-extralight tracking-tighter leading-[0.85] mb-10 text-white">
-            NEST<span className="font-semibold text-[#444]">76</span>
-          </h1>
+        {/* REVISED HERO SECTION */}
+<header className="mb-28 md:mb-36">
+  <div className="flex items-center gap-3 mb-10">
+    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+    <div className="text-[10px] tracking-[0.4em] uppercase opacity-50 font-mono">
+      Systems Online / Jakarta, ID
+    </div>
+  </div>
+  
+  <h1 className="text-6xl md:text-8xl font-extralight tracking-tighter leading-[0.85] mb-10 text-white">
+    NEST<span className="font-semibold text-[#333]">76</span>
+  </h1>
 
-          <p className="text-2xl md:text-3xl font-light text-[#A0A0A0] max-w-3xl leading-relaxed">
-            Studio digital yang merancang <span className="text-white font-normal">sistem ringkas</span> untuk operasional yang kompleks. Kami percaya teknologi hebat seharusnya tidak membingungkan.
-          </p>
-        </header>
+  <p className="text-2xl md:text-3xl font-light text-[#A0A0A0] max-w-2xl leading-relaxed">
+    Membangun <span className="text-white font-normal">infrastruktur digital</span> yang presisi. Kami menyederhanakan alur kerja yang rumit menjadi sistem yang reliabel.
+  </p>
+</header>
 
         {/* SOLUTIONS / PRODUCTS */}
         <section className="mb-32 md:mb-40">
