@@ -12,16 +12,17 @@ export async function createServerSupabaseClient() {
         getAll() {
           return cookieStore.getAll()
         },
-        setAll(cookiesToSet: { name: string; value: string; options: any }[]) {
-  try {
-    cookiesToSet.forEach(({ name, value, options }) =>
-      cookieStore.set(name, value, options)
-    )
-  } catch {
-            // ignore when called from Server Component without mutable cookies
+        // Kita pakai ResponseCookie[] sebagai tipe data yang benar dari Next.js
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // Ini normal di Server Components, abaikan saja
           }
-        }
-      }
+        },
+      },
     }
   )
 }
