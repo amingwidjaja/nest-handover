@@ -1,4 +1,4 @@
-import { createServerClient } from "@supabase/ssr"
+import { createServerClient, type CookieOptions } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
 export async function createServerSupabaseClient() {
@@ -12,14 +12,14 @@ export async function createServerSupabaseClient() {
         getAll() {
           return cookieStore.getAll()
         },
-        // Kita pakai ResponseCookie[] sebagai tipe data yang benar dari Next.js
-        setAll(cookiesToSet) {
+        // Kita pakai tipe yang sangat spesifik biar TypeScript diam
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             )
           } catch {
-            // Ini normal di Server Components, abaikan saja
+            // Safe to ignore in Server Components
           }
         },
       },
