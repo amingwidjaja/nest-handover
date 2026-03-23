@@ -141,27 +141,35 @@ export default function LocationPage() {
     )
   }
 
-  async function submitLocation() {
-    if (!realCoords) return
-    try {
-      const res = await fetch("/api/receive/location/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          handover_id: id,
-          lat: coords.lat,
-          lng: coords.lng,
-          accuracy: coords.accuracy || 0
-        })
+ async function submitLocation() {
+  if (!realCoords) return;
+  
+  // Kita coba tembak full path sesuai struktur folder yang ada di log Vercel
+  const targetUrl = "/api/handover/receive/location/confirm"; 
+  
+  console.log("Menembak ke:", targetUrl);
+
+  try {
+    const res = await fetch(targetUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        handover_id: id,
+        // Kita isi dua-duanya biar DB nggak bingung kolom mana yang mau diisi
+        lat: coords.lat,
+        lng: coords.lng,
+        accuracy: coords.accuracy || 0
       })
-      const data = await res.json()
-      if (!res.ok) { alert(data.error || "Gagal."); return; }
-      if (!data.isValid) { alert(`DI LUAR RADIUS (${data.distance}m)`); return; }
-      router.replace(`/handover/${id}/success`)
-    } catch (err) {
-      alert("SERVER ERROR");
-    }
+    });
+
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || "Server Error"); return; }
+    
+    router.replace(`/handover/${id}/success`);
+  } catch (err) {
+    alert("Koneksi gagal atau URL salah.");
   }
+}
 
   return (
     <div className="flex flex-col h-screen bg-[var(--paper)] max-w-md mx-auto border-x border-[var(--line)] font-sans text-[var(--ink)] antialiased">
