@@ -6,6 +6,10 @@ export type MapboxGeocodeFeature = {
   id: string
   place_name: string
   center: [number, number]
+  /** From `context`: `place` (or `locality` fallback), kota/kabupaten. */
+  city?: string
+  /** From `context` entry with id prefix `postcode`. */
+  postcode?: string
 }
 
 export type ForwardGeocodeOptions = {
@@ -14,6 +18,36 @@ export type ForwardGeocodeOptions = {
    * Prefer results near this point. Mapbox expects `proximity` as `longitude,latitude`.
    */
   proximity?: { lng: number; lat: number }
+}
+
+type MapboxContextEntry = {
+  id?: string
+  text?: string
+}
+
+/**
+ * Mapbox encodes hierarchy in `context`: ids like `place.xxx`, `postcode.xxx`.
+ */
+export function cityAndPostcodeFromContext(
+  context: MapboxContextEntry[] | undefined
+): { city?: string; postcode?: string } {
+  if (!context?.length) return {}
+  let city: string | undefined
+  let locality: string | undefined
+  let postcode: string | undefined
+  for (const entry of context) {
+    const id = entry.id ?? ""
+    if (!postcode && id.startsWith("postcode") && entry.text) {
+      postcode = entry.text.trim()
+    }
+    if (!city && id.startsWith("place") && entry.text) {
+      city = entry.text.trim()
+    }
+    if (!locality && id.startsWith("locality") && entry.text) {
+      locality = entry.text.trim()
+    }
+  }
+  return { city: city ?? locality, postcode }
 }
 
 export async function fetchForwardGeocodeSuggestions(
@@ -55,17 +89,22 @@ export async function fetchForwardGeocodeSuggestions(
       id: string
       place_name?: string
       center?: [number, number]
+      context?: MapboxContextEntry[]
     }>
   }
 
   const out: MapboxGeocodeFeature[] = []
   for (const f of data.features || []) {
     if (!f.center || f.center.length < 2 || !f.place_name) continue
-    out.push({
+    const { city, postcode } = cityAndPostcodeFromContext(f.context)
+    const row: MapboxGeocodeFeature = {
       id: f.id,
       place_name: f.place_name,
       center: [f.center[0], f.center[1]]
-    })
+    }
+    if (city) row.city = city
+    if (postcode) row.postcode = postcode
+    out.push(row)
   }
   return out
 }

@@ -1,16 +1,27 @@
 import { NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { createServerSupabaseClient } from "@/lib/supabase/server"
+import { getSupabaseAdmin } from "@/lib/supabase-admin"
+import { HANDOVER_ACTIVE_LIMITS } from "@/lib/handover-limits"
 
 function generateToken() {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 16)
 }
 
 export async function POST(req: Request) {
-
   try {
+    const supabase = await createServerSupabaseClient()
+    const {
+      data: { user }
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
 
     const body = await req.json()
-    console.log("BODY:", body)
 
     const {
       sender_name,
@@ -20,18 +31,62 @@ export async function POST(req: Request) {
       destination_lat,
       destination_lng,
       destination_address,
+      destination_city,
+      destination_postal_code,
+      sender_address_info,
       items
     } = body
+
+    const admin = getSupabaseAdmin()
+
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("user_type")
+      .eq("id", user.id)
+      .maybeSingle()
+
+    const userType =
+      profile?.user_type === "umkm" ? "umkm" : ("personal" as const)
+    const limit = HANDOVER_ACTIVE_LIMITS[userType]
+
+    const { count: activeCount, error: countErr } = await admin
+      .from("handover")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("record_status", "active")
+
+    if (countErr) {
+      return NextResponse.json(
+        { success: false, error: countErr.message },
+        { status: 500 }
+      )
+    }
+
+    if ((activeCount ?? 0) >= limit) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Batas paket aktif tercapai (${limit} untuk akun ${userType}).`
+        },
+        { status: 429 }
+      )
+    }
 
     const token = generateToken()
 
     const row: Record<string, unknown> = {
       share_token: token,
       status: "created",
+      user_id: user.id,
+      record_status: "active",
       sender_name: sender_name ?? "",
       receiver_target_name: receiver_target_name ?? "",
       receiver_target_phone: receiver_target_phone ?? "",
-      receiver_target_email: receiver_target_email ?? ""
+      receiver_target_email: receiver_target_email ?? "",
+      sender_address_info:
+        sender_address_info && typeof sender_address_info === "object"
+          ? sender_address_info
+          : {}
     }
 
     if (destination_address !== undefined && destination_address !== null) {
@@ -43,8 +98,16 @@ export async function POST(req: Request) {
     if (destination_lng !== undefined && destination_lng !== null && destination_lng !== "") {
       row.destination_lng = destination_lng
     }
+    if (destination_city !== undefined && destination_city !== null) {
+      const t = String(destination_city).trim()
+      if (t) row.destination_city = t
+    }
+    if (destination_postal_code !== undefined && destination_postal_code !== null) {
+      const t = String(destination_postal_code).trim()
+      if (t) row.destination_postal_code = t
+    }
 
-    const { data, error } = await supabase
+    const { data, error } = await admin
       .from("handover")
       .insert(row)
       .select()
@@ -52,45 +115,37 @@ export async function POST(req: Request) {
 
     if (error || !data) {
       return NextResponse.json(
-        { success:false, error: error?.message || "insert failed" },
-        { status:500 }
+        { success: false, error: error?.message || "insert failed" },
+        { status: 500 }
       )
     }
 
     if (items && items.length > 0) {
-
-      const rows = items.map((item: any) => ({
+      const rows = items.map((item: { description?: string; photo_url?: string | null }) => ({
         handover_id: data.id,
         description: item.description,
         photo_url: item.photo_url ?? null
       }))
 
-      const { error:itemsError } = await supabase
-        .from("handover_items")
-        .insert(rows)
+      const { error: itemsError } = await admin.from("handover_items").insert(rows)
 
-      if(itemsError){
+      if (itemsError) {
         return NextResponse.json(
-          { success:false, error:itemsError.message },
-          { status:500 }
+          { success: false, error: itemsError.message },
+          { status: 500 }
         )
       }
-
     }
 
     return NextResponse.json({
-      success:true,
+      success: true,
       token,
-      handover_id:data.id
+      handover_id: data.id
     })
-
   } catch {
-
     return NextResponse.json(
-      { success:false, error:"invalid request" },
-      { status:400 }
+      { success: false, error: "invalid request" },
+      { status: 400 }
     )
-
   }
-
 }

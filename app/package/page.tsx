@@ -2,9 +2,14 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Camera, Home, ChevronRight, ChevronLeft } from "lucide-react"
-import imageCompression from "browser-image-compression"
+import { Camera, Home, ChevronRight, ChevronLeft, User } from "lucide-react"
 import Link from "next/link"
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
+import { cropSquareResizeToJpeg } from "@/lib/image-evidence"
+import {
+  buildEvidenceObjectPath,
+  uploadJpegToNestEvidence
+} from "@/lib/nest-evidence-upload"
 
 export default function PackagePage() {
   const router = useRouter()
@@ -24,6 +29,19 @@ export default function PackagePage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [limitHint, setLimitHint] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function loadLimits() {
+      const res = await fetch("/api/handover/limits")
+      if (!res.ok) return
+      const j = await res.json()
+      if (j.authenticated && typeof j.remaining === "number") {
+        setLimitHint(`${j.remaining}/${j.limit} paket aktif`)
+      }
+    }
+    loadLimits()
+  }, [])
 
   function handleItemChange(index: number, value: string) {
     const copy = [...items]
@@ -32,15 +50,15 @@ export default function PackagePage() {
   }
 
   async function handlePhoto(file: File) {
-    const options = {
-      maxSizeMB: 0.6,
-      maxWidthOrHeight: 1200,
-      useWebWorker: true
+    try {
+      const cropped = await cropSquareResizeToJpeg(file)
+      if (preview) URL.revokeObjectURL(preview)
+      const f = new File([cropped], "package.jpg", { type: "image/jpeg" })
+      setPhotoFile(f)
+      setPreview(URL.createObjectURL(cropped))
+    } catch {
+      alert("Gagal memproses foto")
     }
-    const compressed = await imageCompression(file, options)
-    if (preview) URL.revokeObjectURL(preview)
-    setPhotoFile(compressed)
-    setPreview(URL.createObjectURL(compressed))
   }
 
   async function createHandover(mode: "save" | "handover") {
@@ -50,6 +68,24 @@ export default function PackagePage() {
     }
     if (saving) return
     setSaving(true)
+
+    const supabase = createBrowserSupabaseClient()
+    const {
+      data: { session }
+    } = await supabase.auth.getSession()
+    if (!session) {
+      setSaving(false)
+      router.push("/login?redirect=/package")
+      return
+    }
+
+    const lim = await fetch("/api/handover/limits")
+    const limJson = await lim.json()
+    if (limJson.authenticated && limJson.at_limit) {
+      setSaving(false)
+      alert(limJson.error || "Batas paket aktif tercapai.")
+      return
+    }
 
     const sender_name = localStorage.getItem("draft_sender_name") || ""
     const receiver_target_name = localStorage.getItem("draft_receiver_name") || ""
@@ -64,15 +100,42 @@ export default function PackagePage() {
     const destination_address = localStorage.getItem("draft_destination_address") || ""
     const destLatRaw = localStorage.getItem("draft_destination_lat")
     const destLngRaw = localStorage.getItem("draft_destination_lng")
+    const draftCity = localStorage.getItem("draft_destination_city") || ""
+    const draftPostcode = localStorage.getItem("draft_destination_postcode") || ""
+
+    let packagePhotoUrl: string | null = null
+    if (photoFile) {
+      try {
+        const path = buildEvidenceObjectPath(
+          session.user.id,
+          "package",
+          "paket"
+        )
+        const { publicUrl } = await uploadJpegToNestEvidence(
+          supabase,
+          path,
+          photoFile
+        )
+        packagePhotoUrl = publicUrl
+      } catch {
+        setSaving(false)
+        alert("Gagal mengunggah foto paket")
+        return
+      }
+    }
+
+    const descriptions = items.map((i) => i.trim()).filter(Boolean)
+    const itemRows = descriptions.map((description, idx) => ({
+      description,
+      photo_url: idx === 0 && packagePhotoUrl ? packagePhotoUrl : null
+    }))
 
     const payload: Record<string, unknown> = {
       sender_name,
       receiver_target_name,
       receiver_target_phone,
       receiver_target_email: "",
-      items: items
-        .filter(i => i.trim() !== "")
-        .map(i => ({ description: i }))
+      items: itemRows
     }
 
     if (destination_address.trim()) {
@@ -86,6 +149,12 @@ export default function PackagePage() {
         payload.destination_lng = dlng
       }
     }
+    if (draftCity.trim()) {
+      payload.destination_city = draftCity.trim()
+    }
+    if (draftPostcode.trim()) {
+      payload.destination_postal_code = draftPostcode.trim()
+    }
 
     try {
       const res = await fetch("/api/handover/create", {
@@ -94,9 +163,19 @@ export default function PackagePage() {
         body: JSON.stringify(payload)
       })
       const data = await res.json()
+      if (res.status === 401) {
+        setSaving(false)
+        router.push("/login?redirect=/package")
+        return
+      }
+      if (res.status === 429) {
+        setSaving(false)
+        alert(data.error || "Batas paket tercapai")
+        return
+      }
       if (!data.success) {
         setSaving(false)
-        alert("Gagal membuat handover")
+        alert(data.error || "Gagal membuat handover")
         return
       }
       localStorage.removeItem("draft_sender_name")
@@ -106,6 +185,8 @@ export default function PackagePage() {
       localStorage.removeItem("draft_destination_address")
       localStorage.removeItem("draft_destination_lat")
       localStorage.removeItem("draft_destination_lng")
+      localStorage.removeItem("draft_destination_city")
+      localStorage.removeItem("draft_destination_postcode")
 
       router.push(mode === "save" ? "/paket" : `/handover/${data.handover_id}`)
     } catch {
@@ -134,13 +215,23 @@ export default function PackagePage() {
       <main className="px-8 py-6 flex-1 flex flex-col max-w-md mx-auto w-full">
         
         {/* HEADER */}
-        <div className="flex justify-between items-start mb-4">
-          <h2 className="text-lg font-medium uppercase tracking-[0.2em] opacity-60">
-            Daftar Barang
-          </h2>
-          <Link href="/paket" className="p-1 active:scale-90 transition-transform">
-            <Home size={20} strokeWidth={1.5} className="opacity-60" />
-          </Link>
+        <div className="flex justify-between items-start mb-4 gap-2">
+          <div>
+            <h2 className="text-lg font-medium uppercase tracking-[0.2em] opacity-60">
+              Daftar Barang
+            </h2>
+            {limitHint && (
+              <p className="text-[9px] text-[#A1887F] mt-1 tracking-wide">{limitHint}</p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Link href="/profile" className="p-1 active:scale-90 transition-transform" title="Profil">
+              <User size={20} strokeWidth={1.5} className="opacity-60" />
+            </Link>
+            <Link href="/paket" className="p-1 active:scale-90 transition-transform">
+              <Home size={20} strokeWidth={1.5} className="opacity-60" />
+            </Link>
+          </div>
         </div>
 
         {/* ITEMS - 3 Rows Compact */}

@@ -1,0 +1,9 @@
+-- Optional: allow authenticated users to upload only under their user_id folder in nest-evidence.
+-- Apply in Supabase SQL editor if client-side uploads return 403.
+--
+-- create policy "nest_evidence_insert_own"
+-- on storage.objects for insert to authenticated
+-- with check (
+--   bucket_id = 'nest-evidence'
+--   and (storage.foldername(name))[1] = auth.uid()::text
+-- );

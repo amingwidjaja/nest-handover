@@ -6,6 +6,7 @@ import {
   fetchForwardGeocodeSuggestions,
   type MapboxGeocodeFeature
 } from "@/lib/mapbox-forward-geocode"
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
@@ -33,6 +34,8 @@ export default function HandoverCreatePage() {
   const [receiverContact, setReceiverContact] = useState("")
 
   const [destinationAddress, setDestinationAddress] = useState("")
+  const [destinationCity, setDestinationCity] = useState("")
+  const [destinationPostalCode, setDestinationPostalCode] = useState("")
   /** Set only when user picks a row from the Mapbox dropdown (patokan). */
   const [mapboxPick, setMapboxPick] = useState<{ lat: number; lng: number } | null>(
     null
@@ -43,6 +46,7 @@ export default function HandoverCreatePage() {
   const [locationRefreshing, setLocationRefreshing] = useState(false)
 
   const [toast, setToast] = useState("")
+  const [limitHint, setLimitHint] = useState<string | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
 
   /** Live GPS — used for Mapbox proximity, fallback lat/lng when no patokan selected. */
@@ -56,6 +60,22 @@ export default function HandoverCreatePage() {
     const contact = localStorage.getItem("user_contact")
     if (name) setSenderName(name)
     if (contact) setSenderContact(contact)
+    const draftCity = localStorage.getItem("draft_destination_city")
+    const draftPost = localStorage.getItem("draft_destination_postcode")
+    if (draftCity) setDestinationCity(draftCity)
+    if (draftPost) setDestinationPostalCode(draftPost)
+  }, [])
+
+  useEffect(() => {
+    async function loadLimits() {
+      const res = await fetch("/api/handover/limits")
+      if (!res.ok) return
+      const j = await res.json()
+      if (j.authenticated && typeof j.remaining === "number" && j.limit != null) {
+        setLimitHint(`${j.remaining}/${j.limit} paket aktif tersisa`)
+      }
+    }
+    loadLimits()
   }, [])
 
   useEffect(() => {
@@ -117,7 +137,23 @@ export default function HandoverCreatePage() {
     const [lng, lat] = f.center
     setDestinationAddress(f.place_name)
     setMapboxPick({ lat, lng })
+    const city = f.city ?? ""
+    const pc = f.postcode ?? ""
+    setDestinationCity(city)
+    setDestinationPostalCode(pc)
+    localStorage.setItem("draft_destination_city", city)
+    localStorage.setItem("draft_destination_postcode", pc)
     setSuggestions([])
+  }
+
+  function onCityChange(value: string) {
+    setDestinationCity(value)
+    localStorage.setItem("draft_destination_city", value)
+  }
+
+  function onPostalChange(value: string) {
+    setDestinationPostalCode(value)
+    localStorage.setItem("draft_destination_postcode", value)
   }
 
   function showToast(msg: string) {
@@ -152,7 +188,7 @@ export default function HandoverCreatePage() {
     )
   }
 
-  function submit() {
+  async function submit() {
     if (!receiverName.trim()) {
       showToast("Tulis nama penerima paket")
       return
@@ -195,6 +231,22 @@ export default function HandoverCreatePage() {
       return
     }
 
+    const supabase = createBrowserSupabaseClient()
+    const {
+      data: { session }
+    } = await supabase.auth.getSession()
+    if (!session) {
+      window.location.href = "/login?redirect=/handover/create"
+      return
+    }
+
+    const limRes = await fetch("/api/handover/limits")
+    const lim = await limRes.json()
+    if (lim.authenticated && lim.at_limit) {
+      showToast("Batas paket aktif tercapai untuk akun Anda.")
+      return
+    }
+
     const finalSender =
       senderType === "self"
         ? localStorage.getItem("user_name") || "Sender"
@@ -207,6 +259,8 @@ export default function HandoverCreatePage() {
     localStorage.setItem("draft_destination_address", addr)
     localStorage.setItem("draft_destination_lat", String(destLat))
     localStorage.setItem("draft_destination_lng", String(destLng))
+    localStorage.setItem("draft_destination_city", destinationCity.trim())
+    localStorage.setItem("draft_destination_postcode", destinationPostalCode.trim())
 
     window.location.href = "/package"
   }
@@ -290,6 +344,9 @@ export default function HandoverCreatePage() {
           <p className="text-sm font-medium mb-2">
             Alamat Tujuan
           </p>
+          {limitHint && (
+            <p className="text-[10px] text-[#A1887F] mb-2">{limitHint}</p>
+          )}
           <p className="text-[11px] text-[#A1887F] leading-relaxed mb-4">
             Ketik alamat lengkap jika perlu. Patokan dari peta (opsional) membantu nama tempat.
             Koordinat tujuan memakai patokan jika Anda memilihnya; jika tidak, dipakai lokasi GPS Anda
@@ -351,6 +408,34 @@ export default function HandoverCreatePage() {
                 </ul>
               </div>
             )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div>
+                <label className="block text-[10px] font-medium uppercase tracking-wider text-[#A1887F] mb-1">
+                  Kota (opsional)
+                </label>
+                <input
+                  className="line-input w-full"
+                  placeholder="Kota"
+                  autoComplete="off"
+                  value={destinationCity}
+                  onChange={(e) => onCityChange(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-medium uppercase tracking-wider text-[#A1887F] mb-1">
+                  Kode pos (opsional)
+                </label>
+                <input
+                  className="line-input w-full"
+                  placeholder="Kode pos"
+                  autoComplete="off"
+                  inputMode="numeric"
+                  value={destinationPostalCode}
+                  onChange={(e) => onPostalChange(e.target.value)}
+                />
+              </div>
+            </div>
           </div>
         </section>
       </main>
