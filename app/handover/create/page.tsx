@@ -2,14 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
-// @ts-ignore
-import mbxGeocoding from "@mapbox/mapbox-sdk/services/geocoding"
-
-type GeocodeFeature = {
-  id: string
-  place_name: string
-  center: [number, number]
-}
+import {
+  fetchForwardGeocodeSuggestions,
+  type MapboxGeocodeFeature
+} from "@/lib/mapbox-forward-geocode"
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
@@ -40,7 +36,7 @@ export default function HandoverCreatePage() {
   const [destinationLat, setDestinationLat] = useState<number | null>(null)
   const [destinationLng, setDestinationLng] = useState<number | null>(null)
 
-  const [suggestions, setSuggestions] = useState<GeocodeFeature[]>([])
+  const [suggestions, setSuggestions] = useState<MapboxGeocodeFeature[]>([])
   const [geocodeLoading, setGeocodeLoading] = useState(false)
 
   const [toast, setToast] = useState("")
@@ -70,14 +66,11 @@ export default function HandoverCreatePage() {
     }
     setGeocodeLoading(true)
     try {
-      const geocoding = mbxGeocoding({ accessToken: MAPBOX_TOKEN })
-      const res = await geocoding
-        .forwardGeocode({
-          query: query.trim(),
-          limit: 5
-        })
-        .send()
-      const features = (res.body.features || []) as GeocodeFeature[]
+      const features = await fetchForwardGeocodeSuggestions(
+        query,
+        MAPBOX_TOKEN,
+        5
+      )
       setSuggestions(features)
     } catch {
       setSuggestions([])
@@ -97,7 +90,7 @@ export default function HandoverCreatePage() {
     debouncedGeocode(value)
   }
 
-  function selectSuggestion(f: GeocodeFeature) {
+  function selectSuggestion(f: MapboxGeocodeFeature) {
     const [lng, lat] = f.center
     setDestinationAddress(f.place_name)
     setDestinationLat(lat)
