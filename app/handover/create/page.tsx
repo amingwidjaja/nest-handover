@@ -33,16 +33,19 @@ export default function HandoverCreatePage() {
   const [receiverContact, setReceiverContact] = useState("")
 
   const [destinationAddress, setDestinationAddress] = useState("")
-  const [destinationLat, setDestinationLat] = useState<number | null>(null)
-  const [destinationLng, setDestinationLng] = useState<number | null>(null)
+  /** Set only when user picks a row from the Mapbox dropdown (patokan). */
+  const [mapboxPick, setMapboxPick] = useState<{ lat: number; lng: number } | null>(
+    null
+  )
 
   const [suggestions, setSuggestions] = useState<MapboxGeocodeFeature[]>([])
   const [geocodeLoading, setGeocodeLoading] = useState(false)
+  const [locationRefreshing, setLocationRefreshing] = useState(false)
 
   const [toast, setToast] = useState("")
   const wrapRef = useRef<HTMLDivElement>(null)
 
-  /** Used as Mapbox `proximity` so suggestions favor areas near the user (optional). */
+  /** Live GPS — used for Mapbox proximity, fallback lat/lng when no patokan selected. */
   const [userProximity, setUserProximity] = useState<{
     lng: number
     lat: number
@@ -106,24 +109,47 @@ export default function HandoverCreatePage() {
 
   function onDestinationInputChange(value: string) {
     setDestinationAddress(value)
-    if (destinationLat !== null || destinationLng !== null) {
-      setDestinationLat(null)
-      setDestinationLng(null)
-    }
+    if (mapboxPick !== null) setMapboxPick(null)
     debouncedGeocode(value)
   }
 
   function selectSuggestion(f: MapboxGeocodeFeature) {
     const [lng, lat] = f.center
     setDestinationAddress(f.place_name)
-    setDestinationLat(lat)
-    setDestinationLng(lng)
+    setMapboxPick({ lat, lng })
     setSuggestions([])
   }
 
   function showToast(msg: string) {
     setToast(msg)
     setTimeout(() => setToast(""), 3000)
+  }
+
+  function useCurrentLocation() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      showToast("GPS tidak didukung di perangkat ini")
+      return
+    }
+    setLocationRefreshing(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserProximity({
+          lng: pos.coords.longitude,
+          lat: pos.coords.latitude
+        })
+        setLocationRefreshing(false)
+        showToast("Lokasi saat ini siap dipakai sebagai koordinat tujuan")
+      },
+      () => {
+        setLocationRefreshing(false)
+        showToast("Tidak bisa mengambil lokasi. Izinkan akses lokasi di browser.")
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 20_000,
+        maximumAge: 0
+      }
+    )
   }
 
   function submit() {
@@ -148,18 +174,24 @@ export default function HandoverCreatePage() {
       }
     }
 
-    if (!destinationAddress.trim()) {
+    const addr = destinationAddress.trim()
+    if (!addr) {
       showToast("Isi alamat tujuan")
       return
     }
 
-    if (destinationLat == null || destinationLng == null) {
-      showToast("Pilih alamat dari daftar saran")
-      return
-    }
-
-    if (!MAPBOX_TOKEN) {
-      showToast("Konfigurasi peta belum aktif (token)")
+    let destLat: number
+    let destLng: number
+    if (mapboxPick !== null) {
+      destLat = mapboxPick.lat
+      destLng = mapboxPick.lng
+    } else if (userProximity !== null) {
+      destLat = userProximity.lat
+      destLng = userProximity.lng
+    } else {
+      showToast(
+        "Izinkan lokasi GPS atau ketuk “Gunakan lokasi saat ini”, atau pilih patokan dari daftar"
+      )
       return
     }
 
@@ -172,9 +204,9 @@ export default function HandoverCreatePage() {
     localStorage.setItem("draft_sender_contact", senderContact)
     localStorage.setItem("draft_receiver_name", receiverName)
     localStorage.setItem("draft_receiver_contact", receiverContact)
-    localStorage.setItem("draft_destination_address", destinationAddress)
-    localStorage.setItem("draft_destination_lat", String(destinationLat))
-    localStorage.setItem("draft_destination_lng", String(destinationLng))
+    localStorage.setItem("draft_destination_address", addr)
+    localStorage.setItem("draft_destination_lat", String(destLat))
+    localStorage.setItem("draft_destination_lng", String(destLng))
 
     window.location.href = "/package"
   }
@@ -255,35 +287,69 @@ export default function HandoverCreatePage() {
         </section>
 
         <section>
-          <p className="text-sm font-medium mb-6">
+          <p className="text-sm font-medium mb-2">
             Alamat Tujuan
           </p>
+          <p className="text-[11px] text-[#A1887F] leading-relaxed mb-4">
+            Ketik alamat lengkap jika perlu. Patokan dari peta (opsional) membantu nama tempat.
+            Koordinat tujuan memakai patokan jika Anda memilihnya; jika tidak, dipakai lokasi GPS Anda
+            saat ini.
+          </p>
 
-          <div ref={wrapRef} className="relative space-y-1">
+          <div ref={wrapRef} className="relative space-y-2">
             <input
               className="line-input w-full"
-              placeholder="Alamat Tujuan"
+              placeholder="Alamat tujuan (boleh diketik bebas)"
               autoComplete="off"
               value={destinationAddress}
               onChange={(e) => onDestinationInputChange(e.target.value)}
             />
-            {geocodeLoading && (
-              <span className="text-[10px] opacity-50">Mencari alamat…</span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+              <button
+                type="button"
+                onClick={useCurrentLocation}
+                disabled={locationRefreshing}
+                className="text-[#3E2723] underline underline-offset-2 disabled:opacity-50"
+              >
+                {locationRefreshing
+                  ? "Mengambil lokasi…"
+                  : "Gunakan lokasi saat ini"}
+              </button>
+              {userProximity && (
+                <span className="text-[#A1887F]">
+                  GPS siap
+                </span>
+              )}
+            </div>
+            {(mapboxPick || userProximity) && (
+              <p className="text-[10px] text-[#A1887F]">
+                {mapboxPick
+                  ? "Koordinat tujuan akan memakai patokan yang dipilih."
+                  : "Koordinat tujuan akan memakai lokasi GPS Anda saat ini."}
+              </p>
             )}
-            {suggestions.length > 0 && (
-              <ul className="absolute z-20 left-0 right-0 mt-1 max-h-48 overflow-auto rounded border border-[#E0DED7] bg-white text-sm shadow">
-                {suggestions.map((f) => (
-                  <li key={f.id}>
-                    <button
-                      type="button"
-                      className="w-full text-left px-3 py-2 hover:bg-[#F5F4F0]"
-                      onClick={() => selectSuggestion(f)}
-                    >
-                      {f.place_name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+            {geocodeLoading && MAPBOX_TOKEN && (
+              <span className="text-[10px] opacity-50">Mencari patokan…</span>
+            )}
+            {MAPBOX_TOKEN && suggestions.length > 0 && (
+              <div className="mt-2 space-y-1">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-[#A1887F]">
+                  Patokan / POI
+                </p>
+                <ul className="max-h-48 overflow-auto rounded border border-[#E0DED7] bg-white text-sm shadow">
+                  {suggestions.map((f) => (
+                    <li key={f.id}>
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-[#F5F4F0]"
+                        onClick={() => selectSuggestion(f)}
+                      >
+                        {f.place_name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         </section>
