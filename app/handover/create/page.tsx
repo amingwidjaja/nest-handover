@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
+// @ts-ignore
 import mbxGeocoding from "@mapbox/mapbox-sdk/services/geocoding"
 
 type GeocodeFeature = {
