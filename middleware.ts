@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
+import { type ResponseCookie } from "next/dist/compiled/@edge-runtime/cookies"
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -16,15 +17,23 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+        // Kita kasih tipe data explisit biar Vercel nggak protes 'implicitly has an any type'
+        setAll(cookiesToSet: ResponseCookie[]) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value, options)
+          })
+          response = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options)
-          )
+          })
         }
       }
     }
   )
 
+  // Penting buat nge-refresh session kalau token expire
   await supabase.auth.getUser()
 
   return response
