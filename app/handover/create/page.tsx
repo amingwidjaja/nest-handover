@@ -42,11 +42,35 @@ export default function HandoverCreatePage() {
   const [toast, setToast] = useState("")
   const wrapRef = useRef<HTMLDivElement>(null)
 
+  /** Used as Mapbox `proximity` so suggestions favor areas near the user (optional). */
+  const [userProximity, setUserProximity] = useState<{
+    lng: number
+    lat: number
+  } | null>(null)
+
   useEffect(() => {
     const name = localStorage.getItem("user_name")
     const contact = localStorage.getItem("user_contact")
     if (name) setSenderName(name)
     if (contact) setSenderContact(contact)
+  }, [])
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserProximity({
+          lng: pos.coords.longitude,
+          lat: pos.coords.latitude
+        })
+      },
+      () => {},
+      {
+        enableHighAccuracy: false,
+        timeout: 10_000,
+        maximumAge: 300_000
+      }
+    )
   }, [])
 
   useEffect(() => {
@@ -66,18 +90,17 @@ export default function HandoverCreatePage() {
     }
     setGeocodeLoading(true)
     try {
-      const features = await fetchForwardGeocodeSuggestions(
-        query,
-        MAPBOX_TOKEN,
-        5
-      )
+      const features = await fetchForwardGeocodeSuggestions(query, MAPBOX_TOKEN, {
+        limit: 5,
+        proximity: userProximity ?? undefined
+      })
       setSuggestions(features)
     } catch {
       setSuggestions([])
     } finally {
       setGeocodeLoading(false)
     }
-  }, [])
+  }, [userProximity])
 
   const debouncedGeocode = useDebouncedCallback(runGeocode, 320)
 

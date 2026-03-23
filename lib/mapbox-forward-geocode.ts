@@ -8,13 +8,23 @@ export type MapboxGeocodeFeature = {
   center: [number, number]
 }
 
+export type ForwardGeocodeOptions = {
+  limit?: number
+  /**
+   * Prefer results near this point. Mapbox expects `proximity` as `longitude,latitude`.
+   */
+  proximity?: { lng: number; lat: number }
+}
+
 export async function fetchForwardGeocodeSuggestions(
   query: string,
   accessToken: string,
-  limit = 5
+  options: ForwardGeocodeOptions = {}
 ): Promise<MapboxGeocodeFeature[]> {
   const q = query.trim()
   if (!q || q.length < 2) return []
+
+  const limit = options.limit ?? 5
 
   const path = encodeURIComponent(q)
   const url = new URL(
@@ -23,6 +33,19 @@ export async function fetchForwardGeocodeSuggestions(
   url.searchParams.set("access_token", accessToken)
   url.searchParams.set("limit", String(limit))
   url.searchParams.set("autocomplete", "true")
+
+  url.searchParams.set("country", "id")
+  url.searchParams.set("types", "address,poi,place")
+  url.searchParams.set("language", "id")
+
+  const prox = options.proximity
+  if (
+    prox &&
+    Number.isFinite(prox.lng) &&
+    Number.isFinite(prox.lat)
+  ) {
+    url.searchParams.set("proximity", `${prox.lng},${prox.lat}`)
+  }
 
   const res = await fetch(url.toString())
   if (!res.ok) return []
