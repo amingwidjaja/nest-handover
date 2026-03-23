@@ -8,13 +8,12 @@ const supabase = createClient(
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
 
-// 🔥 TARGET LOKASI (sementara hardcode)
 const TARGET = {
-  lat: -6.2000,
+  lat: -6.2,
   lng: 106.8166
-}
+} as const
 
-const MAX_RADIUS = 100 // meter
+const MAX_RADIUS = 100
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371e3
@@ -33,17 +32,27 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   return R * c
 }
 
+function parseCoord(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  }
+  return null
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { lat, lng, accuracy, handover_id } = body
+    const { accuracy, handover_id } = body
 
-    // FIX 1: Gunakan pengecekan null/undefined agar koordinat 0 tidak dianggap error
-    if (lat === undefined || lng === undefined || !handover_id) {
+    const lat = parseCoord(body.lat)
+    const lng = parseCoord(body.lng)
+
+    if (lat == null || lng == null || handover_id === undefined || handover_id === null || handover_id === "") {
       return NextResponse.json({ error: "Data koordinat atau ID tidak lengkap" }, { status: 400 })
     }
 
-    // 🔥 Reverse Geocode (Mapbox)
     let address = ""
     try {
       const geo = await fetch(
@@ -55,38 +64,69 @@ export async function POST(req: Request) {
       address = "Gagal mengambil alamat"
     }
 
-    // 🔥 Hitung jarak
     const distance = getDistance(lat, lng, TARGET.lat, TARGET.lng)
     const isValid = distance <= MAX_RADIUS
 
-    // 🔥 FIX 2: Sesuaikan nama kolom dengan Migration 002 (gps_lat, gps_lng)
-    // Jika Supabase kamu pakai nama lama (latitude), ganti lagi ke latitude ya!
-    const { error } = await supabase
-      .from("receive_event")
-      .insert({
-        handover_id,
-        gps_lat: lat, 
-        gps_lng: lng,
-        gps_accuracy: accuracy || 0,
-        address,
-        distance_m: Math.round(distance),
-        is_valid: isValid
-      })
+    const acc = typeof accuracy === "number" && Number.isFinite(accuracy) ? accuracy : Number(accuracy) || 0
+    const distanceRounded = Math.round(distance)
 
-    if (error) {
-        console.error("Supabase Error detail:", error);
-        throw new Error(`Database Error: ${error.message}`);
+    const gpsPayload = {
+      gps_lat: lat,
+      gps_lng: lng,
+      gps_accuracy: acc,
+      address,
+      distance_m: distanceRounded,
+      is_valid: isValid
+    }
+
+    const { data: existing, error: selErr } = await supabase
+      .from("receive_event")
+      .select("id")
+      .eq("handover_id", handover_id)
+      .maybeSingle()
+
+    if (selErr) {
+      console.error("Supabase select receive_event:", selErr)
+      throw new Error(`Database Error: ${selErr.message}`)
+    }
+
+    if (existing) {
+      const { error } = await supabase
+        .from("receive_event")
+        .update(gpsPayload)
+        .eq("handover_id", handover_id)
+
+      if (error) {
+        console.error("Supabase Error detail:", error)
+        throw new Error(`Database Error: ${error.message}`)
+      }
+    } else {
+      const { error } = await supabase
+        .from("receive_event")
+        .insert({
+          handover_id,
+          receive_method: "GPS",
+          receiver_type: "direct",
+          receiver_name: null,
+          receiver_relation: null,
+          ...gpsPayload
+        })
+
+      if (error) {
+        console.error("Supabase Error detail:", error)
+        throw new Error(`Database Error: ${error.message}`)
+      }
     }
 
     return NextResponse.json({
       success: true,
       address,
-      distance: Math.round(distance),
+      distance: distanceRounded,
       isValid
     })
-
-  } catch (err: any) {
-    console.error("Server Error detail:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Server error"
+    console.error("Server Error detail:", err)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

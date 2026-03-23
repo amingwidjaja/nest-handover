@@ -141,35 +141,35 @@ export default function LocationPage() {
     )
   }
 
- async function submitLocation() {
-  if (!realCoords) return;
-  
-  // Kita coba tembak full path sesuai struktur folder yang ada di log Vercel
-  const targetUrl = "/api/handover/receive/location/confirm"; 
-  
-  console.log("Menembak ke:", targetUrl);
+  async function submitLocation() {
+    if (!realCoords) return
 
-  try {
-    const res = await fetch(targetUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        handover_id: id,
-        // Kita isi dua-duanya biar DB nggak bingung kolom mana yang mau diisi
-        lat: coords.lat,
-        lng: coords.lng,
-        accuracy: coords.accuracy || 0
+    try {
+      const res = await fetch("/api/handover/receive/location/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          handover_id: id,
+          lat: realCoords.lat,
+          lng: realCoords.lng,
+          accuracy: realCoords.accuracy ?? 0
+        })
       })
-    });
 
-    const data = await res.json();
-    if (!res.ok) { alert(data.error || "Server Error"); return; }
-    
-    router.replace(`/handover/${id}/success`);
-  } catch (err) {
-    alert("Koneksi gagal atau URL salah.");
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error || "Gagal.")
+        return
+      }
+      if (!data.isValid) {
+        alert(`DI LUAR RADIUS (${data.distance}m)`)
+        return
+      }
+      router.replace("/dashboard")
+    } catch {
+      alert("Koneksi gagal.")
+    }
   }
-}
 
   return (
     <div className="flex flex-col h-screen bg-[var(--paper)] max-w-md mx-auto border-x border-[var(--line)] font-sans text-[var(--ink)] antialiased">
@@ -263,12 +263,6 @@ export default function LocationPage() {
           {!loading && <ChevronRight size={18} strokeWidth={2} />}
         </button>
 
-        <button
-          onClick={() => router.replace(`/handover/${id}/success`)}
-          className="w-full text-[9px] text-[#A1887F] border border-[var(--line)] py-3 uppercase tracking-[0.3em] font-bold text-center"
-        >
-          BYPASS VALIDASI
-        </button>
       </div>
     </div>
   )

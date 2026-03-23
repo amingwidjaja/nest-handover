@@ -58,7 +58,7 @@ export default function QRPage(){
         data.status === "accepted"
       ){
         clearInterval(interval)
-        router.push("/dashboard")
+        router.push(`/handover/${id}/location`)
       }
 
     }

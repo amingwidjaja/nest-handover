@@ -36,7 +36,8 @@ export default function ReceivePage(){
         receiver_name:name,
         receiver_relation:relation,
         receive_method: type === "direct" ? "direct_qr" : "proxy_qr",
-        receiver_type: type
+        receiver_type: type,
+        device_id: typeof navigator !== "undefined" ? navigator.userAgent : ""
       })
     })
 

@@ -31,6 +31,8 @@ function formatMetode(method: string) {
       return "QR Code (Diwakilkan)"
     case "proxy_photo":
       return "Foto Serah Terima (Diwakilkan)"
+    case "GPS":
+      return "Validasi GPS"
     default:
       return "-"
   }

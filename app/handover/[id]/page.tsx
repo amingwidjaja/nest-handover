@@ -200,7 +200,7 @@ export default function HandoverPage() {
       const data = await res.json()
 
       if(data.success){
-        router.push("/dashboard")
+        router.push(`/handover/${id}/location`)
       }else{
         setSaving(false)
         alert(data.error || "Gagal")
