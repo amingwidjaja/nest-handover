@@ -17,12 +17,17 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            request.cookies.set(name, value, options)
+          // 1. Update request cookies (Tanpa Options - Biar Polisi Minggir)
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
           )
+          
+          // 2. Refresh response object
           response = NextResponse.next({
             request,
           })
+
+          // 3. Update response cookies (Pakai Options - Biar Auth Jalan)
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           )
@@ -31,6 +36,7 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // Refresh session
   await supabase.auth.getUser()
 
   return response
