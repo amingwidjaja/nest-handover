@@ -44,7 +44,11 @@ export default function HandoverCreatePage() {
 
   const [suggestions, setSuggestions] = useState<MapboxGeocodeFeature[]>([])
   const [geocodeLoading, setGeocodeLoading] = useState(false)
-  /** idle → GPS fix → reverse geocode (alamat/kota/kode pos) */
+  
+  // FIX: Deklarasi state yang hilang
+  const [locationRefreshing, setLocationRefreshing] = useState(false)
+  
+  /** idle → gps → reverse */
   const [locationPhase, setLocationPhase] = useState<
     "idle" | "gps" | "reverse"
   >("idle")
@@ -199,13 +203,19 @@ export default function HandoverCreatePage() {
       showToast("GPS tidak didukung di perangkat ini")
       return
     }
+    
+    // FIX: Sinkronisasi state loading
     setLocationRefreshing(true)
+    setLocationPhase("gps")
+
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const lat = pos.coords.latitude
         const lng = pos.coords.longitude
         setUserProximity({ lng, lat })
         setMapboxPick({ lat, lng })
+        
+        setLocationPhase("reverse")
 
         try {
           const res = await fetch(
@@ -241,10 +251,12 @@ export default function HandoverCreatePage() {
           )
         } finally {
           setLocationRefreshing(false)
+          setLocationPhase("idle")
         }
       },
       () => {
         setLocationRefreshing(false)
+        setLocationPhase("idle")
         showToast("Tidak bisa mengambil lokasi. Izinkan akses lokasi di browser.")
       },
       {
@@ -433,7 +445,7 @@ export default function HandoverCreatePage() {
               <button
                 type="button"
                 onClick={useCurrentLocation}
-                disabled={locationPhase !== "idle"}
+                disabled={locationRefreshing}
                 className="text-[#3E2723] underline underline-offset-2 disabled:opacity-50"
               >
                 {locationPhase === "gps"
