@@ -27,9 +27,11 @@ export async function POST(req: Request) {
         `
         id,
         user_id,
+        serial_number,
         status,
         sender_name,
         receiver_target_name,
+        received_at,
         receipt_url,
         receipt_status,
         handover_items (*),
@@ -80,7 +82,15 @@ export async function POST(req: Request) {
       .update({ receipt_status: "processing" })
       .eq("id", data.id)
 
-    const element = ReceiptDocument({ data })
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("company_name, company_logo_url")
+      .eq("id", data.user_id)
+      .maybeSingle()
+
+    const element = ReceiptDocument({
+      data: { ...data, profiles: profile ?? null }
+    })
     const pdfBuffer = await renderToBuffer(element)
 
     const storagePath = buildPaketReceiptPdfPath(data.user_id, data.id)

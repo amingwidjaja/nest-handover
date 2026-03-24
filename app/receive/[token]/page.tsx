@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation"
 import { useState, useEffect } from "react"
+import { getClientDeviceMeta } from "@/lib/receipt-trust"
 
 export default function ReceivePage(){
 
@@ -26,6 +27,8 @@ export default function ReceivePage(){
 
     setLoading(true)
 
+    const { device_id, device_model } = getClientDeviceMeta()
+
     const res = await fetch("/api/handover/receive",{
       method:"POST",
       headers:{
@@ -37,7 +40,8 @@ export default function ReceivePage(){
         receiver_relation:relation,
         receive_method: type === "direct" ? "direct_qr" : "proxy_qr",
         receiver_type: type,
-        device_id: typeof navigator !== "undefined" ? navigator.userAgent : ""
+        device_id,
+        device_model
       })
     })
 

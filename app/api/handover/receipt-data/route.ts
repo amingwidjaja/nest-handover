@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
 export async function GET(req: Request) {
   try {
@@ -13,13 +13,18 @@ export async function GET(req: Request) {
       )
     }
 
-    const { data: handover, error } = await supabase
+    const admin = getSupabaseAdmin()
+
+    const { data: handover, error } = await admin
       .from("handover")
       .select(`
         id,
+        user_id,
+        serial_number,
         sender_name,
         receiver_target_name,
         status,
+        received_at,
         receipt_url,
         receipt_status,
         handover_items (*)
@@ -34,15 +39,24 @@ export async function GET(req: Request) {
       )
     }
 
-    const { data: receive_event } = await supabase
+    const { data: receive_event } = await admin
       .from("receive_event")
       .select("*")
       .eq("handover_id", handover.id)
       .maybeSingle()
 
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("company_name, company_logo_url")
+      .eq("id", handover.user_id)
+      .maybeSingle()
+
+    const { user_id: _uid, ...handoverPublic } = handover
+
     const payload = {
-      ...handover,
+      ...handoverPublic,
       receive_event: receive_event ?? null,
+      profiles: profile ?? null
     }
 
     console.log("[receipt-data] before return", {

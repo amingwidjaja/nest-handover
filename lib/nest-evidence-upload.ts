@@ -39,7 +39,9 @@ export function resolveNestEvidencePublicUrl(
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
     return trimmed
   }
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ?? ""
+  const rawBase =
+    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || ""
+  const base = rawBase.replace(/\/$/, "")
   if (!base) return null
   const key = trimmed.startsWith("/") ? trimmed.slice(1) : trimmed
   const encoded = key

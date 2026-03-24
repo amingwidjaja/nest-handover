@@ -6,6 +6,7 @@ import Image from "next/image"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 import { cropSquareResizeToJpeg } from "@/lib/image-evidence"
 import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
+import { getClientDeviceMeta } from "@/lib/receipt-trust"
 
 export default function PreviewPage() {
   const params = useParams()
@@ -84,6 +85,8 @@ export default function PreviewPage() {
 
       const receiver_type = meta.mode === "direct" ? "direct" : "proxy"
 
+      const { device_id, device_model } = getClientDeviceMeta()
+
       const res = await fetch("/api/handover/receive", {
         method: "POST",
         headers: {
@@ -95,7 +98,9 @@ export default function PreviewPage() {
           receiver_type,
           receiver_name: meta.mode === "direct" ? "" : meta.delegateName || "",
           receiver_relation: meta.mode === "direct" ? "" : meta.relation || "",
-          photo_url
+          photo_url,
+          device_id,
+          device_model
         })
       })
 

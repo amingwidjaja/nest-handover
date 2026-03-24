@@ -13,7 +13,8 @@ export async function POST(req: Request) {
       receiver_name,
       receiver_relation,
       photo_url,
-      device_id
+      device_id,
+      device_model
     } = body
 
     if (!receive_method || !receiver_type) {
@@ -72,7 +73,8 @@ export async function POST(req: Request) {
       receiver_type,
       receiver_name: receiver_name ?? null,
       receiver_relation: receiver_relation ?? null,
-      device_id: device_id ?? null
+      device_id: device_id ?? null,
+      device_model: device_model ?? null
     }
 
     if (photo_url) {
