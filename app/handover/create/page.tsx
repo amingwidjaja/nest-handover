@@ -44,7 +44,10 @@ export default function HandoverCreatePage() {
 
   const [suggestions, setSuggestions] = useState<MapboxGeocodeFeature[]>([])
   const [geocodeLoading, setGeocodeLoading] = useState(false)
-  const [locationRefreshing, setLocationRefreshing] = useState(false)
+  /** idle → GPS fix → reverse geocode (alamat/kota/kode pos) */
+  const [locationPhase, setLocationPhase] = useState<
+    "idle" | "gps" | "reverse"
+  >("idle")
 
   const [toast, setToast] = useState("")
   const [limitHint, setLimitHint] = useState<string | null>(null)
@@ -430,12 +433,14 @@ export default function HandoverCreatePage() {
               <button
                 type="button"
                 onClick={useCurrentLocation}
-                disabled={locationRefreshing}
+                disabled={locationPhase !== "idle"}
                 className="text-[#3E2723] underline underline-offset-2 disabled:opacity-50"
               >
-                {locationRefreshing
+                {locationPhase === "gps"
                   ? "Mengambil lokasi…"
-                  : "Gunakan lokasi saat ini"}
+                  : locationPhase === "reverse"
+                    ? "Mencari alamat…"
+                    : "Gunakan lokasi saat ini"}
               </button>
               {userProximity && (
                 <span className="text-[#A1887F]">

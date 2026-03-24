@@ -1,49 +1,53 @@
 import { NextResponse } from "next/server"
 
 /**
- * Server-side reverse geocode (Nominatim). Browsers cannot call Nominatim reliably (CORS + policy).
- * @see https://operations.osmfoundation.org/policies/nominatim/
+ * Server-side reverse geocode (Nominatim) — avoids browser CORS and keeps
+ * User-Agent policy-compliant requests.
+ *
+ * @see https://nominatim.org/release-docs/latest/api/Reverse/
  */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const lat = searchParams.get("lat")
-  const lon = searchParams.get("lon")
-  if (!lat || !lon) {
-    return NextResponse.json({ error: "lat and lon required" }, { status: 400 })
-  }
-  const la = Number(lat)
-  const lo = Number(lon)
-  if (!Number.isFinite(la) || !Number.isFinite(lo)) {
-    return NextResponse.json({ error: "invalid coordinates" }, { status: 400 })
+  const lat = parseFloat(searchParams.get("lat") ?? "")
+  const lon = parseFloat(searchParams.get("lon") ?? "")
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return NextResponse.json(
+      { error: "lat and lon query params required" },
+      { status: 400 }
+    )
   }
 
-  const url = new URL("https://nominatim.openstreetmap.org/reverse")
-  url.searchParams.set("lat", String(la))
-  url.searchParams.set("lon", String(lo))
-  url.searchParams.set("format", "json")
-  url.searchParams.set("addressdetails", "1")
-  url.searchParams.set("zoom", "18")
+  const url =
+    `https://nominatim.openstreetmap.org/reverse?` +
+    new URLSearchParams({
+      lat: String(lat),
+      lon: String(lon),
+      format: "json",
+      addressdetails: "1"
+    })
 
   try {
-    const res = await fetch(url.toString(), {
+    const res = await fetch(url, {
       headers: {
         Accept: "application/json",
-        "User-Agent": "NEST-Handover/1.0 (https://github.com/nest-handover)"
+        "User-Agent": "NEST-Handover/1.0 (reverse geocode)"
       },
       next: { revalidate: 0 }
     })
+
     if (!res.ok) {
       return NextResponse.json(
-        { error: `Nominatim HTTP ${res.status}` },
+        { error: "reverse geocode upstream failed" },
         { status: 502 }
       )
     }
+
     const data = (await res.json()) as Record<string, unknown>
     return NextResponse.json(data)
-  } catch (e) {
+  } catch {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "reverse geocode failed" },
-      { status: 500 }
+      { error: "reverse geocode request failed" },
+      { status: 502 }
     )
   }
 }

@@ -59,9 +59,13 @@ export default function PackagePage() {
 
   async function handlePhoto(file: File) {
     setPhotoProcessing(true)
-    await new Promise<void>((r) => setTimeout(r, 0))
     try {
-      const cropped = await compressEvidenceWebpUnder100kb(file)
+      /** Smaller initial edge = faster encode on mobile; still under ~100KB target */
+      const cropped = await compressEvidenceWebpUnder100kb(
+        file,
+        100 * 1024,
+        720
+      )
       setPhotoBlob(cropped)
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current)
@@ -177,13 +181,14 @@ export default function PackagePage() {
       if (photoBlob && data.handover_id && session.access_token) {
         try {
           const ext = photoBlob.type.includes("webp") ? "webp" : "jpg"
-          const uploadFile = new File([photoBlob], `package.${ext}`, {
-            type: photoBlob.type || "image/webp"
-          })
           const fd = new FormData()
           fd.set("handover_id", data.handover_id)
           fd.set("mode", "package_first_item")
-          fd.set("file", uploadFile, `package.${ext}`)
+          fd.set(
+            "file",
+            photoBlob,
+            `package.${ext}`
+          )
 
           const up = await fetch("/api/handover/upload-photo", {
             method: "POST",
