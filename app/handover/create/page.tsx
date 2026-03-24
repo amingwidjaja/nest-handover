@@ -7,6 +7,7 @@ import {
   type MapboxGeocodeFeature
 } from "@/lib/mapbox-forward-geocode"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
+import { parseNominatimReverse } from "@/lib/nominatim-parse"
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
@@ -190,20 +191,54 @@ export default function HandoverCreatePage() {
     setTimeout(() => setToast(""), 3000)
   }
 
-  function useCurrentLocation() {
+  async function useCurrentLocation() {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       showToast("GPS tidak didukung di perangkat ini")
       return
     }
     setLocationRefreshing(true)
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setUserProximity({
-          lng: pos.coords.longitude,
-          lat: pos.coords.latitude
-        })
-        setLocationRefreshing(false)
-        showToast("Lokasi saat ini siap dipakai sebagai koordinat tujuan")
+      async (pos) => {
+        const lat = pos.coords.latitude
+        const lng = pos.coords.longitude
+        setUserProximity({ lng, lat })
+        setMapboxPick({ lat, lng })
+
+        try {
+          const res = await fetch(
+            `/api/geocode/reverse?lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lng))}`
+          )
+          const raw = (await res.json()) as Record<string, unknown>
+          if (!res.ok) {
+            throw new Error(
+              typeof raw.error === "string" ? raw.error : "reverse geocode failed"
+            )
+          }
+          const parsed = parseNominatimReverse(raw)
+          if (parsed?.addressLine) {
+            setDestinationAddress(parsed.addressLine)
+            localStorage.setItem("draft_destination_address", parsed.addressLine)
+          }
+          if (parsed?.city) {
+            setDestinationCity(parsed.city)
+            localStorage.setItem("draft_destination_city", parsed.city)
+          }
+          if (parsed?.postalCode) {
+            setDestinationPostalCode(parsed.postalCode)
+            localStorage.setItem("draft_destination_postcode", parsed.postalCode)
+          }
+          showToast(
+            parsed?.addressLine
+              ? "Alamat terisi dari lokasi Anda"
+              : "Koordinat tujuan diset; alamat bisa disesuaikan manual"
+          )
+        } catch {
+          showToast(
+            "Koordinat tersimpan; isi alamat/kota/kode pos jika perlu"
+          )
+        } finally {
+          setLocationRefreshing(false)
+        }
       },
       () => {
         setLocationRefreshing(false)

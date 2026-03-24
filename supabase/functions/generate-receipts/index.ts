@@ -161,7 +161,8 @@ function formatIndonesianTime(dateStr?: string): string {
 
 const PAGE_W = 595.28
 const PAGE_H = 841.89
-const MARGIN = 48
+/** Tight margins — single-page A4 layout */
+const MARGIN = 40
 const LABEL = rgb(154 / 255, 143 / 255, 136 / 255)
 const VALUE = rgb(62 / 255, 39 / 255, 35 / 255)
 const LINE = rgb(236 / 255, 231 / 255, 227 / 255)
@@ -308,25 +309,19 @@ async function buildReceiptPdfBytes(opts: {
   if (opts.logoBytes) logoImg = await embedRaster(pdf, opts.logoBytes)
   if (opts.photoBytes) productImg = await embedRaster(pdf, opts.photoBytes)
 
-  const FOOTER_H = 52
-  const bottomMin = MARGIN + FOOTER_H
+  const displayItems = opts.items.slice(0, 3)
 
   let page = pdf.addPage([PAGE_W, PAGE_H])
   let y = PAGE_H - MARGIN
 
-  const lh = 13
-  const labelSize = 9
-  const bodySize = 11
-
-  const needSpace = (h: number) => {
-    if (y - h >= bottomMin) return
-    page = pdf.addPage([PAGE_W, PAGE_H])
-    y = PAGE_H - MARGIN
-  }
+  const lh = 11
+  const labelSize = 8
+  const bodySize = 10
+  const tlh = 10
 
   // --- Header (logo left, titles, serial right) ---
   const headerTop = PAGE_H - MARGIN
-  const logoSize = 44
+  const logoSize = 36
   if (logoImg) {
     page.drawImage(logoImg, {
       x: MARGIN,
@@ -338,37 +333,37 @@ async function buildReceiptPdfBytes(opts: {
   const textX = logoImg ? MARGIN + logoSize + 12 : MARGIN
   page.drawText(opts.brandTitle, {
     x: textX,
-    y: headerTop - 18,
-    size: 18,
+    y: headerTop - 16,
+    size: 16,
     font: fontBold,
     color: VALUE
   })
   page.drawText("OFFICIAL RECEIPT", {
     x: textX,
-    y: headerTop - 34,
-    size: 10,
+    y: headerTop - 30,
+    size: 9,
     font: fontRegular,
     color: LABEL
   })
   if (opts.serial) {
-    const sw = fontBold.widthOfTextAtSize(opts.serial, 11)
+    const sw = fontBold.widthOfTextAtSize(opts.serial, 10)
     page.drawText(opts.serial, {
       x: PAGE_W - MARGIN - sw,
-      y: headerTop - 18,
-      size: 11,
+      y: headerTop - 16,
+      size: 10,
       font: fontBold,
       color: VALUE
     })
   }
 
-  y = headerTop - logoSize - 8
+  y = headerTop - logoSize - 6
   page.drawLine({
     start: { x: MARGIN, y },
     end: { x: PAGE_W - MARGIN, y },
     thickness: 0.5,
     color: LINE
   })
-  y -= 20
+  y -= 14
 
   // --- Two columns: Sender | Receiver ---
   const colW = (PAGE_W - 2 * MARGIN - 16) / 2
@@ -428,7 +423,7 @@ async function buildReceiptPdfBytes(opts: {
     font: fontRegular,
     color: VALUE
   })
-  y -= 22
+  y -= 16
 
   page.drawLine({
     start: { x: MARGIN, y },
@@ -436,21 +431,20 @@ async function buildReceiptPdfBytes(opts: {
     thickness: 0.5,
     color: LINE
   })
-  y -= 18
+  y -= 12
 
-  // --- Product: 120×120 + bullets beside ---
-  needSpace(160)
+  // --- Product: 100×100 + bullets beside (max 3 items) ---
   page.drawText("RINCIAN PAKET", {
     x: MARGIN,
     y,
-    size: 10,
+    size: 9,
     font: fontBold,
     color: LABEL
   })
-  y -= 18
+  y -= 14
 
-  const photoBox = 120
-  const gap = 14
+  const photoBox = 100
+  const gap = 10
   const listX = MARGIN + photoBox + gap
   const listW = PAGE_W - MARGIN - listX
   const photoBottomY = y - photoBox
@@ -473,7 +467,7 @@ async function buildReceiptPdfBytes(opts: {
   }
 
   let listY = y
-  if (opts.items.length === 0) {
+  if (displayItems.length === 0) {
     page.drawText("—", {
       x: listX,
       y: listY,
@@ -483,7 +477,7 @@ async function buildReceiptPdfBytes(opts: {
     })
     listY -= lh
   } else {
-    for (const it of opts.items) {
+    for (const it of displayItems) {
       const bullet = `• ${String(it.description || "").trim() || "—"}`
       listY = drawWrapped(
         page,
@@ -498,30 +492,28 @@ async function buildReceiptPdfBytes(opts: {
       )
     }
   }
-  y = Math.min(photoBottomY - 10, listY - 10)
+  y = Math.min(photoBottomY - 8, listY - 8)
 
-  needSpace(40)
   page.drawLine({
     start: { x: MARGIN, y },
     end: { x: PAGE_W - MARGIN, y },
     thickness: 0.5,
     color: LINE
   })
-  y -= 18
+  y -= 12
 
   const tz = String(opts.event.timezone_label || "")
   const fd = formatIndonesianDate(opts.when)
   const ft = formatIndonesianTime(opts.when)
 
-  needSpace(120)
   page.drawText("DETAIL PENERIMAAN", {
     x: MARGIN,
     y,
-    size: 11,
+    size: 10,
     font: fontBold,
     color: LABEL
   })
-  y -= 20
+  y -= 14
 
   const rows: [string, string][] = [
     ["Metode", formatMetode(opts.event.receive_method as string)],
@@ -530,7 +522,6 @@ async function buildReceiptPdfBytes(opts: {
     ["Hubungan", String(opts.event.receiver_relation || "—")]
   ]
   for (const [lab, val] of rows) {
-    needSpace(lh + 4)
     page.drawText(`${lab}:`, {
       x: MARGIN,
       y,
@@ -541,9 +532,9 @@ async function buildReceiptPdfBytes(opts: {
     y = drawWrapped(
       page,
       val,
-      MARGIN + 118,
+      MARGIN + 108,
       y,
-      PAGE_W - MARGIN - 130,
+      PAGE_W - MARGIN - 120,
       bodySize,
       fontRegular,
       VALUE,
@@ -552,50 +543,47 @@ async function buildReceiptPdfBytes(opts: {
     y -= 4
   }
 
-  y -= 6
+  y -= 4
   const closing = `Paket telah diterima oleh ${String(opts.event.receiver_name || "—")} pada tanggal ${fd} pukul ${ft} ${tz} melalui metode ${formatMetode(opts.event.receive_method as string)}.`
-  needSpace(40)
   y = drawWrapped(
     page,
     closing,
     MARGIN,
     y,
     PAGE_W - 2 * MARGIN,
-    10,
+    9,
     fontRegular,
     VALUE,
     lh
   )
-  y -= 16
+  y -= 10
 
   // --- Grey trust block ---
   const deviceLine = formatDeviceIdLine(
     opts.event.device_model as string,
-    shortenDeviceIdForDisplay(opts.event.device_id as string, 120)
+    shortenDeviceIdForDisplay(opts.event.device_id as string, 72)
   )
   const gpsLine = formatGpsCoords(opts.event.gps_lat, opts.event.gps_lng)
   const trustHuman = formatTrustTimestampHuman(opts.when)
   const trustB36 = trustTimestampBase36(opts.when)
 
-  const pad = 12
+  const pad = 8
   const trustTextW = PAGE_W - 2 * MARGIN - 2 * pad
   const devLines = wrapText(
     `Device ID: ${deviceLine}`,
     fontRegular,
-    9,
+    8,
     trustTextW
   )
-  const gpsLines = wrapText(`GPS: ${gpsLine}`, fontRegular, 9, trustTextW)
+  const gpsLines = wrapText(`GPS: ${gpsLine}`, fontRegular, 8, trustTextW)
   const boxH =
     pad * 2 +
-    14 +
-    devLines.length * lh +
-    gpsLines.length * lh +
-    lh +
-    lh +
-    8
-
-  needSpace(boxH + 12)
+    12 +
+    devLines.length * tlh +
+    gpsLines.length * tlh +
+    tlh +
+    tlh +
+    6
 
   const boxBottom = y - boxH
   page.drawRectangle({
@@ -608,52 +596,52 @@ async function buildReceiptPdfBytes(opts: {
     borderWidth: 0.5
   })
 
-  let iy = y - pad - 12
+  let iy = y - pad - 10
   page.drawText("DIGITAL VERIFICATION", {
     x: MARGIN + pad,
     y: iy,
-    size: 11,
+    size: 9,
     font: fontBold,
     color: VALUE
   })
-  iy -= 18
+  iy -= 14
   for (const ln of devLines) {
     page.drawText(ln, {
       x: MARGIN + pad,
       y: iy,
-      size: 9,
+      size: 8,
       font: fontRegular,
       color: VALUE
     })
-    iy -= lh
+    iy -= tlh
   }
   for (const ln of gpsLines) {
     page.drawText(ln, {
       x: MARGIN + pad,
       y: iy,
-      size: 9,
+      size: 8,
       font: fontRegular,
       color: VALUE
     })
-    iy -= lh
+    iy -= tlh
   }
   page.drawText(`Timestamp: ${trustHuman}`, {
     x: MARGIN + pad,
     y: iy,
-    size: 9,
+    size: 8,
     font: fontRegular,
     color: VALUE
   })
-  iy -= lh
+  iy -= tlh
   page.drawText(`Trust seal (Base36): ${trustB36}`, {
     x: MARGIN + pad,
     y: iy,
-    size: 9,
+    size: 8,
     font: fontRegular,
     color: VALUE
   })
 
-  y = boxBottom - 8
+  y = boxBottom - 6
 
   const pages = pdf.getPages()
   drawFooter(pages[pages.length - 1], fontRegular)

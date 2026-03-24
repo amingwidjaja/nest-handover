@@ -1,15 +1,11 @@
 'use client'
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Camera, Home, ChevronRight, ChevronLeft, User } from "lucide-react"
 import Link from "next/link"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
-import {
-  blobToDataUrl,
-  compressEvidenceWebpUnder100kb,
-  dataUrlToBlob
-} from "@/lib/image-evidence"
+import { compressEvidenceWebpUnder100kb } from "@/lib/image-evidence"
 import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
 
 export default function PackagePage() {
@@ -27,8 +23,10 @@ export default function PackagePage() {
 
   /** Exactly 4 baris = 4 tipe barang (boleh kosong kecuali minimal satu terisi). */
   const [items, setItems] = useState(["", "", "", ""])
-  /** Compressed evidence as data URL (preview); binary only at submit via dataUrlToBlob. */
-  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null)
+  /** Compressed binary for upload — no base64 in multipart body. */
+  const [photoBlob, setPhotoBlob] = useState<Blob | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const previewUrlRef = useRef<string | null>(null)
   const [photoProcessing, setPhotoProcessing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [limitHint, setLimitHint] = useState<string | null>(null)
@@ -51,13 +49,26 @@ export default function PackagePage() {
     setItems(copy)
   }
 
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current)
+      }
+    }
+  }, [])
+
   async function handlePhoto(file: File) {
     setPhotoProcessing(true)
     await new Promise<void>((r) => setTimeout(r, 0))
     try {
       const cropped = await compressEvidenceWebpUnder100kb(file)
-      const dataUrl = await blobToDataUrl(cropped)
-      setPhotoDataUrl(dataUrl)
+      setPhotoBlob(cropped)
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current)
+      }
+      const url = URL.createObjectURL(cropped)
+      previewUrlRef.current = url
+      setPreviewUrl(url)
     } catch (err) {
       console.error("UPLOAD_DEBUG:", err)
       alert("Gagal memproses foto")
@@ -163,12 +174,11 @@ export default function PackagePage() {
         return
       }
 
-      if (photoDataUrl && data.handover_id && session.access_token) {
+      if (photoBlob && data.handover_id && session.access_token) {
         try {
-          const blob = dataUrlToBlob(photoDataUrl)
-          const ext = blob.type.includes("webp") ? "webp" : "jpg"
-          const uploadFile = new File([blob], `package.${ext}`, {
-            type: blob.type || "image/webp"
+          const ext = photoBlob.type.includes("webp") ? "webp" : "jpg"
+          const uploadFile = new File([photoBlob], `package.${ext}`, {
+            type: photoBlob.type || "image/webp"
           })
           const fd = new FormData()
           fd.set("handover_id", data.handover_id)
@@ -307,7 +317,7 @@ export default function PackagePage() {
             }}
           />
 
-          {!photoDataUrl ? (
+          {!previewUrl ? (
             <div className="relative w-full flex-1 min-h-[140px]">
               <label
                 htmlFor="cameraInput"
@@ -329,7 +339,7 @@ export default function PackagePage() {
           ) : (
             <div className="relative flex-1 min-h-0 group">
               <img
-                src={photoDataUrl}
+                src={previewUrl}
                 alt=""
                 className="w-full h-full object-cover rounded-sm border border-[#E0DED7] shadow-sm"
               />

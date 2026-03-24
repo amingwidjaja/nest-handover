@@ -1,18 +1,10 @@
 'use client'
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
-import { RotateCcw, ChevronRight, MapPin, SignalLow } from "lucide-react"
-import 'mapbox-gl/dist/mapbox-gl.css'
-
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-
-type Coords = {
-  lat: number
-  lng: number
-  accuracy?: number
-}
+import { ChevronRight, SignalLow } from "lucide-react"
+import type { Coords } from "./validation-map"
 
 const DEFAULT_COORDS: Coords = {
   lat: -6.2,
@@ -20,42 +12,8 @@ const DEFAULT_COORDS: Coords = {
   accuracy: 0
 }
 
-const MapWrapper = dynamic<any>(
-  () =>
-    import("react-map-gl").then((mod) => {
-      const { Map, Marker } = mod
-
-      return function MapboxComponent({ coords }: { coords: Coords }) {
-        if (!MAPBOX_TOKEN) {
-          return (
-            <div className="flex items-center justify-center h-full text-[10px] font-mono text-red-800 uppercase tracking-widest px-10 text-center font-bold bg-[var(--paper)]">
-              SISTEM: TOKEN TIDAK AKTIF
-            </div>
-          )
-        }
-
-        return (
-          <Map
-            key={`${coords.lat}-${coords.lng}`}
-            mapboxAccessToken={MAPBOX_TOKEN}
-            initialViewState={{
-              longitude: coords.lng,
-              latitude: coords.lat,
-              zoom: 16
-            }}
-            mapStyle="mapbox://styles/mapbox/light-v11"
-            style={{ width: '100%', height: '100%' }}
-          >
-            <Marker longitude={coords.lng} latitude={coords.lat} anchor="center">
-              <div className="relative flex items-center justify-center">
-                <div className="w-10 h-10 bg-[#3E2723]/20 rounded-full animate-ping absolute" />
-                <div className="w-5 h-5 bg-[#3E2723] rounded-full border-2 border-[var(--paper)] shadow-xl z-10" />
-              </div>
-            </Marker>
-          </Map>
-        )
-      }
-    }),
+const ValidationMap = dynamic(
+  () => import("./validation-map"),
   {
     ssr: false,
     loading: () => (
@@ -71,9 +29,15 @@ export default function LocationPage() {
   const router = useRouter()
   const id = params.id as string
   const watchId = useRef<number | null>(null)
-  const timerId = useRef<NodeJS.Timeout | null>(null)
+  const timerId = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastMapPush = useRef(0)
+  const mapPrimed = useRef(false)
+  const realCoordsRef = useRef<Coords | null>(null)
 
+  /** Live coords (strip + submit). */
   const [coords, setCoords] = useState<Coords>(DEFAULT_COORDS)
+  /** Throttled — map camera only updates when this changes (avoids remount / ease spam). */
+  const [mapCoords, setMapCoords] = useState<Coords>(DEFAULT_COORDS)
   const [realCoords, setRealCoords] = useState<Coords | null>(null)
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -90,10 +54,33 @@ export default function LocationPage() {
     if (timerId.current) clearTimeout(timerId.current)
   }
 
+  const pushMapIfNeeded = useCallback((c: Coords) => {
+    setMapCoords((prev) => {
+      const now = Date.now()
+      if (!mapPrimed.current) {
+        mapPrimed.current = true
+        lastMapPush.current = now
+        return c
+      }
+      const moved =
+        Math.abs(c.lat - prev.lat) > 0.00003 ||
+        Math.abs(c.lng - prev.lng) > 0.00003
+      if (moved || now - lastMapPush.current > 2000) {
+        lastMapPush.current = now
+        return c
+      }
+      return prev
+    })
+  }, [])
+
   function startTracking() {
     setLoading(true)
     setErrorMsg(null)
     setRealCoords(null)
+    realCoordsRef.current = null
+    mapPrimed.current = false
+    lastMapPush.current = 0
+    setMapCoords(DEFAULT_COORDS)
 
     if (typeof window !== "undefined" && !navigator.geolocation) {
       setErrorMsg("GPS TIDAK DIDUKUNG")
@@ -101,10 +88,8 @@ export default function LocationPage() {
       return
     }
 
-    // 🔥 TIMER MANUAL (12 Detik)
-    // Jika dalam 12 detik GPS tidak memberi respon, kita paksa berhenti loading
     timerId.current = setTimeout(() => {
-      if (loading && !realCoords) {
+      if (!realCoordsRef.current) {
         stopTracking()
         setLoading(false)
         setErrorMsg("TIMEOUT: SINYAL TERLALU LEMAH")
@@ -113,9 +98,8 @@ export default function LocationPage() {
 
     watchId.current = navigator.geolocation.watchPosition(
       (pos) => {
-        // Jika berhasil dapat lokasi, bersihkan timer
         if (timerId.current) clearTimeout(timerId.current)
-        
+
         const newCoords = {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
@@ -123,10 +107,12 @@ export default function LocationPage() {
         }
         setCoords(newCoords)
         setRealCoords(newCoords)
+        realCoordsRef.current = newCoords
+        pushMapIfNeeded(newCoords)
         setLoading(false)
       },
       (err) => {
-        if (!realCoords) {
+        if (!realCoordsRef.current) {
           if (timerId.current) clearTimeout(timerId.current)
           setLoading(false)
           if (err.code === 1) setErrorMsg("IZIN LOKASI DITOLAK")
@@ -198,7 +184,7 @@ export default function LocationPage() {
 
       {/* MAP AREA */}
       <div className="flex-1 relative bg-[var(--line)] overflow-hidden">
-        <MapWrapper coords={coords} />
+        <ValidationMap coords={mapCoords} />
 
         {/* LOADING & ERROR OVERLAY */}
         {(loading || (errorMsg && !realCoords)) && (
