@@ -40,3 +40,33 @@ export async function cropSquareResizeToJpeg(
     bitmap.close()
   }
 }
+
+const DEFAULT_MAX_BYTES = 100 * 1024
+
+/**
+ * Client-side compression: keep uploads fast and under ~100KB when possible.
+ * Iteratively lowers JPEG quality and max edge until size fits or limits hit.
+ */
+export async function compressJpegUnderMaxBytes(
+  input: Blob | File,
+  maxBytes = DEFAULT_MAX_BYTES,
+  initialMaxEdge = 1200
+): Promise<Blob> {
+  let quality = 0.82
+  let maxEdge = initialMaxEdge
+  let blob = await cropSquareResizeToJpeg(input, maxEdge, quality)
+  let guard = 0
+  while (blob.size > maxBytes && guard < 28) {
+    guard++
+    if (quality > 0.52) {
+      quality = Math.max(0.48, quality - 0.07)
+    } else if (maxEdge > 360) {
+      maxEdge = Math.floor(maxEdge * 0.86)
+      quality = 0.78
+    } else {
+      quality = Math.max(0.42, quality - 0.04)
+    }
+    blob = await cropSquareResizeToJpeg(input, maxEdge, quality)
+  }
+  return blob
+}

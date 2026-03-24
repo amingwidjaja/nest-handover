@@ -1,3 +1,11 @@
+/**
+ * Sole worker for receipt PDF generation.
+ * Claim: status=accepted, receipt_url IS NULL, receipt_status pending|failed|null.
+ * Upload: paket/{user_id}/{handover_id}/receipt_{handover_id}.pdf
+ *
+ * Trigger: schedule HTTP POST to this function URL (e.g. every minute) via
+ * Supabase Cron, pg_cron + pg_net, GitHub Actions, or Supabase Scheduled Functions.
+ */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { renderToBuffer } from "npm:@react-pdf/renderer"
 import ReceiptDocument from "../../../lib/pdf/ReceiptPDF.tsx"
@@ -13,11 +21,31 @@ const supabase = createClient(
 
 Deno.serve(async () => {
   try {
+    const { data: claimedId, error: claimErr } = await supabase.rpc(
+      "claim_handover_receipt_job"
+    )
 
-    // 🔥 ambil 1 row processing
-    const { data: rows, error } = await supabase
+    if (claimErr) {
+      return new Response(JSON.stringify({ error: claimErr.message }), {
+        status: 500
+      })
+    }
+
+    const handoverId =
+      claimedId != null && claimedId !== ""
+        ? String(claimedId)
+        : null
+
+    if (!handoverId) {
+      return new Response(JSON.stringify({ success: true, empty: true }), {
+        status: 200
+      })
+    }
+
+    const { data: row, error: fetchErr } = await supabase
       .from("handover")
-      .select(`
+      .select(
+        `
         id,
         user_id,
         serial_number,
@@ -29,19 +57,23 @@ Deno.serve(async () => {
         receipt_status,
         handover_items (*),
         receive_event (*)
-      `)
-      .eq("receipt_status", "processing")
-      .limit(1)
+      `
+      )
+      .eq("id", handoverId)
+      .single()
 
-    if (error) {
-      return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    if (fetchErr || !row) {
+      await supabase
+        .from("handover")
+        .update({ receipt_status: "failed" })
+        .eq("id", handoverId)
+      return new Response(
+        JSON.stringify({ error: fetchErr?.message || "handover not found" }),
+        { status: 500 }
+      )
     }
 
-    if (!rows || rows.length === 0) {
-      return new Response(JSON.stringify({ success: true, empty: true }), { status: 200 })
-    }
-
-    const data = rows[0] as {
+    const data = row as {
       id: string
       user_id: string
       receipt_url: string | null
@@ -49,12 +81,16 @@ Deno.serve(async () => {
     }
 
     if (!data.user_id) {
-      return new Response(JSON.stringify({ error: "handover tanpa user_id" }), {
-        status: 500
-      })
+      await supabase
+        .from("handover")
+        .update({ receipt_status: "failed" })
+        .eq("id", data.id)
+      return new Response(
+        JSON.stringify({ error: "handover tanpa user_id" }),
+        { status: 500 }
+      )
     }
 
-    // ✅ guard: kalau sudah ada URL → skip
     if (data.receipt_url) {
       await supabase
         .from("handover")
@@ -63,7 +99,6 @@ Deno.serve(async () => {
           receipt_generated_at: new Date().toISOString()
         })
         .eq("id", data.id)
-
       return new Response(JSON.stringify({ skipped: true }), { status: 200 })
     }
 
@@ -73,11 +108,20 @@ Deno.serve(async () => {
       .eq("id", data.user_id)
       .maybeSingle()
 
-    // 🔥 generate PDF
-    const element = ReceiptDocument({
-      data: { ...data, profiles: profile ?? null }
-    })
-    const pdfBuffer = await renderToBuffer(element)
+    let pdfBuffer: Uint8Array
+    try {
+      const element = ReceiptDocument({
+        data: { ...data, profiles: profile ?? null }
+      })
+      pdfBuffer = await renderToBuffer(element)
+    } catch (renderErr: unknown) {
+      const msg = renderErr instanceof Error ? renderErr.message : "render failed"
+      await supabase
+        .from("handover")
+        .update({ receipt_status: "failed" })
+        .eq("id", data.id)
+      return new Response(JSON.stringify({ error: msg }), { status: 500 })
+    }
 
     const storagePath = buildPaketReceiptPdfPath(data.user_id, data.id)
 
@@ -89,10 +133,15 @@ Deno.serve(async () => {
       })
 
     if (uploadError) {
-      return new Response(JSON.stringify({ error: uploadError.message }), { status: 500 })
+      await supabase
+        .from("handover")
+        .update({ receipt_status: "failed" })
+        .eq("id", data.id)
+      return new Response(JSON.stringify({ error: uploadError.message }), {
+        status: 500
+      })
     }
 
-    // ✅ update done — DB stores relative path only
     await supabase
       .from("handover")
       .update({
@@ -110,8 +159,8 @@ Deno.serve(async () => {
       }),
       { status: 200 }
     )
-
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "error"
+    return new Response(JSON.stringify({ error: message }), { status: 500 })
   }
 })

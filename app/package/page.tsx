@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Camera, Home, ChevronRight, ChevronLeft, User } from "lucide-react"
 import Link from "next/link"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
-import { cropSquareResizeToJpeg } from "@/lib/image-evidence"
+import { compressJpegUnderMaxBytes } from "@/lib/image-evidence"
 import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
 
 export default function PackagePage() {
@@ -48,7 +48,7 @@ export default function PackagePage() {
 
   async function handlePhoto(file: File) {
     try {
-      const cropped = await cropSquareResizeToJpeg(file)
+      const cropped = await compressJpegUnderMaxBytes(file)
       if (preview) URL.revokeObjectURL(preview)
       const f = new File([cropped], "package.jpg", { type: "image/jpeg" })
       setPhotoFile(f)
@@ -334,7 +334,7 @@ export default function PackagePage() {
             disabled={saving}
             className="bg-[#3E2723] text-[#FAF9F6] py-4 px-5 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] flex justify-between items-center shadow-md active:scale-[0.97] transition-all disabled:opacity-50"
           >
-            <span>Serah Terima</span>
+            <span>Tanda Terima</span>
             <ChevronRight size={14} />
           </button>
 

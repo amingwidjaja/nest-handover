@@ -35,11 +35,11 @@ function formatMetode(method: string) {
     case "direct_qr":
       return "QR Code"
     case "direct_photo":
-      return "Foto Serah Terima"
+      return "Foto Tanda Terima"
     case "proxy_qr":
       return "QR Code (Diwakilkan)"
     case "proxy_photo":
-      return "Foto Serah Terima (Diwakilkan)"
+      return "Foto Tanda Terima (Diwakilkan)"
     case "GPS":
       return "Validasi GPS"
     default:
@@ -122,7 +122,7 @@ export default function ReceiptPage() {
       ? handover.profiles.company_name.trim()
       : ""
   const hasCompanyBrand = !!companyName
-  const brandTitle = hasCompanyBrand ? companyName : "NEST-Paket"
+  const brandTitle = hasCompanyBrand ? companyName : "Tanda Terima"
   const logoUrl =
     hasCompanyBrand && handover.profiles?.company_logo_url
       ? resolveEvidencePhotoUrl(handover.profiles.company_logo_url)
@@ -183,7 +183,7 @@ export default function ReceiptPage() {
             <div className="min-w-0 flex-1 text-center sm:text-left">
               <h1 className="text-xl font-light text-[#3E2723]">{brandTitle}</h1>
               <p className="mt-1 text-xs tracking-wide text-[#9A8F88]">
-                Bukti Serah Terima Paket
+                Tanda Terima
               </p>
             </div>
           </div>
@@ -390,14 +390,14 @@ export default function ReceiptPage() {
         <div className="my-3 border-t border-[#ECE7E3]" />
 
         <p className="text-center text-[9px] leading-relaxed text-[#9A8F88]">
-          Dokumen ini merupakan Bukti Serah Terima Sah yang diterbitkan secara
+          Dokumen ini merupakan Tanda Terima Sah yang diterbitkan secara
           otomatis oleh NEST-System. Keaslian data dijamin melalui verifikasi
           Device ID, Timestamp, dan Geo-tagging sebagai pengganti tanda tangan
           basah.
         </p>
         <p className="mt-2 text-center text-[8px] leading-relaxed text-[#9A8F88]">
-          © 2026 NEST76 Studio. Generated via NEST-Paket Server. All logs are
-          securely encrypted and archived.
+          © 2026 NEST76 Studio. Tanda Terima — generated securely. All logs are
+          encrypted and archived.
         </p>
       </main>
 

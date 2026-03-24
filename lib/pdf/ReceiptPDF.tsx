@@ -345,11 +345,11 @@ function formatMetode(method: string | undefined): string {
     case "direct_qr":
       return "QR Code"
     case "direct_photo":
-      return "Foto Serah Terima"
+      return "Foto Tanda Terima"
     case "proxy_qr":
       return "QR Code (Diwakilkan)"
     case "proxy_photo":
-      return "Foto Serah Terima (Diwakilkan)"
+      return "Foto Tanda Terima (Diwakilkan)"
     case "GPS":
       return "Validasi GPS"
     default:
@@ -396,7 +396,7 @@ const HandoverReceiptPDF = ({ data }: { data: HandoverData }) => {
 
   const companyName = data.profiles?.company_name?.trim()
   const hasCompanyBrand = !!companyName
-  const brandTitle = hasCompanyBrand ? companyName! : "NEST-Paket"
+  const brandTitle = hasCompanyBrand ? companyName! : "Tanda Terima"
   const logoUrl =
     hasCompanyBrand && data.profiles?.company_logo_url
       ? resolveNestEvidencePublicUrl(data.profiles.company_logo_url)
@@ -437,7 +437,7 @@ const HandoverReceiptPDF = ({ data }: { data: HandoverData }) => {
             {logoUrl ? <Image src={logoUrl} style={styles.logo} /> : null}
             <View style={styles.headerTitles}>
               <Text style={styles.brandTitle}>{brandTitle}</Text>
-              <Text style={styles.docSubtitle}>BUKTI SERAH TERIMA PAKET</Text>
+              <Text style={styles.docSubtitle}>TANDA TERIMA</Text>
             </View>
           </View>
           {data.serial_number ? (
@@ -595,14 +595,14 @@ const HandoverReceiptPDF = ({ data }: { data: HandoverData }) => {
 
         <View style={styles.footerWrap} fixed>
           <Text style={styles.legalStatement}>
-            Dokumen ini merupakan Bukti Serah Terima Sah yang diterbitkan secara
+            Dokumen ini merupakan Tanda Terima Sah yang diterbitkan secara
             otomatis oleh NEST-System. Keaslian data dijamin melalui verifikasi
             Device ID, Timestamp, dan Geo-tagging sebagai pengganti tanda tangan
             basah.
           </Text>
           <Text style={styles.copyrightLine}>
-            © 2026 NEST76 Studio. Generated via NEST-Paket Server. All logs are
-            securely encrypted and archived.
+            © 2026 NEST76 Studio. Tanda Terima — generated securely. All logs are
+            encrypted and archived.
           </Text>
         </View>
       </Page>

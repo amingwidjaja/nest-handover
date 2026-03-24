@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
-import { cropSquareResizeToJpeg } from "@/lib/image-evidence"
+import { compressJpegUnderMaxBytes } from "@/lib/image-evidence"
 import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
 import { getClientDeviceMeta } from "@/lib/receipt-trust"
 
@@ -50,7 +50,7 @@ export default function PreviewPage() {
       }
 
       const raw = await (await fetch(photo)).blob()
-      const jpeg = await cropSquareResizeToJpeg(raw)
+      const jpeg = await compressJpegUnderMaxBytes(raw)
       const proofFile = new File([jpeg], `${Date.now()}_bukti.jpg`, {
         type: "image/jpeg"
       })

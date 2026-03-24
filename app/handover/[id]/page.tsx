@@ -226,7 +226,7 @@ export default function HandoverPage() {
       <main className="p-6 pt-6">
 
         <h2 className="text-2xl font-medium mb-1">
-          Serah Terima
+          Tanda Terima
         </h2>
 
         {handover?.serial_number && (

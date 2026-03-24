@@ -35,7 +35,7 @@ export default function VerifyPage(){
     <div className="min-h-screen p-8 bg-[#FAF9F6] text-[#3E2723]">
 
       <h1 className="text-xl mb-8">
-        Verifikasi Serah Terima
+        Verifikasi Tanda Terima
       </h1>
 
       <div className="space-y-2 text-sm">

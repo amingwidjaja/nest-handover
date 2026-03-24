@@ -34,12 +34,12 @@ export default function SuccessPage(){
       <main className="p-8 pt-24 text-center">
 
         <h2 className="text-2xl font-light mb-6">
-          Serah Terima berhasil
+          Tanda Terima berhasil
         </h2>
 
         <p className="text-sm opacity-60 leading-relaxed max-w-sm mx-auto mb-12">
 
-          Dokumen Serah Terima kamu sudah tersimpan.
+          Dokumen Tanda Terima kamu sudah tersimpan.
 
           <br/><br/>
 

@@ -118,6 +118,125 @@ export function buildProfileLogoPath(userId: string): string {
   return `${userId}/profile/logo.png`
 }
 
+const STORAGE_LIST_PAGE = 1000
+const STORAGE_REMOVE_BATCH = 100
+
+/**
+ * Lists every object key under a prefix (recursive). Folders have no `metadata.size`.
+ */
+async function listAllObjectPathsUnderPrefix(
+  supabase: SupabaseClient,
+  bucket: string,
+  prefix: string
+): Promise<string[]> {
+  const collected: string[] = []
+  let offset = 0
+
+  for (;;) {
+    const { data, error } = await supabase.storage.from(bucket).list(prefix, {
+      limit: STORAGE_LIST_PAGE,
+      offset,
+      sortBy: { column: "name", order: "asc" }
+    })
+
+    if (error) {
+      const msg = error.message?.toLowerCase() ?? ""
+      if (
+        msg.includes("not found") ||
+        msg.includes("does not exist") ||
+        msg.includes("no such")
+      ) {
+        return []
+      }
+      throw error
+    }
+
+    if (!data || data.length === 0) break
+
+    for (const item of data) {
+      if (item.name === ".emptyFolderPlaceholder") continue
+
+      const childPath = prefix ? `${prefix}/${item.name}` : item.name
+      const size = (item.metadata as { size?: number } | null | undefined)?.size
+      const hasSize = typeof size === "number"
+      const looksLikeFile = /\.(jpe?g|png|gif|webp|pdf)$/i.test(item.name)
+
+      if (hasSize || looksLikeFile) {
+        collected.push(childPath)
+      } else {
+        const nested = await listAllObjectPathsUnderPrefix(
+          supabase,
+          bucket,
+          childPath
+        )
+        collected.push(...nested)
+      }
+    }
+
+    if (data.length < STORAGE_LIST_PAGE) break
+    offset += STORAGE_LIST_PAGE
+  }
+
+  return collected
+}
+
+export type DeleteHandoverStorageResult = {
+  deleted: number
+  errors: string[]
+}
+
+/**
+ * Deletes all objects in the canonical handover room:
+ * `paket/{user_id}/{handover_id}/` in the nest-evidence bucket.
+ * Safe when the prefix is empty or missing (no throw).
+ */
+export async function deleteHandoverStorage(
+  supabase: SupabaseClient,
+  userId: string,
+  handoverId: string
+): Promise<DeleteHandoverStorageResult> {
+  const errors: string[] = []
+  const uid = String(userId ?? "").trim()
+  const hid = String(handoverId ?? "").trim()
+  if (!uid || !hid) {
+    return { deleted: 0, errors: [] }
+  }
+
+  const prefix = buildPaketRoomRelativePath(uid, hid)
+  let paths: string[] = []
+
+  try {
+    paths = await listAllObjectPathsUnderPrefix(
+      supabase,
+      NEST_EVIDENCE_BUCKET,
+      prefix
+    )
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    errors.push(msg)
+    return { deleted: 0, errors }
+  }
+
+  if (paths.length === 0) {
+    return { deleted: 0, errors: [] }
+  }
+
+  let deleted = 0
+  for (let i = 0; i < paths.length; i += STORAGE_REMOVE_BATCH) {
+    const chunk = paths.slice(i, i + STORAGE_REMOVE_BATCH)
+    const { error } = await supabase.storage
+      .from(NEST_EVIDENCE_BUCKET)
+      .remove(chunk)
+    if (error) {
+      errors.push(error.message)
+    } else {
+      deleted += chunk.length
+    }
+  }
+
+  return { deleted, errors }
+}
+
 export async function uploadJpegToNestEvidence(
   supabase: SupabaseClient,
   path: string,

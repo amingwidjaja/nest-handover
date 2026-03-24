@@ -118,7 +118,7 @@ export default function DocumentPage() {
             </div>
 
             <h1 className="mt-1 text-2xl font-light tracking-tight">
-              Bukti Serah Terima
+              Tanda Terima
             </h1>
 
           </div>
@@ -315,14 +315,14 @@ export default function DocumentPage() {
           <section className="mb-12">
 
             <h3 className="mb-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-              Foto Serah Terima
+              Foto Tanda Terima
             </h3>
 
             <div className="relative aspect-square w-full overflow-hidden rounded-sm border border-gray-100 bg-gray-50 md:max-w-md">
 
               <Image
                 src={proofPhoto}
-                alt="Bukti Serah Terima"
+                alt="Tanda Terima"
                 fill
                 className="object-cover"
                 unoptimized
