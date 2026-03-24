@@ -72,6 +72,26 @@ export async function POST(req: Request) {
       )
     }
 
+    const { data: serialRaw, error: serialErr } = await admin.rpc(
+      "next_handover_serial_number",
+      {
+        p_user_id: user.id,
+        p_sender_name: String(sender_name ?? "")
+      }
+    )
+
+    if (serialErr || serialRaw == null || String(serialRaw).trim() === "") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: serialErr?.message || "Gagal membuat nomor seri"
+        },
+        { status: 500 }
+      )
+    }
+
+    const serial_number = String(serialRaw).trim()
+
     const token = generateToken()
 
     const row: Record<string, unknown> = {
@@ -79,6 +99,7 @@ export async function POST(req: Request) {
       status: "created",
       user_id: user.id,
       record_status: "active",
+      serial_number,
       sender_name: sender_name ?? "",
       receiver_target_name: receiver_target_name ?? "",
       receiver_target_phone: receiver_target_phone ?? "",
@@ -140,7 +161,8 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       token,
-      handover_id: data.id
+      handover_id: data.id,
+      serial_number
     })
   } catch {
     return NextResponse.json(

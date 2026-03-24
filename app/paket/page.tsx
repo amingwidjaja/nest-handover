@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function HomePage() {
+  const router = useRouter();
 
   const [pending,setPending] = useState(0);
   const [last,setLast] = useState<string | null>(null);
+  const [savedSerial, setSavedSerial] = useState<string | null>(null);
 
   useEffect(()=>{
 
@@ -45,10 +48,37 @@ export default function HomePage() {
 
   },[]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sn = new URLSearchParams(window.location.search).get("sn");
+    if (sn) setSavedSerial(sn);
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] px-8 text-center flex flex-col justify-between">
 
       <div>
+
+        {savedSerial && (
+          <div className="max-w-md mx-auto mt-6 mb-2 rounded-sm border border-[#C8B8A8] bg-white/80 px-4 py-3 text-left shadow-sm">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[#8D6E63] mb-1">
+              Tersimpan
+            </p>
+            <p className="text-sm font-mono font-medium text-[#3E2723] break-all">
+              {savedSerial}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSavedSerial(null);
+                router.replace("/paket");
+              }}
+              className="mt-2 text-[11px] text-[#8D6E63] underline underline-offset-2"
+            >
+              Tutup
+            </button>
+          </div>
+        )}
 
         <img
           src="/logo-nest-paket.png"

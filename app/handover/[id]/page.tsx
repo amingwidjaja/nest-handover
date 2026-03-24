@@ -224,9 +224,16 @@ export default function HandoverPage() {
 
       <main className="p-6 pt-6">
 
-        <h2 className="text-2xl font-medium mb-4">
+        <h2 className="text-2xl font-medium mb-1">
           Serah Terima
         </h2>
+
+        {handover?.serial_number && (
+          <p className="text-sm font-mono text-[#5D4037] mb-4 tracking-tight">
+            No. Tanda Terima Digital:{" "}
+            <span className="font-semibold">{handover.serial_number}</span>
+          </p>
+        )}
 
         {handover && (
           <div className="space-y-1 mb-6 text-base">

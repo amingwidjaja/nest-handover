@@ -24,8 +24,8 @@ export default function PackagePage() {
     }
   }, []);
 
-  // Ditambah jadi 3 baris sesuai request
-  const [items, setItems] = useState(["", "", ""])
+  /** Exactly 4 baris = 4 tipe barang (boleh kosong kecuali minimal satu terisi). */
+  const [items, setItems] = useState(["", "", "", ""])
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -175,7 +175,7 @@ export default function PackagePage() {
       }
       if (!data.success) {
         setSaving(false)
-        alert(data.error || "Gagal membuat handover")
+        alert(data.error || "Gagal membuat Tanda Terima Digital")
         return
       }
       localStorage.removeItem("draft_sender_name")
@@ -188,7 +188,14 @@ export default function PackagePage() {
       localStorage.removeItem("draft_destination_city")
       localStorage.removeItem("draft_destination_postcode")
 
-      router.push(mode === "save" ? "/paket" : `/handover/${data.handover_id}`)
+      const sn = typeof data.serial_number === "string" ? data.serial_number : ""
+      router.push(
+        mode === "save"
+          ? sn
+            ? `/paket?sn=${encodeURIComponent(sn)}`
+            : "/paket"
+          : `/handover/${data.handover_id}`
+      )
     } catch {
       setSaving(false)
       alert("Terjadi kesalahan koneksi")
@@ -234,17 +241,24 @@ export default function PackagePage() {
           </div>
         </div>
 
-        {/* ITEMS - 3 Rows Compact */}
-        <div className="space-y-0 mb-4">
+        {/* ITEMS — tepat 4 baris, 1 baris = 1 tipe barang */}
+        <div className="space-y-2 mb-4">
           {items.map((item, i) => (
-            <textarea
-              key={i}
-              value={item}
-              onChange={(e) => handleItemChange(i, e.target.value)}
-              className="w-full bg-transparent border-b border-[#E0DED7] focus:border-[#3E2723] outline-none py-2 text-[14px] resize-none placeholder:opacity-20 transition-all leading-tight line-input"
-              rows={1}
-              placeholder={i === 0 ? "Ketik nama barang utama..." : `Barang tambahan ${i+1}`}
-            />
+            <div key={i} className="flex gap-3 items-start">
+              <span
+                className="shrink-0 w-5 pt-2 text-[13px] opacity-45 font-medium tabular-nums text-right"
+                aria-hidden
+              >
+                {i + 1}.
+              </span>
+              <textarea
+                value={item}
+                onChange={(e) => handleItemChange(i, e.target.value)}
+                className="min-h-0 flex-1 w-full bg-transparent border-b border-[#E0DED7] focus:border-[#3E2723] outline-none py-2 text-[14px] resize-none placeholder:opacity-35 transition-all leading-tight line-input"
+                rows={1}
+                placeholder={i === 0 ? "Contoh: Sepatu" : `Barang ${i + 1}`}
+              />
+            </div>
           ))}
         </div>
 
