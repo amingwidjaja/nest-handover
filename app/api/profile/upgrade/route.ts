@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
-import { buildProfileLogoPath } from "@/lib/nest-evidence-upload"
+import { buildProfileLogoPath, NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
 
 export async function POST(req: Request) {
   const supabase = await createServerSupabaseClient()
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
   if (logoBuffer && logoBuffer.length > 0) {
     const path = buildProfileLogoPath(user.id)
     const { error: upErr } = await admin.storage
-      .from("nest-evidence")
+      .from(NEST_EVIDENCE_BUCKET)
       .upload(path, logoBuffer, {
         contentType: "image/png",
         upsert: true
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: upErr.message }, { status: 500 })
     }
 
-    const { data: pub } = admin.storage.from("nest-evidence").getPublicUrl(path)
+    const { data: pub } = admin.storage.from(NEST_EVIDENCE_BUCKET).getPublicUrl(path)
     company_logo_url = pub.publicUrl
   }
 

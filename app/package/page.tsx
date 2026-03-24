@@ -6,10 +6,7 @@ import { Camera, Home, ChevronRight, ChevronLeft, User } from "lucide-react"
 import Link from "next/link"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 import { cropSquareResizeToJpeg } from "@/lib/image-evidence"
-import {
-  buildEvidenceObjectPath,
-  uploadJpegToNestEvidence
-} from "@/lib/nest-evidence-upload"
+import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
 
 export default function PackagePage() {
   const router = useRouter()
@@ -56,7 +53,8 @@ export default function PackagePage() {
       const f = new File([cropped], "package.jpg", { type: "image/jpeg" })
       setPhotoFile(f)
       setPreview(URL.createObjectURL(cropped))
-    } catch {
+    } catch (err) {
+      console.error("UPLOAD_DEBUG:", err)
       alert("Gagal memproses foto")
     }
   }
@@ -103,31 +101,10 @@ export default function PackagePage() {
     const draftCity = localStorage.getItem("draft_destination_city") || ""
     const draftPostcode = localStorage.getItem("draft_destination_postcode") || ""
 
-    let packagePhotoUrl: string | null = null
-    if (photoFile) {
-      try {
-        const path = buildEvidenceObjectPath(
-          session.user.id,
-          "package",
-          "paket"
-        )
-        const { publicUrl } = await uploadJpegToNestEvidence(
-          supabase,
-          path,
-          photoFile
-        )
-        packagePhotoUrl = publicUrl
-      } catch {
-        setSaving(false)
-        alert("Gagal mengunggah foto paket")
-        return
-      }
-    }
-
     const descriptions = items.map((i) => i.trim()).filter(Boolean)
-    const itemRows = descriptions.map((description, idx) => ({
+    const itemRows = descriptions.map((description) => ({
       description,
-      photo_url: idx === 0 && packagePhotoUrl ? packagePhotoUrl : null
+      photo_url: null as string | null
     }))
 
     const payload: Record<string, unknown> = {
@@ -178,6 +155,43 @@ export default function PackagePage() {
         alert(data.error || "Gagal membuat Tanda Terima Digital")
         return
       }
+
+      if (photoFile && data.handover_id && session.access_token) {
+        try {
+          const fd = new FormData()
+          fd.set("handover_id", data.handover_id)
+          fd.set("mode", "package_first_item")
+          fd.set("file", photoFile, photoFile.name || "paket.jpg")
+
+          const up = await fetch("/api/handover/upload-photo", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${session.access_token}`
+            },
+            body: fd
+          })
+          const upJson = (await up.json().catch(() => ({}))) as {
+            error?: string
+            detail?: string
+          }
+          if (!up.ok) {
+            console.error("UPLOAD_DEBUG:", upJson)
+            throw new Error(
+              upJson.error || upJson.detail || `Upload HTTP ${up.status}`
+            )
+          }
+        } catch (err) {
+          console.error("UPLOAD_DEBUG:", err)
+          setSaving(false)
+          alert(
+            `Gagal mengunggah foto paket (bucket: ${NEST_EVIDENCE_BUCKET}). ${
+              err instanceof Error ? err.message : ""
+            }`
+          )
+          return
+        }
+      }
+
       localStorage.removeItem("draft_sender_name")
       localStorage.removeItem("draft_sender_contact")
       localStorage.removeItem("draft_receiver_name")
@@ -196,7 +210,8 @@ export default function PackagePage() {
             : "/paket"
           : `/handover/${data.handover_id}`
       )
-    } catch {
+    } catch (err) {
+      console.error("UPLOAD_DEBUG:", err)
       setSaving(false)
       alert("Terjadi kesalahan koneksi")
     }

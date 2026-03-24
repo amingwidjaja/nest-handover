@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
+import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
 import { renderToBuffer } from "@react-pdf/renderer"
 import ReceiptDocument from "@/lib/pdf/ReceiptPDF"
 
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
     const fileName = `${data.id}.pdf`
 
     const { error: uploadError } = await supabase.storage
-      .from("nest-evidence")
+      .from(NEST_EVIDENCE_BUCKET)
       .upload(fileName, pdfBuffer, {
         contentType: "application/pdf",
         upsert: false
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
     }
 
     const { data: publicUrlData } = supabase.storage
-      .from("nest-evidence")
+      .from(NEST_EVIDENCE_BUCKET)
       .getPublicUrl(fileName)
 
     const publicUrl = publicUrlData?.publicUrl

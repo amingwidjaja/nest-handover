@@ -5,10 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 import { cropSquareResizeToJpeg } from "@/lib/image-evidence"
-import {
-  buildEvidenceObjectPath,
-  uploadJpegToNestEvidence
-} from "@/lib/nest-evidence-upload"
+import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
 
 export default function PreviewPage() {
   const params = useParams()
@@ -53,12 +50,32 @@ export default function PreviewPage() {
 
       const raw = await (await fetch(photo)).blob()
       const jpeg = await cropSquareResizeToJpeg(raw)
-      const path = buildEvidenceObjectPath(session.user.id, "proof", "bukti")
-      const { publicUrl: photo_url } = await uploadJpegToNestEvidence(
-        supabase,
-        path,
-        jpeg
-      )
+      const proofFile = new File([jpeg], `${Date.now()}_bukti.jpg`, {
+        type: "image/jpeg"
+      })
+
+      const fd = new FormData()
+      fd.set("handover_id", id)
+      fd.set("mode", "proof_only")
+      fd.set("file", proofFile)
+
+      const up = await fetch("/api/handover/upload-photo", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: fd
+      })
+      const upJson = (await up.json().catch(() => ({}))) as {
+        success?: boolean
+        publicUrl?: string
+        error?: string
+      }
+      if (!up.ok || !upJson.publicUrl) {
+        console.error("UPLOAD_DEBUG:", upJson)
+        throw new Error(
+          upJson.error || `Upload gagal (bucket: ${NEST_EVIDENCE_BUCKET})`
+        )
+      }
+      const photo_url = upJson.publicUrl
 
       const meta = JSON.parse(
         sessionStorage.getItem(`handover_${id}_meta`) || "{}"
@@ -89,10 +106,15 @@ export default function PreviewPage() {
 
       sessionStorage.removeItem(`handover_${id}_photo`)
 
+      setSaving(false)
       router.replace(`/handover/${id}/location`)
     } catch (err) {
-      console.log(err)
-      alert("Gagal menyimpan")
+      console.error("UPLOAD_DEBUG:", err)
+      alert(
+        err instanceof Error
+          ? `Gagal menyimpan: ${err.message}`
+          : "Gagal menyimpan"
+      )
       setSaving(false)
     }
   }
