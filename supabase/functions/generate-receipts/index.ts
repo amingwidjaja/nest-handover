@@ -1,6 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { renderToBuffer } from "npm:@react-pdf/renderer"
 import ReceiptDocument from "../../../lib/pdf/ReceiptPDF.tsx"
+import {
+  buildPaketReceiptPdfPath,
+  NEST_EVIDENCE_BUCKET
+} from "../../../lib/nest-evidence-upload.ts"
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -75,11 +79,10 @@ Deno.serve(async () => {
     })
     const pdfBuffer = await renderToBuffer(element)
 
-    const bucket = Deno.env.get("SUPABASE_STORAGE_BUCKET") ?? "nest-evidence"
-    const storagePath = `paket/${data.user_id}/${data.id}/receipt_${data.id}.pdf`
+    const storagePath = buildPaketReceiptPdfPath(data.user_id, data.id)
 
     const { error: uploadError } = await supabase.storage
-      .from(bucket)
+      .from(NEST_EVIDENCE_BUCKET)
       .upload(storagePath, pdfBuffer, {
         contentType: "application/pdf",
         upsert: true

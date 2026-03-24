@@ -1,8 +1,27 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
+/**
+ * Canonical nest-evidence layout (one “room” per handover):
+ * `paket/{user_id}/{handover_id}/…` — photos + receipt PDF live together.
+ */
+
+function readEnv(key: string): string | undefined {
+  if (typeof process !== "undefined" && process.env?.[key]) {
+    return process.env[key]
+  }
+  const DenoEnv = (
+    globalThis as unknown as {
+      Deno?: { env: { get: (k: string) => string | undefined } }
+    }
+  ).Deno?.env
+  return DenoEnv?.get(key)
+}
+
 /** Must match the Supabase Storage bucket name (default used in migrations: nest-evidence). */
 export const NEST_EVIDENCE_BUCKET =
-  process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ?? "nest-evidence"
+  readEnv("NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET") ??
+  readEnv("SUPABASE_STORAGE_BUCKET") ??
+  "nest-evidence"
 
 export type EvidencePhotoType = "package" | "proof"
 
@@ -10,21 +29,29 @@ function safeStamp() {
   return Date.now()
 }
 
-/** Logistics photos under bucket root: `paket/{user_id}/{handover_id}/{type}_{timestamp}.jpg` */
+/** Relative folder key: `paket/{user_id}/{handover_id}` (no trailing slash). */
+export function buildPaketRoomRelativePath(
+  userId: string,
+  handoverId: string
+): string {
+  return `paket/${userId}/${handoverId}`
+}
+
+/** Logistics photos: `paket/{user_id}/{handover_id}/{type}_{timestamp}.jpg` */
 export function buildPaketObjectPath(
   userId: string,
   handoverId: string,
   type: "paket" | "proof"
 ): string {
-  return `paket/${userId}/${handoverId}/${type}_${safeStamp()}.jpg`
+  return `${buildPaketRoomRelativePath(userId, handoverId)}/${type}_${safeStamp()}.jpg`
 }
 
-/** Generated receipt PDF: `paket/{user_id}/{handover_id}/receipt_{handover_id}.pdf` */
+/** Receipt PDF: `paket/{user_id}/{handover_id}/receipt_{handover_id}.pdf` */
 export function buildPaketReceiptPdfPath(
   userId: string,
   handoverId: string
 ): string {
-  return `paket/${userId}/${handoverId}/receipt_${handoverId}.pdf`
+  return `${buildPaketRoomRelativePath(userId, handoverId)}/receipt_${handoverId}.pdf`
 }
 
 /**
@@ -40,7 +67,7 @@ export function resolveNestEvidencePublicUrl(
     return trimmed
   }
   const rawBase =
-    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || ""
+    readEnv("NEXT_PUBLIC_SUPABASE_URL") ?? readEnv("SUPABASE_URL") ?? ""
   const base = rawBase.replace(/\/$/, "")
   if (!base) return null
   const key = trimmed.startsWith("/") ? trimmed.slice(1) : trimmed
@@ -60,27 +87,31 @@ export function resolveEvidencePhotoUrl(
 
 /**
  * @deprecated Prefer {@link buildPaketObjectPath}
+ * Same room layout: `paket/{user_id}/{handover_id}/…`
  */
 export function buildHandoverPhotoPath(
+  userId: string,
   handoverId: string,
   filenameBase = "photo"
 ): string {
-  const safe = String(filenameBase)
-    .replace(/[^a-zA-Z0-9._-]/g, "_")
-    .slice(0, 80) || "photo"
-  return `${handoverId}/${safeStamp()}_${safe}.jpg`
+  const safe =
+    String(filenameBase)
+      .replace(/[^a-zA-Z0-9._-]/g, "_")
+      .slice(0, 80) || "photo"
+  return `${buildPaketRoomRelativePath(userId, handoverId)}/${safeStamp()}_${safe}.jpg`
 }
 
 /**
- * Legacy path: `[user_id]/[photo_type]/[timestamp]_[filename].jpg`
- * Prefer {@link buildHandoverPhotoPath} for new uploads.
+ * Legacy name kept for compatibility; paths now use the paket room layout.
+ * `paket/{user_id}/{handover_id}/{photoType}_{timestamp}_{filename}.jpg`
  */
 export function buildEvidenceObjectPath(
   userId: string,
+  handoverId: string,
   photoType: EvidencePhotoType,
   filenameBase = "photo"
 ): string {
-  return `${userId}/${photoType}/${safeStamp()}_${filenameBase}.jpg`
+  return `${buildPaketRoomRelativePath(userId, handoverId)}/${photoType}_${safeStamp()}_${filenameBase}.jpg`
 }
 
 export function buildProfileLogoPath(userId: string): string {
