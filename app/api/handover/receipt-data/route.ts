@@ -59,10 +59,19 @@ export async function GET(req: Request) {
       profiles: profile ?? null
     }
 
+    const items = handover.handover_items as
+      | Array<{ id?: string; photo_url?: string | null }>
+      | null
+      | undefined
+
     console.log("[receipt-data] before return", {
       handover_id: handover.id,
       status: handover.status,
       receipt_url: handover.receipt_url,
+      handover_items_photo_urls: items?.map((i) => ({
+        id: i.id,
+        photo_url: i.photo_url
+      }))
     })
 
     return NextResponse.json(payload)

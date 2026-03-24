@@ -79,6 +79,15 @@ function normalizeReceiveEvent(ev: unknown) {
   return ev as Record<string, unknown>
 }
 
+function firstHandoverItemPhotoUrl(
+  items: Array<{ id?: string; photo_url?: string | null }> | undefined
+): string | undefined {
+  const found = items?.find(
+    (item) => item.photo_url && String(item.photo_url).trim()
+  )
+  return found?.photo_url != null ? String(found.photo_url).trim() : undefined
+}
+
 export default function ReceiptPage() {
   const params = useParams()
   const token = params.token as string
@@ -97,6 +106,22 @@ export default function ReceiptPage() {
   useEffect(() => {
     load()
   }, [token])
+
+  useEffect(() => {
+    if (!handover?.handover_items) return
+    const raw = firstHandoverItemPhotoUrl(handover.handover_items)
+    const resolved = resolveEvidencePhotoUrl(raw)
+    console.log("[receipt] Product photo (debug)", {
+      rawPhotoPath: raw ?? null,
+      resolvedUrl: resolved,
+      itemsSnapshot: handover.handover_items.map(
+        (i: { id?: string; photo_url?: string | null }) => ({
+          id: i.id,
+          photo_url: i.photo_url
+        })
+      )
+    })
+  }, [handover])
 
   if (loading) {
     return (
@@ -129,7 +154,7 @@ export default function ReceiptPage() {
       : null
 
   const photoSrc = resolveEvidencePhotoUrl(
-    handover.handover_items?.[0]?.photo_url
+    firstHandoverItemPhotoUrl(handover.handover_items)
   )
 
   const gps = ev
@@ -225,12 +250,16 @@ export default function ReceiptPage() {
           <div className="mt-6 flex gap-3 items-start">
             {photoSrc ? (
               <div className="relative h-[104px] w-[104px] shrink-0 overflow-hidden rounded-[10px] border border-[#E5E0DB]">
-                <Image
+                <img
                   src={photoSrc}
                   alt=""
-                  fill
-                  className="object-cover"
-                  sizes="104px"
+                  className="h-full w-full object-cover"
+                  onError={() => {
+                    console.error(
+                      "[receipt] Product photo failed to load:",
+                      photoSrc
+                    )
+                  }}
                 />
               </div>
             ) : (

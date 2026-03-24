@@ -23,6 +23,41 @@ export const NEST_EVIDENCE_BUCKET =
   readEnv("SUPABASE_STORAGE_BUCKET") ??
   "nest-evidence"
 
+/**
+ * Project URL for Storage public URLs. In the browser, only `NEXT_PUBLIC_SUPABASE_URL`
+ * exists in the bundle — `SUPABASE_URL` alone will NOT resolve on the client.
+ */
+export function getSupabasePublicBaseUrl(): string {
+  if (typeof process !== "undefined") {
+    const pub = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (pub && String(pub).trim()) {
+      return String(pub).replace(/\/$/, "")
+    }
+    const srv = process.env.SUPABASE_URL
+    if (srv && String(srv).trim()) {
+      return String(srv).replace(/\/$/, "")
+    }
+  }
+  const fallback =
+    readEnv("NEXT_PUBLIC_SUPABASE_URL") ?? readEnv("SUPABASE_URL") ?? ""
+  return String(fallback).replace(/\/$/, "")
+}
+
+/** Bucket segment in `/storage/v1/object/public/{bucket}/...` — must match actual bucket. */
+export function getNestEvidenceBucketForPublicUrl(): string {
+  if (typeof process !== "undefined") {
+    const pub = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET
+    if (pub && String(pub).trim()) return String(pub).trim()
+    const srv = process.env.SUPABASE_STORAGE_BUCKET
+    if (srv && String(srv).trim()) return String(srv).trim()
+  }
+  return (
+    readEnv("NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET") ??
+    readEnv("SUPABASE_STORAGE_BUCKET") ??
+    NEST_EVIDENCE_BUCKET
+  )
+}
+
 export type EvidencePhotoType = "package" | "proof"
 
 function safeStamp() {
@@ -56,6 +91,10 @@ export function buildPaketReceiptPdfPath(
 
 /**
  * DB stores relative object keys (or legacy full URLs). Resolves to a public URL for images, PDFs, etc.
+ *
+ * Canonical shape:
+ * `{NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/{bucket}/{relative_path}`
+ * e.g. `.../nest-evidence/paket/{user_id}/{handover_id}/paket_123.jpg`
  */
 export function resolveNestEvidencePublicUrl(
   stored: string | null | undefined
@@ -64,18 +103,49 @@ export function resolveNestEvidencePublicUrl(
   const trimmed = stored.trim()
   if (!trimmed) return null
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    if (
+      typeof process !== "undefined" &&
+      process.env.NODE_ENV === "development"
+    ) {
+      console.debug("[nest-evidence] using absolute stored URL:", trimmed)
+    }
     return trimmed
   }
-  const rawBase =
-    readEnv("NEXT_PUBLIC_SUPABASE_URL") ?? readEnv("SUPABASE_URL") ?? ""
-  const base = rawBase.replace(/\/$/, "")
-  if (!base) return null
-  const key = trimmed.startsWith("/") ? trimmed.slice(1) : trimmed
+
+  const base = getSupabasePublicBaseUrl()
+  const bucket = getNestEvidenceBucketForPublicUrl()
+
+  if (!base) {
+    console.warn(
+      "[nest-evidence] Missing NEXT_PUBLIC_SUPABASE_URL — cannot build Storage public URL. Raw key:",
+      trimmed
+    )
+    return null
+  }
+
+  let key = trimmed.startsWith("/") ? trimmed.slice(1) : trimmed
+  const bucketPrefix = `${bucket}/`
+  if (key.startsWith(bucketPrefix)) {
+    key = key.slice(bucketPrefix.length)
+  }
+
   const encoded = key
     .split("/")
+    .filter(Boolean)
     .map((seg) => encodeURIComponent(seg))
     .join("/")
-  return `${base}/storage/v1/object/public/${NEST_EVIDENCE_BUCKET}/${encoded}`
+
+  const url = `${base}/storage/v1/object/public/${bucket}/${encoded}`
+
+  if (typeof process !== "undefined" && process.env.NODE_ENV === "development") {
+    console.debug("[nest-evidence] resolved public URL", {
+      storedKey: trimmed,
+      bucket,
+      url
+    })
+  }
+
+  return url
 }
 
 /** @deprecated Use {@link resolveNestEvidencePublicUrl} */
