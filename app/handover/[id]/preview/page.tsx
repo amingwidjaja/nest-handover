@@ -1,8 +1,7 @@
-'use client'
+"use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import Image from "next/image"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 import { compressJpegUnderMaxBytes } from "@/lib/image-evidence"
 import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
@@ -13,18 +12,50 @@ export default function PreviewPage() {
   const router = useRouter()
   const id = params.id as string
 
-  const [photo, setPhoto] = useState<string | null>(null)
+  const [displayUrl, setDisplayUrl] = useState<string | null>(null)
+  /** Ready-to-upload JPEG (compressed on load, not on submit). */
+  const [uploadBlob, setUploadBlob] = useState<Blob | null>(null)
+  const [preparing, setPreparing] = useState(true)
   const [saving, setSaving] = useState(false)
+  const blobUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
     const stored = sessionStorage.getItem(`handover_${id}_photo`)
-
     if (!stored) {
       router.replace(`/handover/${id}`)
       return
     }
 
-    setPhoto(stored)
+    let cancelled = false
+
+    ;(async () => {
+      setPreparing(true)
+      try {
+        const rawBlob = await (await fetch(stored)).blob()
+        const compressed = await compressJpegUnderMaxBytes(rawBlob)
+        if (cancelled) return
+        setUploadBlob(compressed)
+        const u = URL.createObjectURL(compressed)
+        blobUrlRef.current = u
+        setDisplayUrl(u)
+      } catch (e) {
+        console.error("PREVIEW_COMPRESS:", e)
+        if (!cancelled) {
+          setUploadBlob(null)
+          setDisplayUrl(stored)
+        }
+      } finally {
+        if (!cancelled) setPreparing(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current)
+        blobUrlRef.current = null
+      }
+    }
   }, [id, router])
 
   function handleRetake() {
@@ -32,7 +63,10 @@ export default function PreviewPage() {
   }
 
   async function handleConfirm() {
-    if (!photo) return
+    if (preparing) return
+
+    const stored = sessionStorage.getItem(`handover_${id}_photo`)
+    if (!stored && !uploadBlob) return
 
     setSaving(true)
 
@@ -49,9 +83,14 @@ export default function PreviewPage() {
         return
       }
 
-      const raw = await (await fetch(photo)).blob()
-      const jpeg = await compressJpegUnderMaxBytes(raw)
-      const proofFile = new File([jpeg], `${Date.now()}_bukti.jpg`, {
+      let blob = uploadBlob
+      if (!blob) {
+        blob = await compressJpegUnderMaxBytes(
+          await (await fetch(stored!)).blob()
+        )
+      }
+
+      const proofFile = new File([blob], `${Date.now()}_bukti.jpg`, {
         type: "image/jpeg"
       })
 
@@ -130,24 +169,33 @@ export default function PreviewPage() {
       <main className="p-6 pt-6">
         <h2 className="text-2xl font-medium mb-6 text-center">Preview Bukti</h2>
 
-        {photo && (
-          <div className="relative w-full aspect-square border border-[#E0DED7] rounded-sm overflow-hidden shadow-md mb-6">
-            <Image
-              src={photo}
-              alt="Preview"
-              fill
-              className="object-cover"
-            />
+        <div className="relative w-full aspect-square border border-[#E0DED7] rounded-sm overflow-hidden shadow-md mb-6 bg-[#FAF9F6]">
+          {displayUrl ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={displayUrl}
+                alt="Preview"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              {(preparing || saving) && (
+                <div className="absolute inset-0 bg-[#FAF9F6]/65 flex flex-col items-center justify-center z-10">
+                  <span className="text-xs font-medium text-[#3E2723] animate-pulse">
+                    {preparing ? "Memproses…" : "Menyimpan…"}
+                  </span>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-xs font-medium text-[#3E2723] animate-pulse">
+                Memproses…
+              </span>
+            </div>
+          )}
+        </div>
 
-            {saving && (
-              <div className="absolute inset-0 bg-[#FAF9F6]/60 flex items-center justify-center">
-                <span className="text-xs animate-pulse">Menyimpan...</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {!saving && (
+        {!preparing && !saving && (
           <div className="flex gap-3">
             <button
               onClick={handleRetake}
@@ -158,7 +206,8 @@ export default function PreviewPage() {
 
             <button
               onClick={handleConfirm}
-              className="flex-1 bg-[#3E2723] text-white py-3 rounded-sm"
+              disabled={!displayUrl}
+              className="flex-1 bg-[#3E2723] text-white py-3 rounded-sm disabled:opacity-40"
             >
               Gunakan Foto
             </button>

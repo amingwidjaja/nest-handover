@@ -25,6 +25,7 @@ export default function PackagePage() {
   const [items, setItems] = useState(["", "", "", ""])
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [photoProcessing, setPhotoProcessing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [limitHint, setLimitHint] = useState<string | null>(null)
 
@@ -47,6 +48,8 @@ export default function PackagePage() {
   }
 
   async function handlePhoto(file: File) {
+    setPhotoProcessing(true)
+    await new Promise<void>((r) => setTimeout(r, 0))
     try {
       const cropped = await compressJpegUnderMaxBytes(file)
       if (preview) URL.revokeObjectURL(preview)
@@ -56,6 +59,8 @@ export default function PackagePage() {
     } catch (err) {
       console.error("UPLOAD_DEBUG:", err)
       alert("Gagal memproses foto")
+    } finally {
+      setPhotoProcessing(false)
     }
   }
 
@@ -279,12 +284,16 @@ export default function PackagePage() {
 
         {/* PHOTO AREA */}
         <div className="flex-1 flex flex-col min-h-0 mb-6">
+          <p className="text-[9px] uppercase tracking-[0.2em] text-[#9A8F88] mb-2">
+            Photo Produk
+          </p>
           <input
             type="file"
             accept="image/*"
             capture="environment"
             id="cameraInput"
             className="hidden"
+            disabled={photoProcessing}
             onChange={(e) => {
               if (!e.target.files) return
               handlePhoto(e.target.files[0])
@@ -292,24 +301,41 @@ export default function PackagePage() {
           />
 
           {!preview ? (
-            <label
-              htmlFor="cameraInput"
-              className="w-full flex-1 border border-dashed border-[#E0DED7] flex flex-col items-center justify-center rounded-sm bg-white/30 active:bg-[#F2F1ED] transition-colors"
-            >
-              <Camera className="text-[#A1887F] mb-2" size={24} strokeWidth={1.5} />
-              <span className="text-[9px] text-[#A1887F] uppercase tracking-[0.3em] font-bold">
-                Ambil Foto Paket
-              </span>
-            </label>
+            <div className="relative w-full flex-1 min-h-[140px]">
+              <label
+                htmlFor="cameraInput"
+                className={`w-full h-full min-h-[140px] border border-dashed border-[#E0DED7] flex flex-col items-center justify-center rounded-sm bg-white/30 active:bg-[#F2F1ED] transition-colors ${photoProcessing ? "pointer-events-none opacity-60" : ""}`}
+              >
+                <Camera className="text-[#A1887F] mb-2" size={24} strokeWidth={1.5} />
+                <span className="text-[9px] text-[#A1887F] uppercase tracking-[0.3em] font-bold">
+                  Ambil Foto Paket
+                </span>
+              </label>
+              {photoProcessing && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center rounded-sm bg-[#FAF9F6]/80 backdrop-blur-[1px]">
+                  <span className="text-[10px] font-medium tracking-wide text-[#3E2723] animate-pulse">
+                    Memproses…
+                  </span>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="relative flex-1 min-h-0 group">
               <img
                 src={preview}
+                alt=""
                 className="w-full h-full object-cover rounded-sm border border-[#E0DED7] shadow-sm"
               />
+              {photoProcessing && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center rounded-sm bg-[#FAF9F6]/75 backdrop-blur-[2px]">
+                  <span className="text-[10px] font-medium tracking-wide text-[#3E2723] animate-pulse">
+                    Memproses…
+                  </span>
+                </div>
+              )}
               <label
                 htmlFor="cameraInput"
-                className="absolute bottom-3 right-3 bg-white/90 backdrop-blur px-3 py-2 rounded-sm text-[8px] uppercase tracking-[0.2em] font-bold shadow-sm border border-[#E0DED7] active:scale-95 transition-transform"
+                className={`absolute bottom-3 right-3 bg-white/90 backdrop-blur px-3 py-2 rounded-sm text-[8px] uppercase tracking-[0.2em] font-bold shadow-sm border border-[#E0DED7] active:scale-95 transition-transform ${photoProcessing ? "pointer-events-none opacity-50" : ""}`}
               >
                 Ganti Foto
               </label>
@@ -322,7 +348,7 @@ export default function PackagePage() {
           
           <button
             onClick={() => createHandover("save")}
-            disabled={saving}
+            disabled={saving || photoProcessing}
             className="border border-[#E0DED7] text-[#3E2723] py-4 px-5 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] flex justify-between items-center active:bg-zinc-50 transition-all disabled:opacity-30"
           >
             <ChevronLeft size={14} />
@@ -331,7 +357,7 @@ export default function PackagePage() {
 
           <button
             onClick={() => createHandover("handover")}
-            disabled={saving}
+            disabled={saving || photoProcessing}
             className="bg-[#3E2723] text-[#FAF9F6] py-4 px-5 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] flex justify-between items-center shadow-md active:scale-[0.97] transition-all disabled:opacity-50"
           >
             <span>Tanda Terima</span>

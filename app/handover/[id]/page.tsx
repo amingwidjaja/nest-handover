@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation"
 import { QrCode, Camera } from "lucide-react"
 import Image from "next/image"
 import { resolveEvidencePhotoUrl } from "@/lib/nest-evidence-upload"
+import { blobToDataUrl, compressJpegUnderMaxBytes } from "@/lib/image-evidence"
 
 export default function HandoverPage() {
 
@@ -26,6 +27,7 @@ export default function HandoverPage() {
   const [rawFile,setRawFile] = useState<File | null>(null)
   const [notes,setNotes] = useState("")
   const [saving,setSaving] = useState(false)
+  const [processingCapture, setProcessingCapture] = useState(false)
 
   const [handover,setHandover] = useState<any>(null)
 
@@ -51,61 +53,77 @@ export default function HandoverPage() {
     })
   }
 
-  // ===== STEP 1: CAPTURE ONLY (NO UPLOAD) =====
- async function handlePhoto(e: ChangeEvent<HTMLInputElement>) {
+  // ===== STEP 1: CAPTURE ONLY (NO UPLOAD) — compress before preview =====
+  async function handlePhoto(e: ChangeEvent<HTMLInputElement>) {
+    if (!e.target.files?.length) return
 
-  if (!e.target.files?.length) return
+    const file = e.target.files[0]
+    e.target.value = ""
 
-  const file = e.target.files[0]
-  e.target.value = ""
+    if (mode === "delegate") {
+      if (!delegateName.trim() || !relation.trim()) {
+        alert("Nama wakil & hubungan wajib diisi")
+        return
+      }
+    }
 
-  if (mode === "delegate") {
-    if (!delegateName.trim() || !relation.trim()) {
-      alert("Nama wakil & hubungan wajib diisi")
-      return
+    setProcessingCapture(true)
+    await new Promise<void>((r) => setTimeout(r, 0))
+    const objectUrl = URL.createObjectURL(file)
+    const img = document.createElement("img")
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject(new Error("Gagal memuat gambar"))
+        img.src = objectUrl
+      })
+
+      const size = Math.min(img.width, img.height)
+      const sx = (img.width - size) / 2
+      const sy = (img.height - size) / 2
+
+      const MAX_SIZE = 1200
+      const targetSize = size > MAX_SIZE ? MAX_SIZE : size
+
+      const canvas = document.createElement("canvas")
+      canvas.width = targetSize
+      canvas.height = targetSize
+
+      const ctx = canvas.getContext("2d")
+      if (!ctx) throw new Error("canvas")
+
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, targetSize, targetSize)
+
+      const rawBlob: Blob | null = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.92)
+      )
+      if (!rawBlob) throw new Error("toBlob")
+
+      const compressed = await compressJpegUnderMaxBytes(rawBlob)
+      const dataUrl = await blobToDataUrl(compressed)
+
+      const key = `handover_${id}_photo`
+      sessionStorage.setItem(key, dataUrl)
+
+      sessionStorage.setItem(
+        `handover_${id}_meta`,
+        JSON.stringify({
+          mode,
+          delegateName,
+          relation
+        })
+      )
+
+      router.replace(`/handover/${id}/preview`)
+    } catch (err) {
+      console.error(err)
+      alert("Gagal memproses foto")
+    } finally {
+      URL.revokeObjectURL(objectUrl)
+      setProcessingCapture(false)
     }
   }
-
-  const img = document.createElement("img")
-  img.src = URL.createObjectURL(file)
-
-  img.onload = () => {
-
-    const size = Math.min(img.width, img.height)
-    const sx = (img.width - size) / 2
-    const sy = (img.height - size) / 2
-
-    const MAX_SIZE = 1200
-    const targetSize = size > MAX_SIZE ? MAX_SIZE : size
-
-    const canvas = document.createElement("canvas")
-    canvas.width = targetSize
-    canvas.height = targetSize
-
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-
-    ctx.drawImage(
-      img,
-      sx, sy, size, size,
-      0, 0, targetSize, targetSize
-    )
-
-    // 🔥 compress BEFORE storage
-    const base64 = canvas.toDataURL("image/jpeg", 0.8)
-
-    const key = `handover_${id}_photo`
-    sessionStorage.setItem(key, base64)
-
-    sessionStorage.setItem(`handover_${id}_meta`, JSON.stringify({
-      mode,
-      delegateName,
-      relation
-    }))
-
-    router.replace(`/handover/${id}/preview`)
-  }
-}
 
   // ===== STEP 2: PROCESS + UPLOAD =====
   async function handleConfirm(){
@@ -168,7 +186,8 @@ export default function HandoverPage() {
         return
       }
 
-      const finalFile = new File([blob],"photo.jpg",{ type:"image/jpeg" })
+      const compressed = await compressJpegUnderMaxBytes(blob)
+      const finalFile = new File([compressed],"photo.jpg",{ type:"image/jpeg" })
 
       // ===== UPLOAD =====
       const form = new FormData()
@@ -221,7 +240,15 @@ export default function HandoverPage() {
 
   return(
 
-    <div className="min-h-full bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
+    <div className="min-h-full bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between relative">
+
+      {processingCapture && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#FAF9F6]/80 backdrop-blur-[1px]">
+          <span className="text-sm font-medium text-[#3E2723] animate-pulse">
+            Memproses foto…
+          </span>
+        </div>
+      )}
 
       <main className="p-6 pt-6">
 

@@ -70,3 +70,13 @@ export async function compressJpegUnderMaxBytes(
   }
   return blob
 }
+
+/** For sessionStorage (data URL) after compression. */
+export function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader()
+    r.onloadend = () => resolve(r.result as string)
+    r.onerror = () => reject(new Error("FileReader failed"))
+    r.readAsDataURL(blob)
+  })
+}
