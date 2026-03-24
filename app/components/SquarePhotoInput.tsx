@@ -1,6 +1,10 @@
 'use client'
 
 import { useRef } from "react"
+import {
+  blobToDataUrl,
+  compressEvidenceWebpUnder100kb
+} from "@/lib/image-evidence"
 
 type Props = {
   onPhoto:(file:File, preview:string)=>void
@@ -28,60 +32,16 @@ export default function SquarePhotoInput({
 
     const file = e.target.files[0]
 
-    const img = new Image()
-    img.src = URL.createObjectURL(file)
-
-    img.onload = async ()=>{
-
-      const size = Math.min(img.width,img.height)
-
-      const sx = (img.width - size) / 2
-      const sy = (img.height - size) / 2
-
-      const MAX_SIZE = 1200
-
-      let targetSize = size
-
-      if(size > MAX_SIZE){
-        targetSize = MAX_SIZE
-      }
-
-      const canvas = document.createElement("canvas")
-      canvas.width = targetSize
-      canvas.height = targetSize
-
-      const ctx = canvas.getContext("2d")
-
-      if(!ctx) return
-
-      ctx.drawImage(
-        img,
-        sx,
-        sy,
-        size,
-        size,
-        0,
-        0,
-        targetSize,
-        targetSize
-      )
-
-      canvas.toBlob((blob)=>{
-
-        if(!blob) return
-
-        const croppedFile = new File(
-          [blob],
-          "photo.jpg",
-          { type:"image/jpeg" }
-        )
-
-        const preview = URL.createObjectURL(blob)
-
-        onPhoto(croppedFile,preview)
-
-      },"image/jpeg",0.8)
-
+    try {
+      const cropped = await compressEvidenceWebpUnder100kb(file)
+      const dataUrl = await blobToDataUrl(cropped)
+      const ext = cropped.type.includes("webp") ? "webp" : "jpg"
+      const croppedFile = new File([cropped], `photo.${ext}`, {
+        type: cropped.type || "image/webp"
+      })
+      onPhoto(croppedFile, dataUrl)
+    } catch {
+      /* ignore */
     }
 
   }

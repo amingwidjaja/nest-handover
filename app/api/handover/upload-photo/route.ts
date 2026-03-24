@@ -78,11 +78,16 @@ export async function POST(req: Request) {
 
     const buf = Buffer.from(await file.arrayBuffer())
     const objectType = mode === "proof_only" ? "proof" : "paket"
-    const storagePath = buildPaketObjectPath(user.id, handover_id, objectType)
-    const contentType =
-      file.type && file.type.startsWith("image/")
-        ? file.type
-        : "image/jpeg"
+    const mime =
+      file.type && file.type.startsWith("image/") ? file.type : "image/jpeg"
+    const ext: "webp" | "jpg" = mime.includes("webp") ? "webp" : "jpg"
+    const storagePath = buildPaketObjectPath(
+      user.id,
+      handover_id,
+      objectType,
+      ext
+    )
+    const contentType = mime
 
     const { error: upErr } = await admin.storage
       .from(NEST_EVIDENCE_BUCKET)

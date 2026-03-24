@@ -6,7 +6,10 @@ import { useParams, useRouter } from "next/navigation"
 import { QrCode, Camera } from "lucide-react"
 import Image from "next/image"
 import { resolveEvidencePhotoUrl } from "@/lib/nest-evidence-upload"
-import { compressJpegUnderMaxBytes } from "@/lib/image-evidence"
+import {
+  blobToDataUrl,
+  compressEvidenceWebpUnder100kb
+} from "@/lib/image-evidence"
 
 export default function HandoverPage() {
 
@@ -69,42 +72,13 @@ export default function HandoverPage() {
 
     setProcessingCapture(true)
     await new Promise<void>((r) => setTimeout(r, 0))
-    const objectUrl = URL.createObjectURL(file)
-    const img = document.createElement("img")
 
     try {
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve()
-        img.onerror = () => reject(new Error("Gagal memuat gambar"))
-        img.src = objectUrl
-      })
-
-      const size = Math.min(img.width, img.height)
-      const sx = (img.width - size) / 2
-      const sy = (img.height - size) / 2
-
-      const MAX_SIZE = 1200
-      const targetSize = size > MAX_SIZE ? MAX_SIZE : size
-
-      const canvas = document.createElement("canvas")
-      canvas.width = targetSize
-      canvas.height = targetSize
-
-      const ctx = canvas.getContext("2d")
-      if (!ctx) throw new Error("canvas")
-
-      ctx.drawImage(img, sx, sy, size, size, 0, 0, targetSize, targetSize)
-
-      const rawBlob: Blob | null = await new Promise((resolve) =>
-        canvas.toBlob(resolve, "image/jpeg", 0.92)
-      )
-      if (!rawBlob) throw new Error("toBlob")
-
-      const compressed = await compressJpegUnderMaxBytes(rawBlob)
-      const objectUrl = URL.createObjectURL(compressed)
+      const compressed = await compressEvidenceWebpUnder100kb(file)
+      const dataUrl = await blobToDataUrl(compressed)
 
       const key = `handover_${id}_photo`
-      sessionStorage.setItem(key, objectUrl)
+      sessionStorage.setItem(key, dataUrl)
 
       sessionStorage.setItem(
         `handover_${id}_meta`,
@@ -120,7 +94,6 @@ export default function HandoverPage() {
       console.error(err)
       alert("Gagal memproses foto")
     } finally {
-      URL.revokeObjectURL(objectUrl)
       setProcessingCapture(false)
     }
   }
@@ -186,8 +159,11 @@ export default function HandoverPage() {
         return
       }
 
-      const compressed = await compressJpegUnderMaxBytes(blob)
-      const finalFile = new File([compressed],"photo.jpg",{ type:"image/jpeg" })
+      const compressed = await compressEvidenceWebpUnder100kb(blob)
+      const ext = compressed.type.includes("webp") ? "webp" : "jpg"
+      const finalFile = new File([compressed], `photo.${ext}`, {
+        type: compressed.type || "image/webp"
+      })
 
       // ===== UPLOAD =====
       const form = new FormData()

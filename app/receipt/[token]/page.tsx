@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { resolveNestEvidencePublicUrl } from "@/lib/nest-evidence-upload"
+import { resolveEvidencePhotoUrl } from "@/lib/nest-evidence-upload"
 import {
   formatDeviceIdLine,
   formatGpsCoords,
@@ -110,7 +110,7 @@ export default function ReceiptPage() {
   useEffect(() => {
     if (!handover?.handover_items) return
     const raw = firstHandoverItemPhotoUrl(handover.handover_items)
-    const resolved = resolveNestEvidencePublicUrl(raw)
+    const resolved = resolveEvidencePhotoUrl(raw)
     console.log("[receipt] Product photo (debug)", {
       rawPhotoPath: raw ?? null,
       resolvedUrl: resolved,
@@ -150,10 +150,10 @@ export default function ReceiptPage() {
   const brandTitle = hasCompanyBrand ? companyName : "Tanda Terima"
   const logoUrl =
     hasCompanyBrand && handover.profiles?.company_logo_url
-      ? resolveNestEvidencePublicUrl(handover.profiles.company_logo_url)
+      ? resolveEvidencePhotoUrl(handover.profiles.company_logo_url)
       : null
 
-  const photoSrc = resolveNestEvidencePublicUrl(
+  const photoSrc = resolveEvidencePhotoUrl(
     firstHandoverItemPhotoUrl(handover.handover_items)
   )
 

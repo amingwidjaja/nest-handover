@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation"
 import { Camera, Home, ChevronRight, ChevronLeft, User } from "lucide-react"
 import Link from "next/link"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
-import { compressJpegUnderMaxBytes } from "@/lib/image-evidence"
+import {
+  blobToDataUrl,
+  compressEvidenceWebpUnder100kb,
+  dataUrlToBlob
+} from "@/lib/image-evidence"
 import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
 
 export default function PackagePage() {
@@ -23,8 +27,8 @@ export default function PackagePage() {
 
   /** Exactly 4 baris = 4 tipe barang (boleh kosong kecuali minimal satu terisi). */
   const [items, setItems] = useState(["", "", "", ""])
-  const [photoFile, setPhotoFile] = useState<File | null>(null)
-  const [preview, setPreview] = useState<string | null>(null)
+  /** Compressed evidence as data URL (preview); binary only at submit via dataUrlToBlob. */
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null)
   const [photoProcessing, setPhotoProcessing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [limitHint, setLimitHint] = useState<string | null>(null)
@@ -51,11 +55,9 @@ export default function PackagePage() {
     setPhotoProcessing(true)
     await new Promise<void>((r) => setTimeout(r, 0))
     try {
-      const cropped = await compressJpegUnderMaxBytes(file)
-      if (preview) URL.revokeObjectURL(preview)
-      const f = new File([cropped], "package.jpg", { type: "image/jpeg" })
-      setPhotoFile(f)
-      setPreview(URL.createObjectURL(cropped))
+      const cropped = await compressEvidenceWebpUnder100kb(file)
+      const dataUrl = await blobToDataUrl(cropped)
+      setPhotoDataUrl(dataUrl)
     } catch (err) {
       console.error("UPLOAD_DEBUG:", err)
       alert("Gagal memproses foto")
@@ -161,12 +163,17 @@ export default function PackagePage() {
         return
       }
 
-      if (photoFile && data.handover_id && session.access_token) {
+      if (photoDataUrl && data.handover_id && session.access_token) {
         try {
+          const blob = dataUrlToBlob(photoDataUrl)
+          const ext = blob.type.includes("webp") ? "webp" : "jpg"
+          const uploadFile = new File([blob], `package.${ext}`, {
+            type: blob.type || "image/webp"
+          })
           const fd = new FormData()
           fd.set("handover_id", data.handover_id)
           fd.set("mode", "package_first_item")
-          fd.set("file", photoFile, photoFile.name || "paket.jpg")
+          fd.set("file", uploadFile, `package.${ext}`)
 
           const up = await fetch("/api/handover/upload-photo", {
             method: "POST",
@@ -300,7 +307,7 @@ export default function PackagePage() {
             }}
           />
 
-          {!preview ? (
+          {!photoDataUrl ? (
             <div className="relative w-full flex-1 min-h-[140px]">
               <label
                 htmlFor="cameraInput"
@@ -322,7 +329,7 @@ export default function PackagePage() {
           ) : (
             <div className="relative flex-1 min-h-0 group">
               <img
-                src={preview}
+                src={photoDataUrl}
                 alt=""
                 className="w-full h-full object-cover rounded-sm border border-[#E0DED7] shadow-sm"
               />

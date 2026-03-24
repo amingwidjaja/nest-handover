@@ -72,13 +72,15 @@ export function buildPaketRoomRelativePath(
   return `paket/${userId}/${handoverId}`
 }
 
-/** Logistics photos: `paket/{user_id}/{handover_id}/{type}_{timestamp}.jpg` */
+/** Logistics photos: `paket/{user_id}/{handover_id}/{type}_{timestamp}.webp` (or `.jpg` if upload is JPEG). */
 export function buildPaketObjectPath(
   userId: string,
   handoverId: string,
-  type: "paket" | "proof"
+  type: "paket" | "proof",
+  ext: "webp" | "jpg" = "webp"
 ): string {
-  return `${buildPaketRoomRelativePath(userId, handoverId)}/${type}_${safeStamp()}.jpg`
+  const suffix = ext === "jpg" ? "jpg" : "webp"
+  return `${buildPaketRoomRelativePath(userId, handoverId)}/${type}_${safeStamp()}.${suffix}`
 }
 
 /** Receipt PDF: `paket/{user_id}/{handover_id}/receipt_{handover_id}.pdf` */
@@ -94,7 +96,7 @@ export function buildPaketReceiptPdfPath(
  *
  * Canonical shape:
  * `{NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/{bucket}/{relative_path}`
- * e.g. `.../nest-evidence/paket/{user_id}/{handover_id}/paket_123.jpg`
+ * e.g. `.../nest-evidence/paket/{user_id}/{handover_id}/paket_123.webp`
  */
 export function resolveNestEvidencePublicUrl(
   stored: string | null | undefined
@@ -168,7 +170,7 @@ export function buildHandoverPhotoPath(
     String(filenameBase)
       .replace(/[^a-zA-Z0-9._-]/g, "_")
       .slice(0, 80) || "photo"
-  return `${buildPaketRoomRelativePath(userId, handoverId)}/${safeStamp()}_${safe}.jpg`
+  return `${buildPaketRoomRelativePath(userId, handoverId)}/${safeStamp()}_${safe}.webp`
 }
 
 /**
@@ -181,7 +183,7 @@ export function buildEvidenceObjectPath(
   photoType: EvidencePhotoType,
   filenameBase = "photo"
 ): string {
-  return `${buildPaketRoomRelativePath(userId, handoverId)}/${photoType}_${safeStamp()}_${filenameBase}.jpg`
+  return `${buildPaketRoomRelativePath(userId, handoverId)}/${photoType}_${safeStamp()}_${filenameBase}.webp`
 }
 
 export function buildProfileLogoPath(userId: string): string {

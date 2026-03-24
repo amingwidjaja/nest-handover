@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
-import { compressJpegUnderMaxBytes } from "@/lib/image-evidence"
+import { dataUrlToBlob } from "@/lib/image-evidence"
 import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
 import { getClientDeviceMeta } from "@/lib/receipt-trust"
 
@@ -13,60 +13,18 @@ export default function PreviewPage() {
   const id = params.id as string
 
   const [displayUrl, setDisplayUrl] = useState<string | null>(null)
-  /** Ready-to-upload JPEG (compressed on load, not on submit). */
-  const [uploadBlob, setUploadBlob] = useState<Blob | null>(null)
   const [preparing, setPreparing] = useState(true)
   const [saving, setSaving] = useState(false)
-  const blobUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
     const stored = sessionStorage.getItem(`handover_${id}_photo`)
-    if (!stored) {
+    if (!stored?.startsWith("data:")) {
       router.replace(`/handover/${id}`)
       return
     }
 
-    let cancelled = false
-
-    ;(async () => {
-      setPreparing(true)
-      try {
-        if (stored.startsWith("blob:")) {
-          const blob = await (await fetch(stored)).blob()
-          if (cancelled) return
-          setUploadBlob(blob)
-          setDisplayUrl(stored)
-          return
-        }
-        if (stored.startsWith("data:")) {
-          const rawBlob = await (await fetch(stored)).blob()
-          const compressed = await compressJpegUnderMaxBytes(rawBlob)
-          if (cancelled) return
-          setUploadBlob(compressed)
-          const u = URL.createObjectURL(compressed)
-          blobUrlRef.current = u
-          setDisplayUrl(u)
-          return
-        }
-        router.replace(`/handover/${id}`)
-      } catch (e) {
-        console.error("PREVIEW_PREP:", e)
-        if (!cancelled) {
-          setUploadBlob(null)
-          setDisplayUrl(null)
-        }
-      } finally {
-        if (!cancelled) setPreparing(false)
-      }
-    })()
-
-    return () => {
-      cancelled = true
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current)
-        blobUrlRef.current = null
-      }
-    }
+    setDisplayUrl(stored)
+    setPreparing(false)
   }, [id, router])
 
   function handleRetake() {
@@ -75,8 +33,10 @@ export default function PreviewPage() {
 
   async function handleConfirm() {
     if (preparing) return
-    if (!uploadBlob) {
-      alert("Foto belum siap. Tunggu sebentar atau ambil ulang.")
+
+    const stored = sessionStorage.getItem(`handover_${id}_photo`)
+    if (!stored?.startsWith("data:")) {
+      alert("Foto tidak ditemukan. Ambil ulang dari halaman sebelumnya.")
       return
     }
 
@@ -95,8 +55,16 @@ export default function PreviewPage() {
         return
       }
 
-      const proofFile = new File([uploadBlob], `${Date.now()}_bukti.jpg`, {
-        type: "image/jpeg"
+      let blob: Blob
+      try {
+        blob = dataUrlToBlob(stored)
+      } catch {
+        throw new Error("Data foto tidak valid")
+      }
+
+      const ext = blob.type.includes("webp") ? "webp" : "jpg"
+      const proofFile = new File([blob], `${Date.now()}_bukti.${ext}`, {
+        type: blob.type || "image/webp"
       })
 
       const fd = new FormData()
@@ -154,12 +122,7 @@ export default function PreviewPage() {
         throw new Error(result.error || "fail")
       }
 
-      const key = `handover_${id}_photo`
-      const prev = sessionStorage.getItem(key)
-      if (prev?.startsWith("blob:")) {
-        URL.revokeObjectURL(prev)
-      }
-      sessionStorage.removeItem(key)
+      sessionStorage.removeItem(`handover_${id}_photo`)
 
       setSaving(false)
       router.replace(`/handover/${id}/location`)
