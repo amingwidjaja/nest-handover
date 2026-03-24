@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import Link from "next/link"
 import { Home } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -16,12 +16,13 @@ export default function DashboardPage(){
   const [highlightId,setHighlightId] = useState<string | null>(null)
 
   const timerRef = useRef<any>(null)
+  const handoversRef = useRef<any[]>([])
 
-  useEffect(()=>{
-    load()
-  },[])
+  useEffect(() => {
+    handoversRef.current = handovers
+  }, [handovers])
 
-  async function load(){
+  const load = useCallback(async function load(){
 
     const res = await fetch("/api/handover/list", {
       cache: "no-store"
@@ -44,7 +45,67 @@ export default function DashboardPage(){
 
     }
 
-  }
+  }, [])
+
+  useEffect(()=>{
+    load()
+  },[load])
+
+  /** SSOT: accepted + no PDF yet → poll receipt-data every 5s (same route as public receipt page). */
+  useEffect(() => {
+    const needsReceipt = handovers.some(
+      (h) => h.status === "accepted" && !h.receipt_url
+    )
+    if (!needsReceipt) return
+
+    async function pollOnce() {
+      const stuck = handoversRef.current.filter(
+        (h: { status?: string; receipt_url?: string | null }) =>
+          h.status === "accepted" && !h.receipt_url
+      )
+      if (!stuck.length) return
+
+      for (const h of stuck) {
+        if (!h.share_token) continue
+        try {
+          const res = await fetch(
+            `/api/handover/receipt-data?token=${encodeURIComponent(String(h.share_token))}`,
+            { cache: "no-store" }
+          )
+          if (!res.ok) continue
+          const data = await res.json()
+          if (data?.id && data.receipt_url) {
+            setHandovers((prev) =>
+              prev.map((row) =>
+                row.id === h.id
+                  ? {
+                      ...row,
+                      receipt_url: data.receipt_url,
+                      status: data.status ?? row.status
+                    }
+                  : row
+              )
+            )
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+
+      if (
+        stuck.some(
+          (h: { share_token?: string }) =>
+            !h.share_token
+        )
+      ) {
+        await load()
+      }
+    }
+
+    pollOnce()
+    const id = window.setInterval(pollOnce, 5000)
+    return () => window.clearInterval(id)
+  }, [handovers, load])
 
   function toggleSelect(id:string){
     if(selected.includes(id)){
@@ -134,7 +195,7 @@ export default function DashboardPage(){
     )
   }
 
-  // 🔥 ONLY CHANGE HERE
+  /** Row tap → detail page (SSOT from /api/handover/detail). Receipt PDF / web receipt → dedicated control. */
   function handleClick(h:any){
 
     if(selectMode){
@@ -142,31 +203,51 @@ export default function DashboardPage(){
       return
     }
 
-    // ACCEPTED → langsung cek receipt_url
-    if(h.status === "accepted"){
-
-      if(h.receipt_url){
-        const url = resolveNestEvidencePublicUrl(h.receipt_url)
-        if (url) {
-          window.open(url, "_blank")
-        } else {
-          alert("URL receipt tidak valid")
-        }
-        return
-      }
-
-      alert("Bukti sedang diproses, silakan tunggu")
-      return
-    }
-
-    // RECEIVED → tetap seperti sekarang
-    if(h.status === "received"){
-      router.push(`/receipt/${h.share_token}`)
-      return
-    }
-
-    // default
     router.push(`/handover/${h.id}`)
+  }
+
+  function receiptCell(h:any){
+
+    if(selectMode) return null
+
+    if(h.status === "accepted"){
+      const pdf = h.receipt_url
+        ? resolveNestEvidencePublicUrl(h.receipt_url)
+        : null
+      if(pdf){
+        return (
+          <a
+            href={pdf}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e)=>e.stopPropagation()}
+            className="text-[9px] font-semibold uppercase tracking-wide text-[#5D4037] underline decoration-[#5D4037]/50"
+          >
+            Lihat Tanda Terima
+          </a>
+        )
+      }
+      return (
+        <span className="text-[8px] leading-tight text-[#A1887F]">
+          Menyiapkan PDF…
+        </span>
+      )
+    }
+
+    if(h.status === "received" && h.share_token){
+      return (
+        <Link
+          href={`/receipt/${h.share_token}`}
+          onClick={(e)=>e.stopPropagation()}
+          className="text-[9px] font-semibold uppercase tracking-wide text-[#5D4037] underline decoration-[#5D4037]/50"
+        >
+          Lihat Tanda Terima
+        </Link>
+      )
+    }
+
+    return null
+
   }
 
   function row(h:any){
@@ -236,11 +317,15 @@ export default function DashboardPage(){
           {receiver}
         </span>
 
-        <span className="flex-1 italic text-[#A1887F] truncate">
+        <span className="flex-1 min-w-0 italic text-[#A1887F] truncate">
           {packageName}
         </span>
 
-        <span className="w-6 text-right">
+        <div className="w-[5.5rem] shrink-0 text-right flex flex-col items-end justify-center gap-0.5">
+          {receiptCell(h)}
+        </div>
+
+        <span className="w-6 shrink-0 text-right tabular-nums">
 
           {selectMode ? (
             ""

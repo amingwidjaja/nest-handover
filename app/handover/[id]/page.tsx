@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation"
 import { QrCode, Camera } from "lucide-react"
 import Image from "next/image"
 import { resolveEvidencePhotoUrl } from "@/lib/nest-evidence-upload"
-import { blobToDataUrl, compressJpegUnderMaxBytes } from "@/lib/image-evidence"
+import { compressJpegUnderMaxBytes } from "@/lib/image-evidence"
 
 export default function HandoverPage() {
 
@@ -101,10 +101,10 @@ export default function HandoverPage() {
       if (!rawBlob) throw new Error("toBlob")
 
       const compressed = await compressJpegUnderMaxBytes(rawBlob)
-      const dataUrl = await blobToDataUrl(compressed)
+      const objectUrl = URL.createObjectURL(compressed)
 
       const key = `handover_${id}_photo`
-      sessionStorage.setItem(key, dataUrl)
+      sessionStorage.setItem(key, objectUrl)
 
       sessionStorage.setItem(
         `handover_${id}_meta`,

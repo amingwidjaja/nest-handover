@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin"
 import {
   NEST_EVIDENCE_BUCKET,
   buildPaketObjectPath,
-  resolveEvidencePhotoUrl
+  resolveNestEvidencePublicUrl
 } from "@/lib/nest-evidence-upload"
 import { getUserFromRequest } from "@/lib/supabase/auth-from-request"
 
@@ -99,7 +99,7 @@ export async function POST(req: Request) {
       )
     }
 
-    const publicUrl = resolveEvidencePhotoUrl(storagePath)
+    const publicUrl = resolveNestEvidencePublicUrl(storagePath)
 
     if (mode === "proof_only") {
       return NextResponse.json({

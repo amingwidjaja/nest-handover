@@ -31,18 +31,29 @@ export default function PreviewPage() {
     ;(async () => {
       setPreparing(true)
       try {
-        const rawBlob = await (await fetch(stored)).blob()
-        const compressed = await compressJpegUnderMaxBytes(rawBlob)
-        if (cancelled) return
-        setUploadBlob(compressed)
-        const u = URL.createObjectURL(compressed)
-        blobUrlRef.current = u
-        setDisplayUrl(u)
+        if (stored.startsWith("blob:")) {
+          const blob = await (await fetch(stored)).blob()
+          if (cancelled) return
+          setUploadBlob(blob)
+          setDisplayUrl(stored)
+          return
+        }
+        if (stored.startsWith("data:")) {
+          const rawBlob = await (await fetch(stored)).blob()
+          const compressed = await compressJpegUnderMaxBytes(rawBlob)
+          if (cancelled) return
+          setUploadBlob(compressed)
+          const u = URL.createObjectURL(compressed)
+          blobUrlRef.current = u
+          setDisplayUrl(u)
+          return
+        }
+        router.replace(`/handover/${id}`)
       } catch (e) {
-        console.error("PREVIEW_COMPRESS:", e)
+        console.error("PREVIEW_PREP:", e)
         if (!cancelled) {
           setUploadBlob(null)
-          setDisplayUrl(stored)
+          setDisplayUrl(null)
         }
       } finally {
         if (!cancelled) setPreparing(false)
@@ -64,9 +75,10 @@ export default function PreviewPage() {
 
   async function handleConfirm() {
     if (preparing) return
-
-    const stored = sessionStorage.getItem(`handover_${id}_photo`)
-    if (!stored && !uploadBlob) return
+    if (!uploadBlob) {
+      alert("Foto belum siap. Tunggu sebentar atau ambil ulang.")
+      return
+    }
 
     setSaving(true)
 
@@ -83,14 +95,7 @@ export default function PreviewPage() {
         return
       }
 
-      let blob = uploadBlob
-      if (!blob) {
-        blob = await compressJpegUnderMaxBytes(
-          await (await fetch(stored!)).blob()
-        )
-      }
-
-      const proofFile = new File([blob], `${Date.now()}_bukti.jpg`, {
+      const proofFile = new File([uploadBlob], `${Date.now()}_bukti.jpg`, {
         type: "image/jpeg"
       })
 
@@ -149,7 +154,12 @@ export default function PreviewPage() {
         throw new Error(result.error || "fail")
       }
 
-      sessionStorage.removeItem(`handover_${id}_photo`)
+      const key = `handover_${id}_photo`
+      const prev = sessionStorage.getItem(key)
+      if (prev?.startsWith("blob:")) {
+        URL.revokeObjectURL(prev)
+      }
+      sessionStorage.removeItem(key)
 
       setSaving(false)
       router.replace(`/handover/${id}/location`)
