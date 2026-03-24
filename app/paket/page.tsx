@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 export default function HomePage() {
   const router = useRouter();
@@ -10,49 +11,72 @@ export default function HomePage() {
   const [pending,setPending] = useState(0);
   const [last,setLast] = useState<string | null>(null);
   const [savedSerial, setSavedSerial] = useState<string | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(()=>{
 
-    const user = localStorage.getItem("user_name")
+    async function gate() {
+      const supabase = createBrowserSupabaseClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        router.replace("/login?redirect=/paket");
+        return;
+      }
+      const pr = await fetch("/api/profile");
+      const pj = await pr.json();
+      const profile = pj.profile as { onboarded_at?: string | null } | null;
+      if (!profile || !profile.onboarded_at) {
+        router.replace("/choose-type?redirect=/paket");
+        return;
+      }
+      setAuthReady(true);
 
-    if(!user){
-      window.location.href = "/user"
-      return
-    }
+      async function load(){
 
-    async function load(){
+        const res = await fetch("/api/handover/list");
+        const data = await res.json();
 
-      const res = await fetch("/api/handover/list");
-      const data = await res.json();
+        if(!data.handovers) return;
 
-      if(!data.handovers) return;
+        const pendingList = data.handovers.filter((h:any)=>h.status !== "accepted");
 
-      const pendingList = data.handovers.filter((h:any)=>h.status !== "accepted");
+        setPending(pendingList.length);
 
-      setPending(pendingList.length);
+        if(data.handovers.length){
 
-      if(data.handovers.length){
+          const date = new Date(data.handovers[0].created_at).toLocaleDateString(
+            "id-ID",
+            { day:"2-digit", month:"short", year:"numeric" }
+          );
 
-        const date = new Date(data.handovers[0].created_at).toLocaleDateString(
-          "id-ID",
-          { day:"2-digit", month:"short", year:"numeric" }
-        );
+          setLast(date);
 
-        setLast(date);
+        }
 
       }
 
+      load();
     }
 
-    load();
+    gate();
 
-  },[]);
+  },[router]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sn = new URLSearchParams(window.location.search).get("sn");
     if (sn) setSavedSerial(sn);
   }, []);
+
+  if (!authReady) {
+    return (
+      <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center text-sm text-[#A1887F]">
+        Memuat…
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] px-8 text-center flex flex-col justify-between">
@@ -107,10 +131,10 @@ export default function HomePage() {
 
         {/* 🔥 EDIT USER LINK */}
         <Link
-          href="/user"
+          href="/profile"
           className="block mt-4 text-sm opacity-50"
         >
-          Edit Profil
+          Profil
         </Link>
 
         <Link

@@ -1,5 +1,6 @@
 import Link from "next/link"
 import type { Metadata } from "next"
+import { AuthAwarePaketCta } from "@/components/auth-aware-paket-cta"
 
 export const metadata: Metadata = {
   title: "NEST76 | Studio Sistem Digital",
@@ -38,6 +39,16 @@ export default function Home() {
   <p className="text-xl md:text-2xl font-light text-[#A0A0A0] max-w-2xl leading-relaxed">
     Solusi Tanda Terima Digital yang rapi, cepat, dan 100% GRATIS.
   </p>
+
+  <div className="mt-10">
+    <AuthAwarePaketCta
+      loggedInHref="/paket"
+      guestHref="/choose-type?redirect=/paket"
+      className="inline-flex items-center justify-center px-10 py-4 bg-[#EDEDED] text-[#0A0A0A] text-xs font-bold uppercase tracking-[0.28em] rounded-sm hover:bg-white transition-colors"
+    >
+      Kirim
+    </AuthAwarePaketCta>
+  </div>
 </header>
 
         {/* SOLUTIONS / PRODUCTS */}
@@ -51,7 +62,11 @@ export default function Home() {
             
             {/* NEST PAKET - The Hero Product */}
             <div className="md:col-span-7 group">
-              <Link href="/paket" className="block">
+              <AuthAwarePaketCta
+                loggedInHref="/paket"
+                guestHref="/choose-type?redirect=/paket"
+                className="block"
+              >
                 {/* Visual Placeholder - Nanti bisa diisi screen capture atau animasi mapbox */}
                 <div className="mb-8 overflow-hidden bg-[#111] border border-[#2A2A2A] aspect-[16/10] flex items-center justify-center group-hover:border-[#EDEDED] transition-all duration-500 relative rounded-lg shadow-2xl shadow-black/50">
                   <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -70,7 +85,7 @@ export default function Home() {
                 </p>
                 
                 <div className="mt-6 h-[2px] w-20 bg-[#2A2A2A] group-hover:w-full group-hover:bg-[#EDEDED] transition-all duration-500 rounded"></div>
-              </Link>
+              </AuthAwarePaketCta>
             </div>
 
             {/* NEST FACTORY & SCHOOL - Coming Soon */}

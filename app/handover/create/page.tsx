@@ -56,14 +56,43 @@ export default function HandoverCreatePage() {
   } | null>(null)
 
   useEffect(() => {
-    const name = localStorage.getItem("user_name")
-    const contact = localStorage.getItem("user_contact")
-    if (name) setSenderName(name)
-    if (contact) setSenderContact(contact)
-    const draftCity = localStorage.getItem("draft_destination_city")
-    const draftPost = localStorage.getItem("draft_destination_postcode")
-    if (draftCity) setDestinationCity(draftCity)
-    if (draftPost) setDestinationPostalCode(draftPost)
+    async function hydrate() {
+      const name = localStorage.getItem("user_name")
+      const contact = localStorage.getItem("user_contact")
+      if (name) setSenderName(name)
+      if (contact) setSenderContact(contact)
+      if (!name) {
+        const supabase = createBrowserSupabaseClient()
+        const {
+          data: { session }
+        } = await supabase.auth.getSession()
+        if (session) {
+          const res = await fetch("/api/profile")
+          const j = await res.json()
+          const p = j.profile as {
+            display_name?: string | null
+            company_name?: string | null
+          } | null
+          const dn =
+            (p?.display_name && String(p.display_name).trim()) ||
+            (p?.company_name && String(p.company_name).trim()) ||
+            ""
+          if (dn) {
+            setSenderName(dn)
+            try {
+              localStorage.setItem("user_name", dn)
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+      }
+      const draftCity = localStorage.getItem("draft_destination_city")
+      const draftPost = localStorage.getItem("draft_destination_postcode")
+      if (draftCity) setDestinationCity(draftCity)
+      if (draftPost) setDestinationPostalCode(draftPost)
+    }
+    hydrate()
   }, [])
 
   useEffect(() => {
@@ -236,7 +265,8 @@ export default function HandoverCreatePage() {
       data: { session }
     } = await supabase.auth.getSession()
     if (!session) {
-      window.location.href = "/login?redirect=/handover/create"
+      window.location.href =
+        "/choose-type?redirect=" + encodeURIComponent("/handover/create")
       return
     }
 

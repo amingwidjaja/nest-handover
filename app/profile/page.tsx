@@ -2,12 +2,42 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { LogOut } from "lucide-react"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
+
+function clearSessionLocalStorage() {
+  const explicit = [
+    "user_name",
+    "user_contact",
+    "nest_onboarding_type",
+    "nest_onboarding_redirect"
+  ]
+  for (const key of explicit) {
+    try {
+      localStorage.removeItem(key)
+    } catch {
+      /* ignore */
+    }
+  }
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i)
+      if (k && k.startsWith("draft_")) {
+        localStorage.removeItem(k)
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+}
 
 type ProfileRow = {
   user_type: "personal" | "umkm"
   company_name: string | null
   company_logo_url: string | null
+  display_name?: string | null
+  company_address?: string | null
+  onboarded_at?: string | null
 }
 
 export default function ProfilePage() {
@@ -46,8 +76,9 @@ export default function ProfilePage() {
     load()
   }, [])
 
-  async function signOut() {
+  async function handleLogout() {
     const supabase = createBrowserSupabaseClient()
+    clearSessionLocalStorage()
     await supabase.auth.signOut()
     window.location.href = "/"
   }
@@ -151,12 +182,22 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] p-8 max-w-md mx-auto space-y-10">
-      <header>
-        <h1 className="text-xl font-medium mb-1">Profil</h1>
-        <p className="text-xs text-[#A1887F] break-all">{email}</p>
-        <span className="inline-block mt-2 text-[10px] uppercase tracking-widest px-2 py-1 border border-[#E0DED7] rounded">
-          {profile?.user_type === "umkm" ? "UMKM" : "Personal"}
-        </span>
+      <header className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-medium mb-1">Profil</h1>
+          <p className="text-xs text-[#A1887F] break-all">{email}</p>
+          <span className="inline-block mt-2 text-[10px] uppercase tracking-widest px-2 py-1 border border-[#E0DED7] rounded">
+            {profile?.user_type === "umkm" ? "UMKM" : "Personal"}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="shrink-0 inline-flex items-center gap-2 text-sm text-[#5D4037] border border-[#E0DED7] rounded-sm px-3 py-2 hover:bg-[#F5F4F0] active:scale-[0.98] transition-colors"
+        >
+          <LogOut size={18} strokeWidth={1.5} aria-hidden />
+          Log out
+        </button>
       </header>
 
       {profile?.user_type === "personal" && (
@@ -221,13 +262,10 @@ export default function ProfilePage() {
         </section>
       )}
 
-      <div className="flex justify-between text-sm pt-8 border-t border-[#E0DED7]">
+      <div className="flex justify-start text-sm pt-8 border-t border-[#E0DED7]">
         <Link href="/paket" className="opacity-60">
           ← Paket
         </Link>
-        <button type="button" onClick={signOut} className="opacity-60">
-          Keluar
-        </button>
       </div>
 
       {toast && (

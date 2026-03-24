@@ -15,7 +15,9 @@ export async function GET() {
   const admin = getSupabaseAdmin()
   const { data: profile, error } = await admin
     .from("profiles")
-    .select("user_type, company_name, company_logo_url")
+    .select(
+      "user_type, company_name, company_logo_url, display_name, company_address, onboarded_at"
+    )
     .eq("id", user.id)
     .maybeSingle()
 
@@ -42,8 +44,12 @@ export async function PATCH(req: Request) {
   const body = await req.json().catch(() => ({}))
   const company_name =
     typeof body.company_name === "string" ? body.company_name.trim() : undefined
+  const company_address =
+    typeof body.company_address === "string"
+      ? body.company_address.trim()
+      : undefined
 
-  if (company_name === undefined) {
+  if (company_name === undefined && company_address === undefined) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 })
   }
 
@@ -61,13 +67,13 @@ export async function PATCH(req: Request) {
     )
   }
 
-  const { error } = await admin
-    .from("profiles")
-    .update({
-      company_name: company_name || null,
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", user.id)
+  const update: Record<string, unknown> = {
+    updated_at: new Date().toISOString()
+  }
+  if (company_name !== undefined) update.company_name = company_name || null
+  if (company_address !== undefined) update.company_address = company_address || null
+
+  const { error } = await admin.from("profiles").update(update).eq("id", user.id)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

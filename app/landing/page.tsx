@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Bot, Sparkles } from "lucide-react"
+import { AuthAwarePaketCta } from "@/components/auth-aware-paket-cta"
 
 export default function LandingPage() {
   return (
@@ -15,14 +16,15 @@ export default function LandingPage() {
       </p>
 
       <div className="flex flex-wrap items-center justify-center gap-3">
-        <Link
-          href="/login?redirect=/paket"
+        <AuthAwarePaketCta
+          loggedInHref="/paket"
+          guestHref="/choose-type?redirect=/paket"
           className="inline-flex items-center gap-2 px-8 py-4 bg-[#EDEDED] text-[#0A0A0A] text-xs font-bold uppercase tracking-[0.25em] rounded-sm hover:bg-white transition-colors"
         >
           <Sparkles className="w-4 h-4 opacity-70" strokeWidth={1.5} aria-hidden />
           Kirim
           <Bot className="w-4 h-4 opacity-70" strokeWidth={1.5} aria-hidden />
-        </Link>
+        </AuthAwarePaketCta>
         <span className="text-[10px] text-[#555] opacity-80 max-w-[200px] leading-snug">
           Ikon AI (placeholder) untuk fitur cerdas mendatang.
         </span>

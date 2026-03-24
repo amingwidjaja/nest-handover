@@ -1,8 +1,8 @@
-'use client'
+"use client"
 
-import { useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useState } from "react"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 
 export function LoginForm() {
@@ -12,7 +12,6 @@ export function LoginForm() {
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [mode, setMode] = useState<"signin" | "signup">("signin")
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
@@ -25,28 +24,48 @@ export function LoginForm() {
     setMsg(null)
     const supabase = createBrowserSupabaseClient()
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password
-        })
-        if (error) throw error
-        setMsg("Cek email untuk verifikasi (jika diaktifkan di Supabase).")
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password
-        })
-        if (error) throw error
-        router.replace(redirect)
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password
+      })
+      if (error) throw error
+
+      const pr = await fetch("/api/profile")
+      const pj = await pr.json()
+      const profile = pj.profile as { onboarded_at?: string | null } | null
+
+      if (!profile || !profile.onboarded_at) {
+        const t = (() => {
+          try {
+            return localStorage.getItem("nest_onboarding_type")
+          } catch {
+            return null
+          }
+        })()
+        if (t === "personal" || t === "umkm") {
+          router.replace(
+            `/register?type=${t}&redirect=${encodeURIComponent(redirect)}`
+          )
+          router.refresh()
+          return
+        }
+        router.replace(
+          `/choose-type?redirect=${encodeURIComponent(redirect)}`
+        )
         router.refresh()
+        return
       }
+
+      router.replace(redirect)
+      router.refresh()
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Gagal")
     } finally {
       setLoading(false)
     }
   }
+
+  const chooseHref = `/choose-type?redirect=${encodeURIComponent(redirect)}`
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex items-center justify-center p-8">
@@ -55,23 +74,6 @@ export function LoginForm() {
         <p className="text-xs text-center text-[#A1887F]">
           Akun diperlukan untuk batas paket dan penyimpanan bukti.
         </p>
-
-        <div className="flex gap-4 text-sm justify-center">
-          <button
-            type="button"
-            className={mode === "signin" ? "font-medium border-b border-[#3E2723]" : "opacity-50"}
-            onClick={() => setMode("signin")}
-          >
-            Masuk
-          </button>
-          <button
-            type="button"
-            className={mode === "signup" ? "font-medium border-b border-[#3E2723]" : "opacity-50"}
-            onClick={() => setMode("signup")}
-          >
-            Daftar
-          </button>
-        </div>
 
         <input
           className="line-input w-full"
@@ -84,7 +86,7 @@ export function LoginForm() {
         <input
           className="line-input w-full"
           type="password"
-          autoComplete={mode === "signup" ? "new-password" : "current-password"}
+          autoComplete="current-password"
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -100,8 +102,16 @@ export function LoginForm() {
           disabled={loading}
           className="w-full py-3 border border-[#3E2723] disabled:opacity-50"
         >
-          {loading ? "…" : mode === "signup" ? "Buat akun" : "Masuk"}
+          {loading ? "…" : "Masuk"}
         </button>
+
+        <p className="text-xs text-center text-[#A1887F] leading-relaxed">
+          Belum punya akun?{" "}
+          <Link href={chooseHref} className="font-medium text-[#3E2723] underline">
+            Pilih Personal atau UMKM
+          </Link>{" "}
+          lalu daftar.
+        </p>
 
         <Link href="/" className="block text-center text-xs opacity-50">
           ← Kembali
