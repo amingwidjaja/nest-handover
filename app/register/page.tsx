@@ -65,17 +65,29 @@ function RegisterInner() {
     }
   }, [redirect, router])
 
-  async function runOnboardPersonal() {
+  async function parseJsonError(res: Response): Promise<string> {
+    const text = await res.text()
+    try {
+      const j = JSON.parse(text) as { error?: string }
+      return j.error || text || `HTTP ${res.status}`
+    } catch {
+      return text || `HTTP ${res.status}`
+    }
+  }
+
+  async function runOnboardPersonal(accessToken: string) {
     const res = await fetch("/api/profile/onboard", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`
+      },
       body: JSON.stringify({
         type: "personal",
         display_name: displayName.trim()
       })
     })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || "Onboarding gagal")
+    if (!res.ok) throw new Error(await parseJsonError(res))
     try {
       localStorage.setItem("user_name", displayName.trim())
     } catch {
@@ -83,7 +95,7 @@ function RegisterInner() {
     }
   }
 
-  async function runOnboardUmkm() {
+  async function runOnboardUmkm(accessToken: string) {
     const fd = new FormData()
     fd.set("type", "umkm")
     fd.set("company_name", companyName.trim())
@@ -91,9 +103,12 @@ function RegisterInner() {
     if (logoFile && logoFile.size > 0) {
       fd.set("logo", logoFile)
     }
-    const res = await fetch("/api/profile/onboard", { method: "POST", body: fd })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || "Onboarding gagal")
+    const res = await fetch("/api/profile/onboard", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: fd
+    })
+    if (!res.ok) throw new Error(await parseJsonError(res))
     try {
       localStorage.setItem("user_name", companyName.trim())
     } catch {
@@ -122,6 +137,8 @@ function RegisterInner() {
     const supabase = createBrowserSupabaseClient()
 
     try {
+      let accessToken: string | null = null
+
       if (needsAuth) {
         if (!email.trim() || !password) {
           setMsg("Email dan password wajib")
@@ -140,25 +157,30 @@ function RegisterInner() {
           data: { session }
         } = await supabase.auth.getSession()
 
-        if (!session) {
+        if (!session?.access_token) {
           setMsg(
             "Jika verifikasi email aktif, cek inbox lalu masuk untuk melanjutkan onboarding."
           )
           setLoading(false)
           return
         }
-
-        if (type === "personal") {
-          await runOnboardPersonal()
-        } else {
-          await runOnboardUmkm()
-        }
+        accessToken = session.access_token
       } else {
-        if (type === "personal") {
-          await runOnboardPersonal()
-        } else {
-          await runOnboardUmkm()
+        const {
+          data: { session }
+        } = await supabase.auth.getSession()
+        if (!session?.access_token) {
+          setMsg("Sesi tidak valid. Silakan masuk lagi.")
+          setLoading(false)
+          return
         }
+        accessToken = session.access_token
+      }
+
+      if (type === "personal") {
+        await runOnboardPersonal(accessToken)
+      } else {
+        await runOnboardUmkm(accessToken)
       }
 
       router.replace(redirect)

@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server"
-import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 import { buildProfileLogoPath } from "@/lib/nest-evidence-upload"
+import { getUserFromRequest } from "@/lib/supabase/auth-from-request"
 
 export async function POST(req: Request) {
-  const supabase = await createServerSupabaseClient()
-  const {
-    data: { user }
-  } = await supabase.auth.getUser()
+  const user = await getUserFromRequest(req)
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return NextResponse.json(
+      { error: "Unauthorized — pastikan cookie sesi atau header Authorization valid." },
+      { status: 401 }
+    )
   }
 
   const admin = getSupabaseAdmin()
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     )
   }
 
-  const ct = req.headers.get("content-type") || ""
+  const ct = (req.headers.get("content-type") || "").toLowerCase()
 
   if (ct.includes("multipart/form-data")) {
     const form = await req.formData()
@@ -44,7 +44,13 @@ export async function POST(req: Request) {
       }
 
       let company_logo_url: string | null = null
-      if (file instanceof File && file.size > 0) {
+      const hasLogo =
+        file &&
+        typeof file === "object" &&
+        "size" in file &&
+        typeof (file as Blob).size === "number" &&
+        (file as Blob).size > 0
+      if (hasLogo && file instanceof Blob) {
         const buf = Buffer.from(await file.arrayBuffer())
         const path = buildProfileLogoPath(user.id)
         const { error: upErr } = await admin.storage
