@@ -15,6 +15,8 @@ Deno.serve(async () => {
       .from("handover")
       .select(`
         id,
+        user_id,
+        status,
         sender_name,
         receiver_target_name,
         receipt_url,
@@ -33,7 +35,18 @@ Deno.serve(async () => {
       return new Response(JSON.stringify({ success: true, empty: true }), { status: 200 })
     }
 
-    const data = rows[0]
+    const data = rows[0] as {
+      id: string
+      user_id: string
+      receipt_url: string | null
+      [key: string]: unknown
+    }
+
+    if (!data.user_id) {
+      return new Response(JSON.stringify({ error: "handover tanpa user_id" }), {
+        status: 500
+      })
+    }
 
     // ✅ guard: kalau sudah ada URL → skip
     if (data.receipt_url) {
@@ -52,11 +65,12 @@ Deno.serve(async () => {
     const element = ReceiptDocument({ data })
     const pdfBuffer = await renderToBuffer(element)
 
-    const fileName = `${data.id}.pdf`
+    const bucket = Deno.env.get("SUPABASE_STORAGE_BUCKET") ?? "nest-evidence"
+    const storagePath = `paket/${data.user_id}/${data.id}/receipt_${data.id}.pdf`
 
     const { error: uploadError } = await supabase.storage
-      .from("nest-evidence")
-      .upload(fileName, pdfBuffer, {
+      .from(bucket)
+      .upload(storagePath, pdfBuffer, {
         contentType: "application/pdf",
         upsert: true
       })
@@ -65,31 +79,24 @@ Deno.serve(async () => {
       return new Response(JSON.stringify({ error: uploadError.message }), { status: 500 })
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from("nest-evidence")
-      .getPublicUrl(fileName)
-
-    const publicUrl = publicUrlData?.publicUrl
-
-    if (!publicUrl) {
-      return new Response(JSON.stringify({ error: "no public url" }), { status: 500 })
-    }
-
-    // ✅ update done
+    // ✅ update done — DB stores relative path only
     await supabase
       .from("handover")
       .update({
-        receipt_url: publicUrl,
+        receipt_url: storagePath,
         receipt_status: "done",
         receipt_generated_at: new Date().toISOString()
       })
       .eq("id", data.id)
 
-    return new Response(JSON.stringify({
-      success: true,
-      id: data.id,
-      receipt_url: publicUrl
-    }), { status: 200 })
+    return new Response(
+      JSON.stringify({
+        success: true,
+        id: data.id,
+        receipt_storage_path: storagePath
+      }),
+      { status: 200 }
+    )
 
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500 })

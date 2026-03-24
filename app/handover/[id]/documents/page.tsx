@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import { Check, CheckCheck, Circle, Download, Loader2 } from "lucide-react"
 import Image from "next/image"
+import { resolveEvidencePhotoUrl } from "@/lib/nest-evidence-upload"
 
 export default function DocumentPage() {
 
@@ -82,8 +83,8 @@ export default function DocumentPage() {
 
   const { handover, items, receive_event } = data
 
-  const firstItemPhoto = items?.[0]?.photo_url
-  const proofPhoto = receive_event?.photo_url
+  const firstItemPhoto = resolveEvidencePhotoUrl(items?.[0]?.photo_url)
+  const proofPhoto = resolveEvidencePhotoUrl(receive_event?.photo_url)
 
   const receiveMethod =
     receive_event?.receive_method

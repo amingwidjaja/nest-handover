@@ -10,8 +10,54 @@ function safeStamp() {
   return Date.now()
 }
 
+/** Logistics photos under bucket root: `paket/{user_id}/{handover_id}/{type}_{timestamp}.jpg` */
+export function buildPaketObjectPath(
+  userId: string,
+  handoverId: string,
+  type: "paket" | "proof"
+): string {
+  return `paket/${userId}/${handoverId}/${type}_${safeStamp()}.jpg`
+}
+
+/** Generated receipt PDF: `paket/{user_id}/{handover_id}/receipt_{handover_id}.pdf` */
+export function buildPaketReceiptPdfPath(
+  userId: string,
+  handoverId: string
+): string {
+  return `paket/${userId}/${handoverId}/receipt_${handoverId}.pdf`
+}
+
 /**
- * Path: `{handover_id}/{timestamp}_{filenameBase}.jpg` — simple & receipt-friendly.
+ * DB stores relative object keys (or legacy full URLs). Resolves to a public URL for images, PDFs, etc.
+ */
+export function resolveNestEvidencePublicUrl(
+  stored: string | null | undefined
+): string | null {
+  if (stored == null || typeof stored !== "string") return null
+  const trimmed = stored.trim()
+  if (!trimmed) return null
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed
+  }
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ?? ""
+  if (!base) return null
+  const key = trimmed.startsWith("/") ? trimmed.slice(1) : trimmed
+  const encoded = key
+    .split("/")
+    .map((seg) => encodeURIComponent(seg))
+    .join("/")
+  return `${base}/storage/v1/object/public/${NEST_EVIDENCE_BUCKET}/${encoded}`
+}
+
+/** @deprecated Use {@link resolveNestEvidencePublicUrl} */
+export function resolveEvidencePhotoUrl(
+  stored: string | null | undefined
+): string | null {
+  return resolveNestEvidencePublicUrl(stored)
+}
+
+/**
+ * @deprecated Prefer {@link buildPaketObjectPath}
  */
 export function buildHandoverPhotoPath(
   handoverId: string,

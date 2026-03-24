@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 import {
   NEST_EVIDENCE_BUCKET,
-  buildHandoverPhotoPath
+  buildPaketObjectPath,
+  resolveEvidencePhotoUrl
 } from "@/lib/nest-evidence-upload"
 import { getUserFromRequest } from "@/lib/supabase/auth-from-request"
 
@@ -76,7 +77,8 @@ export async function POST(req: Request) {
     }
 
     const buf = Buffer.from(await file.arrayBuffer())
-    const path = buildHandoverPhotoPath(handover_id, "photo")
+    const objectType = mode === "proof_only" ? "proof" : "paket"
+    const storagePath = buildPaketObjectPath(user.id, handover_id, objectType)
     const contentType =
       file.type && file.type.startsWith("image/")
         ? file.type
@@ -84,7 +86,7 @@ export async function POST(req: Request) {
 
     const { error: upErr } = await admin.storage
       .from(NEST_EVIDENCE_BUCKET)
-      .upload(path, buf, {
+      .upload(storagePath, buf, {
         contentType,
         upsert: false
       })
@@ -97,16 +99,13 @@ export async function POST(req: Request) {
       )
     }
 
-    const { data: pub } = admin.storage
-      .from(NEST_EVIDENCE_BUCKET)
-      .getPublicUrl(path)
-    const publicUrl = pub.publicUrl
+    const publicUrl = resolveEvidencePhotoUrl(storagePath)
 
     if (mode === "proof_only") {
       return NextResponse.json({
         success: true,
-        publicUrl,
-        path
+        storagePath,
+        publicUrl
       })
     }
 
@@ -126,7 +125,7 @@ export async function POST(req: Request) {
     if (firstId) {
       const { error: updErr } = await admin
         .from("handover_items")
-        .update({ photo_url: publicUrl })
+        .update({ photo_url: storagePath })
         .eq("id", firstId)
 
       if (updErr) {
@@ -137,8 +136,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      publicUrl,
-      path
+      storagePath,
+      publicUrl
     })
   } catch (e: unknown) {
     console.error("UPLOAD_DEBUG:", e)

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
 import { Home } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { resolveNestEvidencePublicUrl } from "@/lib/nest-evidence-upload"
 
 export default function DashboardPage(){
 
@@ -145,7 +146,12 @@ export default function DashboardPage(){
     if(h.status === "accepted"){
 
       if(h.receipt_url){
-        window.open(h.receipt_url, "_blank")
+        const url = resolveNestEvidencePublicUrl(h.receipt_url)
+        if (url) {
+          window.open(url, "_blank")
+        } else {
+          alert("URL receipt tidak valid")
+        }
         return
       }
 

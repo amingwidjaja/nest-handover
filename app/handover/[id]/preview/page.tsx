@@ -66,16 +66,17 @@ export default function PreviewPage() {
       })
       const upJson = (await up.json().catch(() => ({}))) as {
         success?: boolean
+        storagePath?: string
         publicUrl?: string
         error?: string
       }
-      if (!up.ok || !upJson.publicUrl) {
+      if (!up.ok || !upJson.storagePath) {
         console.error("UPLOAD_DEBUG:", upJson)
         throw new Error(
           upJson.error || `Upload gagal (bucket: ${NEST_EVIDENCE_BUCKET})`
         )
       }
-      const photo_url = upJson.publicUrl
+      const photo_url = upJson.storagePath
 
       const meta = JSON.parse(
         sessionStorage.getItem(`handover_${id}_meta`) || "{}"

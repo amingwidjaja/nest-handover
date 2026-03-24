@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
+import { resolveEvidencePhotoUrl } from "@/lib/nest-evidence-upload"
 
 function formatTanggalIndonesia(dateString: string) {
   if (!dateString) return "-"
@@ -131,12 +132,18 @@ export default function ReceiptPage() {
           <div className="flex gap-3 items-start mt-6">
 
             <div className="w-26 aspect-square border border-[#E0DED7] rounded-sm overflow-hidden flex-shrink-0">
-              {handover.handover_items?.[0]?.photo_url && (
-                <img
-                  src={handover.handover_items[0].photo_url}
-                  className="w-full h-full object-cover"
-                />
-              )}
+              {(() => {
+                const src = resolveEvidencePhotoUrl(
+                  handover.handover_items?.[0]?.photo_url
+                )
+                return src ? (
+                  <img
+                    src={src}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : null
+              })()}
             </div>
 
             <div className="flex-1">

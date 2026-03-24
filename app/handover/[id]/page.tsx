@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { QrCode, Camera } from "lucide-react"
 import Image from "next/image"
+import { resolveEvidencePhotoUrl } from "@/lib/nest-evidence-upload"
 
 export default function HandoverPage() {
 
@@ -258,9 +259,16 @@ export default function HandoverPage() {
               <div key={item.id} className="flex gap-3 items-stretch">
 
                 <div className="aspect-square w-26 border border-[#E0DED7] rounded-sm overflow-hidden flex-shrink-0">
-                  {item.photo_url && (
-                    <img src={item.photo_url} className="w-full h-full object-cover"/>
-                  )}
+                  {(() => {
+                    const src = resolveEvidencePhotoUrl(item.photo_url)
+                    return src ? (
+                      <img
+                        src={src}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : null
+                  })()}
                 </div>
 
                 <div className="flex-1 border border-[#E0DED7] rounded-sm px-3 py-2">
