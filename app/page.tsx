@@ -3,7 +3,8 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "NEST76 | Studio Sistem Digital",
-  description: "Membangun sistem sederhana untuk operasional yang kompleks. Pengalaman Digital Sejak '76.",
+  description:
+    "Tanda Terima Digital — bukti kirim jelas, tanpa kertas. Rapi, cepat, dan 100% GRATIS.",
 }
 
 export default function Home() {
@@ -26,12 +27,16 @@ export default function Home() {
     </div>
   </div>
   
-  <h1 className="text-6xl md:text-8xl font-extralight tracking-tighter leading-[0.85] mb-10 text-white">
-    NEST<span className="font-semibold text-[#333]">76</span>
+  <p className="text-[10px] tracking-[0.35em] uppercase opacity-50 font-mono mb-6 text-white">
+    NEST<span className="text-[#555]">76</span>
+  </p>
+
+  <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extralight tracking-tighter leading-[1.05] mb-10 text-white max-w-4xl">
+    Bukti kirim jadi lebih jelas. Say bye-bye ke kertas! 🌿
   </h1>
 
-  <p className="text-2xl md:text-3xl font-light text-[#A0A0A0] max-w-2xl leading-relaxed">
-    Membangun <span className="text-white font-normal">infrastruktur digital</span> yang presisi. Kami menyederhanakan alur kerja yang rumit menjadi sistem yang reliabel.
+  <p className="text-xl md:text-2xl font-light text-[#A0A0A0] max-w-2xl leading-relaxed">
+    Solusi Tanda Terima Digital yang rapi, cepat, dan 100% GRATIS.
   </p>
 </header>
 
@@ -61,7 +66,7 @@ export default function Home() {
                 </h3>
                 
                 <p className="text-lg text-[#888] font-light leading-relaxed max-w-2xl">
-                  Manajemen serah terima paket dan logistik. Verifikasi lokasi <span className="text-white">real-time</span> dengan antarmuka yang ramah untuk siapa saja.
+                  Tanda Terima Digital untuk paket dan logistik. Verifikasi lokasi <span className="text-white">real-time</span> dengan antarmuka yang ramah untuk siapa saja.
                 </p>
                 
                 <div className="mt-6 h-[2px] w-20 bg-[#2A2A2A] group-hover:w-full group-hover:bg-[#EDEDED] transition-all duration-500 rounded"></div>

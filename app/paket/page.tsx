@@ -60,15 +60,19 @@ export default function HomePage() {
           NEST PAKET
         </div>
 
-        <h1 className="text-2xl font-light leading-relaxed mt-10 mb-16">
-          Serah terima barang <br/> sekarang lebih tenang.
+        <h1 className="text-xl sm:text-2xl font-light leading-snug mt-10 mb-4 max-w-md mx-auto">
+          Bukti kirim jadi lebih jelas. Say bye-bye ke kertas! 🌿
         </h1>
+
+        <p className="text-sm sm:text-base opacity-80 font-light leading-relaxed mb-12 max-w-lg mx-auto px-2">
+          Solusi Tanda Terima Digital yang rapi, cepat, dan 100% GRATIS.
+        </p>
 
         <Link
           href="/handover/create"
           className="block w-full max-w-xs mx-auto py-4 bg-[#3E2723] text-[#FAF9F6] rounded-sm font-medium"
         >
-          Buat Serah Terima
+          Buat Tanda Terima Digital
         </Link>
 
         {/* 🔥 EDIT USER LINK */}

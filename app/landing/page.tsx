@@ -7,12 +7,11 @@ export default function LandingPage() {
       <p className="text-[10px] tracking-[0.4em] uppercase opacity-40 font-mono mb-6">
         NEST · Landing
       </p>
-      <h1 className="text-4xl md:text-5xl font-extralight tracking-tight mb-2 text-center">
-        Kirim paket dengan <span className="text-white">presisi</span>
+      <h1 className="text-3xl sm:text-4xl md:text-5xl font-extralight tracking-tight mb-4 text-center max-w-3xl leading-tight">
+        Bukti kirim jadi lebih jelas. Say bye-bye ke kertas! 🌿
       </h1>
-      <p className="text-sm text-[#888] max-w-md text-center mb-12 leading-relaxed">
-        Alur serah terima, bukti foto, dan validasi lokasi — siap untuk integrasi AI di
-        masa depan.
+      <p className="text-sm text-[#888] max-w-lg text-center mb-12 leading-relaxed">
+        Solusi Tanda Terima Digital yang rapi, cepat, dan 100% GRATIS.
       </p>
 
       <div className="flex flex-wrap items-center justify-center gap-3">
