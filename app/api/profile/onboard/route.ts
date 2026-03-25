@@ -94,6 +94,44 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
   const type = typeof body.type === "string" ? body.type.trim() : ""
 
+  if (type === "umkm") {
+    const display_name =
+      typeof body.display_name === "string" ? body.display_name.trim() : ""
+    const company_name =
+      typeof body.company_name === "string" ? body.company_name.trim() : ""
+    const company_address =
+      typeof body.company_address === "string" ? body.company_address.trim() : ""
+
+    const finalCompany = company_name || display_name
+    if (!finalCompany) {
+      return NextResponse.json(
+        { error: "Nama bisnis atau nama tampilan wajib diisi" },
+        { status: 400 }
+      )
+    }
+
+    const finalAddress =
+      company_address || "Lengkapi alamat bisnis di Profil."
+
+    const { error } = await admin
+      .from("profiles")
+      .update({
+        user_type: "umkm",
+        company_name: finalCompany,
+        company_address: finalAddress,
+        display_name: null,
+        onboarded_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", user.id)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, user_type: "umkm" })
+  }
+
   if (type === "personal") {
     const display_name =
       typeof body.display_name === "string" ? body.display_name.trim() : ""

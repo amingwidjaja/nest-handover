@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
+import { Loader2 } from "lucide-react"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 
 export function LoginForm() {
@@ -100,9 +101,13 @@ export function LoginForm() {
           type="button"
           onClick={submit}
           disabled={loading}
-          className="w-full py-3 border border-[#3E2723] disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 border border-[#3E2723] py-3 disabled:opacity-50"
         >
-          {loading ? "…" : "Masuk"}
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin text-[#3E2723]" />
+          ) : (
+            "Masuk"
+          )}
         </button>
 
         <p className="text-xs text-center text-[#A1887F] leading-relaxed">
