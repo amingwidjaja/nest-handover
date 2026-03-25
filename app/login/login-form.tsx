@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
-import { Loader2 } from "lucide-react"
+import { Loader2, ShieldCheck, Lock } from "lucide-react" // Tambah icon buat trust
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 
 export function LoginForm() {
@@ -18,7 +18,7 @@ export function LoginForm() {
 
   async function submit() {
     if (!email.trim() || !password) {
-      setMsg("Email dan password wajib")
+      setMsg("Email dan password wajib diisi")
       return
     }
     setLoading(true)
@@ -60,7 +60,7 @@ export function LoginForm() {
       router.replace(redirect)
       router.refresh()
     } catch (e: unknown) {
-      setMsg(e instanceof Error ? e.message : "Gagal")
+      setMsg(e instanceof Error ? e.message : "Gagal masuk. Cek kembali email & password.")
     } finally {
       setLoading(false)
     }
@@ -70,57 +70,84 @@ export function LoginForm() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex items-center justify-center p-8">
-      <div className="w-full max-w-sm space-y-6">
-        <h1 className="text-xl text-center font-medium">Masuk ke NEST</h1>
-        <p className="text-xs text-center text-[#A1887F]">
-          Akun diperlukan untuk batas paket dan penyimpanan bukti.
-        </p>
+      <div className="w-full max-w-sm space-y-8">
+        
+        {/* Header Section: Branding Baru */}
+        <div className="text-center space-y-2">
+          <div className="flex justify-center mb-4 text-[#3E2723]">
+            <ShieldCheck className="w-10 h-10" strokeWidth={1.5} />
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight">NEST76 STUDIO</h1>
+          <p className="text-[13px] text-[#A1887F] leading-relaxed italic">
+            "Protokol keamanan untuk integritas serah terima Anda."
+          </p>
+        </div>
 
-        <input
-          className="line-input w-full"
-          type="email"
-          autoComplete="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          className="line-input w-full"
-          type="password"
-          autoComplete="current-password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div className="space-y-4">
+          <input
+            className="line-input w-full bg-transparent border-b border-[#D7CCC8] py-2 focus:border-[#3E2723] outline-none transition-all placeholder:text-[#D7CCC8]"
+            type="email"
+            autoComplete="email"
+            placeholder="Email Bisnis / Personal"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <input
+            className="line-input w-full bg-transparent border-b border-[#D7CCC8] py-2 focus:border-[#3E2723] outline-none transition-all placeholder:text-[#D7CCC8]"
+            type="password"
+            autoComplete="current-password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
 
         {msg && (
-          <p className="text-xs text-center text-[#5D4037]">{msg}</p>
+          <div className="bg-[#EFEBE9] p-3 rounded text-[11px] text-center text-[#5D4037]">
+            {msg}
+          </div>
         )}
 
-        <button
-          type="button"
-          onClick={submit}
-          disabled={loading}
-          className="flex w-full items-center justify-center gap-2 border border-[#3E2723] py-3 disabled:opacity-50"
-        >
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin text-[#3E2723]" />
-          ) : (
-            "Masuk"
-          )}
-        </button>
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={submit}
+            disabled={loading}
+            className="flex w-full items-center justify-center gap-2 bg-[#3E2723] text-white py-3 hover:bg-[#2D1B19] transition-all disabled:opacity-50"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              "Akses Protokol"
+            )}
+          </button>
 
-        <p className="text-xs text-center text-[#A1887F] leading-relaxed">
-          Belum punya akun?{" "}
-          <Link href={chooseHref} className="font-medium text-[#3E2723] underline">
-            Pilih Personal atau UMKM
-          </Link>{" "}
-          lalu daftar.
+          {/* Micro-copy yang menenangkan */}
+          <div className="flex items-start gap-2 px-2 py-4 bg-[#F5F5F5] rounded-lg">
+            <Lock className="w-4 h-4 text-[#A1887F] mt-0.5" />
+            <p className="text-[10px] text-[#A1887F] leading-relaxed">
+              <strong>Privasi Terjamin:</strong> Identitas Anda hanya digunakan untuk verifikasi paket. Data dienkripsi secara profesional oleh NEST76 STUDIO.
+            </p>
+          </div>
+        </div>
+
+        <div className="text-center space-y-6">
+          <p className="text-xs text-[#A1887F]">
+            Belum terdaftar?{" "}
+            <Link href={chooseHref} className="font-bold text-[#3E2723] underline underline-offset-4">
+              Pilih Personal / UMKM
+            </Link>
+          </p>
+
+          <Link href="/" className="inline-block text-[10px] uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity">
+            ← Kembali ke Beranda
+          </Link>
+        </div>
+
+        {/* Branding Footer */}
+        <p className="text-[9px] text-center text-[#D7CCC8] font-mono pt-4">
+          © 2026 NEST76 STUDIO • Build with Integrity
         </p>
-
-        <Link href="/" className="block text-center text-xs opacity-50">
-          ← Kembali
-        </Link>
       </div>
     </div>
   )
