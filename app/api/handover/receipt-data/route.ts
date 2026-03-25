@@ -23,6 +23,7 @@ export async function GET(req: Request) {
         serial_number,
         sender_name,
         receiver_target_name,
+        destination_address,
         receiver_target_phone,
         receiver_target_email,
         notes,

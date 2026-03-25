@@ -180,13 +180,21 @@ export default function ReceiptPage() {
       ? resolveEvidencePhotoUrl(handover.profiles.company_logo_url)
       : null)
 
-  const receiverWhatsapp = String(
-    handover.receiver_whatsapp ?? handover.receiver_contact ?? ""
-  ).trim()
+  const waOnly = String(handover.receiver_whatsapp ?? "").trim()
+  const contactRaw = String(handover.receiver_contact ?? "").trim()
+  const contactForWa = contactRaw.includes("@") ? "" : contactRaw
+  const receiverWhatsapp = waOnly || contactForWa
+
   const receiverEmail =
     typeof handover.receiver_email === "string" && handover.receiver_email.trim()
       ? handover.receiver_email.trim()
       : null
+
+  const destinationAddress =
+    typeof handover.destination_address === "string" &&
+    handover.destination_address.trim()
+      ? handover.destination_address.trim()
+      : ""
 
   const notesRaw =
     typeof handover.notes === "string" ? handover.notes.trim() : ""
@@ -214,13 +222,24 @@ export default function ReceiptPage() {
       )}`
     : null
 
+  const evRecord = ev as Record<string, unknown> | null
   const receiveWhen =
-    (ev?.timestamp as string) || (ev?.created_at as string) || ""
+    (typeof evRecord?.timestamp === "string" && evRecord.timestamp
+      ? evRecord.timestamp
+      : null) ||
+    (typeof evRecord?.created_at === "string" && evRecord.created_at
+      ? evRecord.created_at
+      : null) ||
+    (typeof handover.received_at === "string" && handover.received_at
+      ? handover.received_at
+      : "") ||
+    ""
+
   const handoverTs = formatTrustTimestampId(receiveWhen)
-  const deviceIdDisplay = !ev
-    ? "System Verified"
-    : ev.device_id != null && String(ev.device_id).trim()
-      ? shortenDeviceIdForDisplay(String(ev.device_id), 120)
+  const scannerDeviceRaw = evRecord?.device_id
+  const deviceIdDisplay =
+    scannerDeviceRaw != null && String(scannerDeviceRaw).trim()
+      ? shortenDeviceIdForDisplay(String(scannerDeviceRaw).trim(), 120)
       : "System Verified"
   const gpsCoords = ev
     ? formatGpsCoords(ev.gps_lat, ev.gps_lng)
@@ -232,12 +251,10 @@ export default function ReceiptPage() {
         )
       : null
 
-  const formattedDateOnly = receiveWhen
-    ? formatTanggalIndonesia(receiveWhen)
-    : "-"
-
   const qrImgClass =
     "h-[128px] w-[128px] shrink-0 rounded-sm border border-[var(--primary-color)] bg-white p-1"
+  const qrLinkClass =
+    "flex flex-col items-center justify-center rounded-sm transition-transform active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-color)]"
 
   return (
     <div
@@ -304,6 +321,12 @@ export default function ReceiptPage() {
               </span>
             </div>
             <div className="flex justify-between gap-2">
+              <span className="shrink-0 text-[#9A8F88]">Alamat:</span>
+              <span className="min-w-0 max-w-[65%] text-right text-[var(--primary-color)]">
+                {destinationAddress || "—"}
+              </span>
+            </div>
+            <div className="flex justify-between gap-2">
               <span className="shrink-0 text-[#9A8F88]">Status:</span>
               <span className="text-right font-medium text-[var(--primary-color)]">
                 {formatStatus(handover.status)}
@@ -317,13 +340,17 @@ export default function ReceiptPage() {
                 {receiverWhatsapp || "—"}
               </span>
             </div>
-            <div className="border-t border-[#ECE7E3]" />
-            <div className="flex justify-between gap-2">
-              <span className="shrink-0 font-medium text-[#9A8F88]">Email</span>
-              <span className="min-w-0 break-all text-right font-medium text-[var(--primary-color)]">
-                {receiverEmail ?? "—"}
-              </span>
-            </div>
+            {receiverEmail ? (
+              <>
+                <div className="border-t border-[#ECE7E3]" />
+                <div className="flex justify-between gap-2">
+                  <span className="shrink-0 font-medium text-[#9A8F88]">Email</span>
+                  <span className="min-w-0 break-all text-right font-medium text-[var(--primary-color)]">
+                    {receiverEmail}
+                  </span>
+                </div>
+              </>
+            ) : null}
           </div>
         </section>
 
@@ -360,9 +387,7 @@ export default function ReceiptPage() {
               <div className="flex justify-between gap-2">
                 <span className="text-[#9A8F88]">Waktu:</span>
                 <span className="text-right text-[var(--primary-color)]">
-                  {formatTanggalIndonesia(
-                    (ev?.timestamp as string) || (ev?.created_at as string) || ""
-                  )}
+                  {formatTanggalIndonesia(receiveWhen)}
                 </span>
               </div>
               {ev?.receiver_name && (
@@ -383,16 +408,26 @@ export default function ReceiptPage() {
               )}
             </div>
           </div>
+        </section>
+
+        <div className="border-t border-[#ECE7E3]" />
+
+        {/* Section 4 — Keterangan / Catatan (sebelum QR & verifikasi) */}
+        <section aria-labelledby="receipt-notes" className="space-y-2">
+          <h2
+            id="receipt-notes"
+            className="text-[11px] font-semibold uppercase tracking-widest text-[#9A8F88]"
+          >
+            Keterangan
+          </h2>
           <p className="text-sm leading-relaxed text-[var(--primary-color)]">
-            Paket telah diterima oleh {String(ev?.receiver_name || "-")} pada{" "}
-            {formattedDateOnly} melalui metode{" "}
-            {formatMetode(ev?.receive_method as string)}.
+            {notesDisplay}
           </p>
         </section>
 
         <div className="border-t border-[#ECE7E3]" />
 
-        {/* Section 4 — Pusat QR (2 kolom) */}
+        {/* Section 5 — Pusat QR (2 kolom, tap) */}
         <section aria-labelledby="receipt-qr" className="space-y-3">
           <h2
             id="receipt-qr"
@@ -408,13 +443,12 @@ export default function ReceiptPage() {
               {mapsUrl && mapsQrSrc ? (
                 <a
                   href={mapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex flex-col items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-color)]"
+                  className={qrLinkClass}
+                  aria-label="Buka lokasi di Google Maps"
                 >
                   <Image
                     src={mapsQrSrc}
-                    alt="Buka lokasi di Google Maps"
+                    alt=""
                     width={QR_PX}
                     height={QR_PX}
                     className={qrImgClass}
@@ -428,16 +462,15 @@ export default function ReceiptPage() {
               <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-[var(--primary-color)]">
                 Evidence
               </p>
-              {evidenceAbsolute && evidenceQrSrc ? (
+              {evidenceQrSrc ? (
                 <a
-                  href={evidenceAbsolute}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex flex-col items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-color)]"
+                  href={evidencePath}
+                  className={qrLinkClass}
+                  aria-label="Buka halaman bukti foto dan evidence"
                 >
                   <Image
                     src={evidenceQrSrc}
-                    alt="Buka halaman bukti foto"
+                    alt=""
                     width={QR_PX}
                     height={QR_PX}
                     className={qrImgClass}
@@ -448,21 +481,6 @@ export default function ReceiptPage() {
               )}
             </div>
           </div>
-        </section>
-
-        <div className="border-t border-[#ECE7E3]" />
-
-        {/* Section 5 — Keterangan */}
-        <section aria-labelledby="receipt-notes" className="space-y-2">
-          <h2
-            id="receipt-notes"
-            className="text-[11px] font-semibold uppercase tracking-widest text-[#9A8F88]"
-          >
-            Keterangan
-          </h2>
-          <p className="text-sm leading-relaxed text-[var(--primary-color)]">
-            {notesDisplay}
-          </p>
         </section>
 
         <div className="border-t border-[#ECE7E3]" />
