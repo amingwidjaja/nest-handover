@@ -81,6 +81,15 @@ function normalizeReceiveEvent(ev: unknown) {
   return ev as Record<string, unknown>
 }
 
+function firstHandoverItemPhotoUrl(
+  items: Array<{ id?: string; photo_url?: string | null }> | undefined
+): string | undefined {
+  const found = items?.find(
+    (item) => item.photo_url && String(item.photo_url).trim()
+  )
+  return found?.photo_url != null ? String(found.photo_url).trim() : undefined
+}
+
 export default function ReceiptPage() {
   const params = useParams()
   const token = params.token as string
@@ -106,6 +115,22 @@ export default function ReceiptPage() {
       setOrigin(window.location.origin)
     }
   }, [])
+
+  useEffect(() => {
+    if (!handover?.handover_items) return
+    const raw = firstHandoverItemPhotoUrl(handover.handover_items)
+    const resolved = resolveEvidencePhotoUrl(raw)
+    console.log("[receipt] Product photo (debug)", {
+      rawPhotoPath: raw ?? null,
+      resolvedUrl: resolved,
+      itemsSnapshot: handover.handover_items.map(
+        (i: { id?: string; photo_url?: string | null }) => ({
+          id: i.id,
+          photo_url: i.photo_url
+        })
+      )
+    })
+  }, [handover])
 
   if (loading) {
     return (
@@ -219,157 +244,165 @@ export default function ReceiptPage() {
       className="min-h-screen bg-[#FAF9F6] flex flex-col justify-between"
       style={{ ["--primary-color" as string]: "#3E2723" }}
     >
-      <main className="p-6 pt-10 max-w-md mx-auto w-full space-y-6 text-[var(--primary-color)]">
-        <div className="relative flex flex-row items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-1 flex-row items-start gap-3">
-            {logoUrl ? (
-              <Image
-                src={logoUrl}
-                alt=""
-                width={44}
-                height={44}
-                className="h-11 w-11 shrink-0 object-contain"
-              />
-            ) : null}
-            <div className="min-w-0 flex-1 text-left">
-              <h1 className="text-xl font-bold uppercase tracking-wide text-[var(--primary-color)]">
-                Tanda Terima
-              </h1>
-              {businessDisplayName ? (
-                <p className="mt-0.5 text-xs font-medium text-[#9A8F88]">
-                  {businessDisplayName}
-                </p>
+      <main className="mx-auto w-full max-w-md space-y-6 p-6 pt-10 text-[var(--primary-color)]">
+        {/* Section 1 — Header */}
+        <section aria-labelledby="receipt-header" className="text-left">
+          <div className="relative flex flex-row items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-1 flex-row items-start gap-3">
+              {logoUrl ? (
+                <Image
+                  src={logoUrl}
+                  alt=""
+                  width={44}
+                  height={44}
+                  className="h-11 w-11 shrink-0 object-contain"
+                />
               ) : null}
+              <div className="min-w-0 flex-1">
+                <h1
+                  id="receipt-header"
+                  className="text-xl font-bold uppercase tracking-wide text-[var(--primary-color)]"
+                >
+                  Tanda Terima
+                </h1>
+                {businessDisplayName ? (
+                  <p className="mt-0.5 text-xs font-medium text-[#9A8F88]">
+                    {businessDisplayName}
+                  </p>
+                ) : null}
+              </div>
             </div>
+            {handover.serial_number ? (
+              <div className="shrink-0 text-right text-xs font-semibold leading-tight tracking-wide text-[var(--primary-color)]">
+                {handover.serial_number}
+              </div>
+            ) : null}
           </div>
-          {handover.serial_number ? (
-            <div className="shrink-0 text-right text-xs font-semibold leading-tight tracking-wide text-[var(--primary-color)]">
-              {handover.serial_number}
-            </div>
-          ) : null}
-        </div>
+        </section>
 
-        <div className="my-2 border-t border-[#ECE7E3]" />
+        <div className="border-t border-[#ECE7E3]" />
 
-        {/* Section 2 — Kontak */}
-        <div className="mt-2 space-y-1.5 text-sm">
-          <div className="flex justify-between gap-2">
-            <span className="shrink-0 text-[#9A8F88]">Pengirim:</span>
-            <span className="text-right font-medium text-[var(--primary-color)]">
-              {handover.sender_name || "-"}
-            </span>
-          </div>
-
-          <div className="flex justify-between gap-2">
-            <span className="shrink-0 text-[#9A8F88]">Penerima:</span>
-            <span className="text-right font-medium text-[var(--primary-color)]">
-              {handover.receiver_target_name}
-            </span>
-          </div>
-
-          <div className="flex justify-between gap-2">
-            <span className="shrink-0 text-[#9A8F88]">WhatsApp:</span>
-            <span className="text-right font-medium text-[var(--primary-color)] tabular-nums">
-              {receiverWhatsapp || "—"}
-            </span>
-          </div>
-
-          {receiverEmail ? (
+        {/* Section 2 — Kontak (WhatsApp & Email terpisah) */}
+        <section aria-labelledby="receipt-contacts" className="space-y-3 text-sm">
+          <h2
+            id="receipt-contacts"
+            className="text-[11px] font-semibold uppercase tracking-widest text-[#9A8F88]"
+          >
+            Kontak
+          </h2>
+          <div className="space-y-1.5">
             <div className="flex justify-between gap-2">
-              <span className="shrink-0 text-[#9A8F88]">Email:</span>
+              <span className="shrink-0 text-[#9A8F88]">Pengirim:</span>
+              <span className="text-right font-medium text-[var(--primary-color)]">
+                {handover.sender_name || "-"}
+              </span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="shrink-0 text-[#9A8F88]">Penerima:</span>
+              <span className="text-right font-medium text-[var(--primary-color)]">
+                {handover.receiver_target_name}
+              </span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="shrink-0 text-[#9A8F88]">Status:</span>
+              <span className="text-right font-medium text-[var(--primary-color)]">
+                {formatStatus(handover.status)}
+              </span>
+            </div>
+          </div>
+          <div className="space-y-2 rounded-md border border-[#E5E0DB] bg-[#FAF9F6] px-3 py-2.5">
+            <div className="flex justify-between gap-2">
+              <span className="shrink-0 font-medium text-[#9A8F88]">WhatsApp</span>
+              <span className="min-w-0 text-right font-medium text-[var(--primary-color)] tabular-nums">
+                {receiverWhatsapp || "—"}
+              </span>
+            </div>
+            <div className="border-t border-[#ECE7E3]" />
+            <div className="flex justify-between gap-2">
+              <span className="shrink-0 font-medium text-[#9A8F88]">Email</span>
               <span className="min-w-0 break-all text-right font-medium text-[var(--primary-color)]">
-                {receiverEmail}
+                {receiverEmail ?? "—"}
               </span>
             </div>
-          ) : null}
-
-          <div className="flex justify-between gap-2">
-            <span className="shrink-0 text-[#9A8F88]">Status:</span>
-            <span className="text-right font-medium text-[var(--primary-color)]">
-              {formatStatus(handover.status)}
-            </span>
           </div>
-        </div>
+        </section>
 
-        <div className="my-1 border-t border-[#ECE7E3]" />
+        <div className="border-t border-[#ECE7E3]" />
 
-        {/* Section 3 — Item details only (no product photo) */}
-        <div className="space-y-2">
-          <div className="text-[11px] uppercase tracking-widest text-[#9A8F88]">
-            Rincian Paket
+        {/* Section 3 — Rincian & detail penerimaan */}
+        <section aria-labelledby="receipt-items" className="space-y-4">
+          <div className="space-y-2">
+            <h2
+              id="receipt-items"
+              className="text-[11px] font-semibold uppercase tracking-widest text-[#9A8F88]"
+            >
+              Rincian Paket
+            </h2>
+            <div className="space-y-1 text-sm text-[var(--primary-color)]">
+              {handover.handover_items?.map(
+                (item: { id?: string; description?: string }, idx: number) => (
+                  <div key={item.id ?? `item-${idx}`}>• {item.description}</div>
+                )
+              )}
+            </div>
           </div>
-          <div className="space-y-1 text-sm text-[var(--primary-color)]">
-            {handover.handover_items?.map(
-              (item: { id?: string; description?: string }, idx: number) => (
-                <div key={item.id ?? `item-${idx}`}>
-                  • {item.description}
+          <div className="space-y-2 text-sm">
+            <h3 className="text-[11px] font-semibold uppercase tracking-widest text-[#9A8F88]">
+              Detail Penerimaan
+            </h3>
+            <div className="space-y-1">
+              <div className="flex justify-between gap-2">
+                <span className="text-[#9A8F88]">Metode:</span>
+                <span className="text-right text-[var(--primary-color)]">
+                  {formatMetode(ev?.receive_method as string)}
+                </span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-[#9A8F88]">Waktu:</span>
+                <span className="text-right text-[var(--primary-color)]">
+                  {formatTanggalIndonesia(
+                    (ev?.timestamp as string) || (ev?.created_at as string) || ""
+                  )}
+                </span>
+              </div>
+              {ev?.receiver_name && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-[#9A8F88]">Diterima oleh:</span>
+                  <span className="text-right text-[var(--primary-color)]">
+                    {String(ev.receiver_name)}
+                  </span>
                 </div>
-              )
-            )}
-          </div>
-        </div>
-
-        <div className="my-2 border-t border-[#ECE7E3]" />
-
-        {/* Detail Penerimaan (no QR here) */}
-        <div className="space-y-2 text-sm">
-          <div className="text-[11px] uppercase tracking-widest text-[#9A8F88]">
-            Detail Penerimaan
-          </div>
-
-          <div className="space-y-1">
-            <div className="flex justify-between gap-2">
-              <span className="text-[#9A8F88]">Metode:</span>
-              <span className="text-right text-[var(--primary-color)]">
-                {formatMetode(ev?.receive_method as string)}
-              </span>
+              )}
+              {ev?.receiver_relation && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-[#9A8F88]">Hubungan:</span>
+                  <span className="text-right text-[var(--primary-color)]">
+                    {String(ev.receiver_relation)}
+                  </span>
+                </div>
+              )}
             </div>
-
-            <div className="flex justify-between gap-2">
-              <span className="text-[#9A8F88]">Waktu:</span>
-              <span className="text-right text-[var(--primary-color)]">
-                {formatTanggalIndonesia(
-                  (ev?.timestamp as string) || (ev?.created_at as string) || ""
-                )}
-              </span>
-            </div>
-
-            {ev?.receiver_name && (
-              <div className="flex justify-between gap-2">
-                <span className="text-[#9A8F88]">Diterima oleh:</span>
-                <span className="text-right text-[var(--primary-color)]">
-                  {String(ev.receiver_name)}
-                </span>
-              </div>
-            )}
-
-            {ev?.receiver_relation && (
-              <div className="flex justify-between gap-2">
-                <span className="text-[#9A8F88]">Hubungan:</span>
-                <span className="text-right text-[var(--primary-color)]">
-                  {String(ev.receiver_relation)}
-                </span>
-              </div>
-            )}
           </div>
-        </div>
+          <p className="text-sm leading-relaxed text-[var(--primary-color)]">
+            Paket telah diterima oleh {String(ev?.receiver_name || "-")} pada{" "}
+            {formattedDateOnly} melalui metode{" "}
+            {formatMetode(ev?.receive_method as string)}.
+          </p>
+        </section>
 
-        <p className="text-sm leading-relaxed text-[var(--primary-color)]">
-          Paket telah diterima oleh {String(ev?.receiver_name || "-")} pada{" "}
-          {formattedDateOnly} melalui metode{" "}
-          {formatMetode(ev?.receive_method as string)}.
-        </p>
+        <div className="border-t border-[#ECE7E3]" />
 
-        <div className="my-2 border-t border-[#ECE7E3]" />
-
-        {/* Section 4 — QR hub (2 columns, long-press friendly <a>) */}
-        <div className="space-y-3">
-          <div className="text-[11px] uppercase tracking-widest text-[#9A8F88]">
+        {/* Section 4 — Pusat QR (2 kolom) */}
+        <section aria-labelledby="receipt-qr" className="space-y-3">
+          <h2
+            id="receipt-qr"
+            className="text-[11px] font-semibold uppercase tracking-widest text-[#9A8F88]"
+          >
             Pusat QR
-          </div>
+          </h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex min-h-[180px] flex-col items-center justify-start text-center">
-              <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-[#9A8F88]">
+              <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-[var(--primary-color)]">
                 Google Maps
               </p>
               {mapsUrl && mapsQrSrc ? (
@@ -391,9 +424,8 @@ export default function ReceiptPage() {
                 <span className="text-xs text-[#9A8F88]">—</span>
               )}
             </div>
-
             <div className="flex min-h-[180px] flex-col items-center justify-start text-center">
-              <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-[#9A8F88]">
+              <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-[var(--primary-color)]">
                 Evidence
               </p>
               {evidenceAbsolute && evidenceQrSrc ? (
@@ -416,59 +448,66 @@ export default function ReceiptPage() {
               )}
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="my-2 border-t border-[#ECE7E3]" />
+        <div className="border-t border-[#ECE7E3]" />
 
-        {/* Section 5 — Notes */}
-        <div className="space-y-2">
-          <div className="text-[11px] uppercase tracking-widest text-[#9A8F88]">
+        {/* Section 5 — Keterangan */}
+        <section aria-labelledby="receipt-notes" className="space-y-2">
+          <h2
+            id="receipt-notes"
+            className="text-[11px] font-semibold uppercase tracking-widest text-[#9A8F88]"
+          >
             Keterangan
-          </div>
+          </h2>
           <p className="text-sm leading-relaxed text-[var(--primary-color)]">
             {notesDisplay}
           </p>
-        </div>
+        </section>
 
-        <div className="my-2 border-t border-[#ECE7E3]" />
+        <div className="border-t border-[#ECE7E3]" />
 
-        {/* Section 6 — Digital verification */}
-        <div className="text-[11px] uppercase tracking-widest text-[#9A8F88]">
-          Verifikasi digital
-        </div>
-
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between gap-2">
-            <span className="text-[#9A8F88]">Metode:</span>
-            <span className="text-right text-[var(--primary-color)]">
-              {formatMetode(ev?.receive_method as string)}
-            </span>
-          </div>
-          <div className="flex justify-between gap-2">
-            <span className="shrink-0 text-[#9A8F88]">Device ID:</span>
-            <span className="max-w-[60%] text-right break-words text-[var(--primary-color)]">
-              {deviceIdDisplay}
-            </span>
-          </div>
-          <div className="flex justify-between gap-2">
-            <span className="text-[#9A8F88]">Timestamp:</span>
-            <span className="text-right text-[var(--primary-color)]">{handoverTs}</span>
-          </div>
-          <div className="flex justify-between gap-2">
-            <span className="text-[#9A8F88]">GPS:</span>
-            <span className="text-right text-[var(--primary-color)]">{gpsCoords}</span>
-          </div>
-          {handover.status === "accepted" ? (
-            <div className="flex justify-between gap-2 pt-1">
-              <span className="shrink-0 text-[#9A8F88]">Approval:</span>
-              <span className="max-w-[70%] text-right text-[var(--primary-color)]">
-                Disetujui secara digital pada {acceptedTs ?? "-"}
+        {/* Section 6 — Verifikasi digital (Device ID = receive_event.device_id) */}
+        <section aria-labelledby="receipt-verify" className="space-y-2">
+          <h2
+            id="receipt-verify"
+            className="text-[11px] font-semibold uppercase tracking-widest text-[#9A8F88]"
+          >
+            Verifikasi digital
+          </h2>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between gap-2">
+              <span className="text-[#9A8F88]">Metode:</span>
+              <span className="text-right text-[var(--primary-color)]">
+                {formatMetode(ev?.receive_method as string)}
               </span>
             </div>
-          ) : null}
-        </div>
+            <div className="flex justify-between gap-2">
+              <span className="shrink-0 text-[#9A8F88]">Device ID:</span>
+              <span className="max-w-[60%] text-right break-words text-[var(--primary-color)]">
+                {deviceIdDisplay}
+              </span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-[#9A8F88]">Timestamp:</span>
+              <span className="text-right text-[var(--primary-color)]">{handoverTs}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-[#9A8F88]">GPS:</span>
+              <span className="text-right text-[var(--primary-color)]">{gpsCoords}</span>
+            </div>
+            {handover.status === "accepted" ? (
+              <div className="flex justify-between gap-2 pt-1">
+                <span className="shrink-0 text-[#9A8F88]">Approval:</span>
+                <span className="max-w-[70%] text-right text-[var(--primary-color)]">
+                  Disetujui secara digital pada {acceptedTs ?? "-"}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        </section>
 
-        <div className="my-3 border-t border-[#ECE7E3]" />
+        <div className="border-t border-[#ECE7E3]" />
 
         <p className="text-center text-[9px] leading-relaxed text-[#9A8F88]">
           Dokumen ini merupakan Tanda Terima Sah yang diterbitkan secara
