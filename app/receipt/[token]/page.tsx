@@ -6,7 +6,6 @@ import Link from "next/link"
 import Image from "next/image"
 import { resolveEvidencePhotoUrl } from "@/lib/nest-evidence-upload"
 import {
-  formatDeviceIdLine,
   formatGpsCoords,
   formatTrustTimestampId,
   isQrReceiveMethod,
@@ -125,7 +124,10 @@ export default function ReceiptPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
+      <div
+        className="min-h-screen flex items-center justify-center bg-[#FAF9F6]"
+        style={{ ["--primary-color" as string]: "#3E2723" }}
+      >
         <div className="text-center space-y-2">
           <div className="text-sm text-[#9A8F88]">Menyiapkan data...</div>
         </div>
@@ -135,22 +137,49 @@ export default function ReceiptPage() {
 
   if (!handover) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6] text-[#3E2723]">
+      <div
+        className="min-h-screen flex items-center justify-center bg-[#FAF9F6] text-[var(--primary-color)]"
+        style={{ ["--primary-color" as string]: "#3E2723" }}
+      >
         Data serah terima tidak ditemukan
       </div>
     )
   }
 
   const ev = normalizeReceiveEvent(handover.receive_event)
-  const companyName =
-    typeof handover.profiles?.company_name === "string"
+
+  const businessProfile = handover.business_profile as
+    | { display_name?: string | null; logo_url?: string | null }
+    | undefined
+  const businessDisplayName =
+    (typeof businessProfile?.display_name === "string"
+      ? businessProfile.display_name.trim()
+      : "") ||
+    (typeof handover.profiles?.company_name === "string"
       ? handover.profiles.company_name.trim()
-      : ""
-  const hasCompanyBrand = !!companyName
-  const brandTitle = hasCompanyBrand ? companyName : "Tanda Terima"
+      : "")
+
+  const logoFromBusiness =
+    typeof businessProfile?.logo_url === "string" &&
+    businessProfile.logo_url.trim()
+      ? resolveEvidencePhotoUrl(businessProfile.logo_url.trim())
+      : null
   const logoUrl =
-    hasCompanyBrand && handover.profiles?.company_logo_url
+    logoFromBusiness ||
+    (handover.profiles?.company_logo_url
       ? resolveEvidencePhotoUrl(handover.profiles.company_logo_url)
+      : null)
+
+  const receiverWhatsapp = String(
+    handover.receiver_whatsapp ??
+      handover.receiver_contact ??
+      handover.receiver_target_phone ??
+      ""
+  ).trim()
+  const receiverEmailRaw = handover.receiver_email ?? handover.receiver_target_email
+  const receiverEmail =
+    typeof receiverEmailRaw === "string" && receiverEmailRaw.trim()
+      ? receiverEmailRaw.trim()
       : null
 
   const photoSrc = resolveEvidencePhotoUrl(
@@ -164,7 +193,7 @@ export default function ReceiptPage() {
     ? `https://www.google.com/maps?q=${gps.lat},${gps.lng}`
     : null
   const qrSrc = mapsUrl
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=48x48&data=${encodeURIComponent(
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=48x48&color=3E2723&data=${encodeURIComponent(
         mapsUrl
       )}`
     : null
@@ -172,10 +201,11 @@ export default function ReceiptPage() {
   const receiveWhen =
     (ev?.timestamp as string) || (ev?.created_at as string) || ""
   const handoverTs = formatTrustTimestampId(receiveWhen)
-  const deviceLine = formatDeviceIdLine(
-    ev?.device_model as string | undefined,
-    shortenDeviceIdForDisplay(ev?.device_id as string | undefined, 120)
-  )
+  const deviceIdDisplay = !ev
+    ? "System Verified"
+    : ev.device_id != null && String(ev.device_id).trim()
+      ? shortenDeviceIdForDisplay(String(ev.device_id), 120)
+      : "System Verified"
   const gpsCoords = ev
     ? formatGpsCoords(ev.gps_lat, ev.gps_lng)
     : "—"
@@ -192,10 +222,13 @@ export default function ReceiptPage() {
     : "-"
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
-      <main className="p-6 pt-10 max-w-md mx-auto w-full space-y-6">
+    <div
+      className="min-h-screen bg-[#FAF9F6] flex flex-col justify-between"
+      style={{ ["--primary-color" as string]: "#3E2723" }}
+    >
+      <main className="p-6 pt-10 max-w-md mx-auto w-full space-y-6 text-[var(--primary-color)]">
         <div className="relative flex flex-row items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-1 flex-row items-start justify-center gap-3 sm:justify-start">
+          <div className="flex min-w-0 flex-1 flex-row items-start gap-3">
             {logoUrl ? (
               <Image
                 src={logoUrl}
@@ -205,15 +238,19 @@ export default function ReceiptPage() {
                 className="h-11 w-11 shrink-0 object-contain"
               />
             ) : null}
-            <div className="min-w-0 flex-1 text-center sm:text-left">
-              <h1 className="text-xl font-light text-[#3E2723]">{brandTitle}</h1>
-              <p className="mt-1 text-xs tracking-wide text-[#9A8F88]">
+            <div className="min-w-0 flex-1 text-left">
+              <h1 className="text-xl font-bold uppercase tracking-wide text-[var(--primary-color)]">
                 Tanda Terima
-              </p>
+              </h1>
+              {businessDisplayName ? (
+                <p className="mt-0.5 text-xs font-medium text-[#9A8F88]">
+                  {businessDisplayName}
+                </p>
+              ) : null}
             </div>
           </div>
           {handover.serial_number ? (
-            <div className="shrink-0 text-right text-xs font-semibold leading-tight tracking-wide text-[#3E2723]">
+            <div className="shrink-0 text-right text-xs font-semibold leading-tight tracking-wide text-[var(--primary-color)]">
               {handover.serial_number}
             </div>
           ) : null}
@@ -221,24 +258,40 @@ export default function ReceiptPage() {
 
         <div className="my-2 border-t border-[#ECE7E3]" />
 
-        <div className="mt-5 space-y-2 text-sm">
+        <div className="mt-2 space-y-1.5 text-sm">
           <div className="flex justify-between gap-2">
             <span className="shrink-0 text-[#9A8F88]">Pengirim:</span>
-            <span className="text-right font-medium text-[#3E2723]">
+            <span className="text-right font-medium text-[var(--primary-color)]">
               {handover.sender_name || "-"}
             </span>
           </div>
 
           <div className="flex justify-between gap-2">
             <span className="shrink-0 text-[#9A8F88]">Penerima:</span>
-            <span className="text-right font-medium text-[#3E2723]">
+            <span className="text-right font-medium text-[var(--primary-color)]">
               {handover.receiver_target_name}
             </span>
           </div>
 
           <div className="flex justify-between gap-2">
+            <span className="shrink-0 text-[#9A8F88]">WhatsApp:</span>
+            <span className="text-right font-medium text-[var(--primary-color)] tabular-nums">
+              {receiverWhatsapp || "—"}
+            </span>
+          </div>
+
+          {receiverEmail ? (
+            <div className="flex justify-between gap-2">
+              <span className="shrink-0 text-[#9A8F88]">Email:</span>
+              <span className="min-w-0 break-all text-right font-medium text-[var(--primary-color)]">
+                {receiverEmail}
+              </span>
+            </div>
+          ) : null}
+
+          <div className="flex justify-between gap-2">
             <span className="shrink-0 text-[#9A8F88]">Status:</span>
-            <span className="text-right font-medium text-[#3E2723]">
+            <span className="text-right font-medium text-[var(--primary-color)]">
               {formatStatus(handover.status)}
             </span>
           </div>
@@ -271,7 +324,7 @@ export default function ReceiptPage() {
                 Rincian Paket
               </div>
 
-              <div className="space-y-1 text-sm text-[#3E2723]">
+              <div className="space-y-1 text-sm text-[var(--primary-color)]">
                 {handover.handover_items?.map((item: any) => (
                   <div key={item.id}>
                     • {item.description}
@@ -292,14 +345,14 @@ export default function ReceiptPage() {
           <div className="space-y-1">
             <div className="flex justify-between gap-2">
               <span className="text-[#9A8F88]">Metode:</span>
-              <span className="text-right text-[#3E2723]">
+              <span className="text-right text-[var(--primary-color)]">
                 {formatMetode(ev?.receive_method as string)}
               </span>
             </div>
 
             <div className="flex justify-between gap-2">
               <span className="text-[#9A8F88]">Waktu:</span>
-              <span className="text-right text-[#3E2723]">
+              <span className="text-right text-[var(--primary-color)]">
                 {formatTanggalIndonesia(
                   (ev?.timestamp as string) || (ev?.created_at as string) || ""
                 )}
@@ -309,7 +362,7 @@ export default function ReceiptPage() {
             {ev?.receiver_name && (
               <div className="flex justify-between gap-2">
                 <span className="text-[#9A8F88]">Diterima oleh:</span>
-                <span className="text-right text-[#3E2723]">
+                <span className="text-right text-[var(--primary-color)]">
                   {String(ev.receiver_name)}
                 </span>
               </div>
@@ -318,7 +371,7 @@ export default function ReceiptPage() {
             {ev?.receiver_relation && (
               <div className="flex justify-between gap-2">
                 <span className="text-[#9A8F88]">Hubungan:</span>
-                <span className="text-right text-[#3E2723]">
+                <span className="text-right text-[var(--primary-color)]">
                   {String(ev.receiver_relation)}
                 </span>
               </div>
@@ -331,7 +384,7 @@ export default function ReceiptPage() {
                   alt=""
                   width={48}
                   height={48}
-                  className="h-12 w-12 shrink-0"
+                  className="h-12 w-12 shrink-0 rounded-sm border border-[var(--primary-color)] bg-white p-0.5"
                 />
                 <div className="min-w-0 flex-1 space-y-1">
                   <p className="text-[11px] leading-snug text-[#9A8F88]">
@@ -341,7 +394,7 @@ export default function ReceiptPage() {
                     href={mapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-block text-xs text-[#3E2723] underline"
+                    className="inline-block text-xs text-[var(--primary-color)] underline"
                   >
                     Buka di Google Maps
                   </a>
@@ -353,7 +406,7 @@ export default function ReceiptPage() {
 
         <div className="my-2 border-t border-[#ECE7E3]" />
 
-        <p className="text-sm leading-relaxed text-[#3E2723]">
+        <p className="text-sm leading-relaxed text-[var(--primary-color)]">
           Paket telah diterima oleh {String(ev?.receiver_name || "-")} pada{" "}
           {formattedDateOnly} melalui metode{" "}
           {formatMetode(ev?.receive_method as string)}.
@@ -363,19 +416,19 @@ export default function ReceiptPage() {
 
         {isQr ? (
           <div className="rounded-lg border border-[#E5E0DB] bg-[#FAF9F6] p-4">
-            <div className="mb-3 text-center text-[10px] font-semibold uppercase tracking-wide text-[#3E2723]">
+            <div className="mb-3 text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--primary-color)]">
               Tanda tangan digital (QR)
             </div>
             <div className="space-y-3 text-sm">
               <div>
                 <div className="text-[11px] text-[#9A8F88]">Device ID</div>
-                <div className="font-semibold leading-snug text-[#3E2723] break-words">
-                  {deviceLine}
+                <div className="font-semibold leading-snug text-[var(--primary-color)] break-words">
+                  {deviceIdDisplay}
                 </div>
               </div>
               <div>
                 <div className="text-[11px] text-[#9A8F88]">Timestamp</div>
-                <div className="font-semibold text-[#3E2723]">{handoverTs}</div>
+                <div className="font-semibold text-[var(--primary-color)]">{handoverTs}</div>
               </div>
             </div>
           </div>
@@ -388,28 +441,28 @@ export default function ReceiptPage() {
         <div className="space-y-2 text-sm">
           <div className="flex justify-between gap-2">
             <span className="text-[#9A8F88]">Metode:</span>
-            <span className="text-right text-[#3E2723]">
+            <span className="text-right text-[var(--primary-color)]">
               {formatMetode(ev?.receive_method as string)}
             </span>
           </div>
           <div className="flex justify-between gap-2">
             <span className="shrink-0 text-[#9A8F88]">Device ID:</span>
-            <span className="max-w-[60%] text-right break-words text-[#3E2723]">
-              {deviceLine}
+            <span className="max-w-[60%] text-right break-words text-[var(--primary-color)]">
+              {deviceIdDisplay}
             </span>
           </div>
           <div className="flex justify-between gap-2">
             <span className="text-[#9A8F88]">Timestamp:</span>
-            <span className="text-right text-[#3E2723]">{handoverTs}</span>
+            <span className="text-right text-[var(--primary-color)]">{handoverTs}</span>
           </div>
           <div className="flex justify-between gap-2">
             <span className="text-[#9A8F88]">GPS:</span>
-            <span className="text-right text-[#3E2723]">{gpsCoords}</span>
+            <span className="text-right text-[var(--primary-color)]">{gpsCoords}</span>
           </div>
           {handover.status === "accepted" ? (
             <div className="flex justify-between gap-2 pt-1">
               <span className="shrink-0 text-[#9A8F88]">Approval:</span>
-              <span className="max-w-[70%] text-right text-[#3E2723]">
+              <span className="max-w-[70%] text-right text-[var(--primary-color)]">
                 Disetujui secara digital pada {acceptedTs ?? "-"}
               </span>
             </div>
@@ -417,6 +470,13 @@ export default function ReceiptPage() {
         </div>
 
         <div className="my-3 border-t border-[#ECE7E3]" />
+
+        <Link
+          href={`/receipt/${encodeURIComponent(token)}/evidence`}
+          className="flex w-full items-center justify-center rounded-sm border border-[var(--primary-color)] bg-[var(--primary-color)] px-4 py-3 text-center text-sm font-semibold text-[#FAF9F6] shadow-sm transition-opacity hover:opacity-95 active:opacity-90"
+        >
+          Lihat Bukti Foto & Evidence
+        </Link>
 
         <p className="text-center text-[9px] leading-relaxed text-[#9A8F88]">
           Dokumen ini merupakan Tanda Terima Sah yang diterbitkan secara
@@ -431,7 +491,10 @@ export default function ReceiptPage() {
       </main>
 
       <div className="flex justify-center px-6 pb-6 text-sm">
-        <Link href="/dashboard" className="text-[#9A8F88]">
+        <Link
+          href="/dashboard"
+          className="font-medium text-[var(--primary-color)] underline-offset-2 hover:underline"
+        >
           Kembali ke Dashboard
         </Link>
       </div>
