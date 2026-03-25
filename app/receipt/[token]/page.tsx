@@ -223,12 +223,10 @@ export default function ReceiptPage() {
     : null
 
   const evRecord = ev as Record<string, unknown> | null
+  /** Schema: receive_event.received_at (not timestamp). Fallback: handover.received_at */
   const receiveWhen =
-    (typeof evRecord?.timestamp === "string" && evRecord.timestamp
-      ? evRecord.timestamp
-      : null) ||
-    (typeof evRecord?.created_at === "string" && evRecord.created_at
-      ? evRecord.created_at
+    (typeof evRecord?.received_at === "string" && evRecord.received_at
+      ? evRecord.received_at
       : null) ||
     (typeof handover.received_at === "string" && handover.received_at
       ? handover.received_at

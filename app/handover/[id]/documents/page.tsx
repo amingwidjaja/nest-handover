@@ -92,8 +92,8 @@ export default function DocumentPage() {
       : '-'
 
   const receiveTime =
-    receive_event?.timestamp
-      ? new Date(receive_event.timestamp).toLocaleString(
+    receive_event?.received_at
+      ? new Date(receive_event.received_at as string).toLocaleString(
           'id-ID',
           { dateStyle:'long', timeStyle:'short' }
         )
