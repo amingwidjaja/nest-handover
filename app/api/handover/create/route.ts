@@ -104,6 +104,8 @@ export async function POST(req: Request) {
       receiver_target_name: receiver_target_name ?? "",
       receiver_target_phone: receiver_target_phone ?? "",
       receiver_target_email: receiver_target_email ?? "",
+      receiver_contact: receiver_target_phone ?? "",
+      receiver_email: receiver_target_email ?? "",
       sender_address_info:
         sender_address_info && typeof sender_address_info === "object"
           ? sender_address_info

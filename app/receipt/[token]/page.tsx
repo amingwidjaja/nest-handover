@@ -8,9 +8,12 @@ import { resolveEvidencePhotoUrl } from "@/lib/nest-evidence-upload"
 import {
   formatGpsCoords,
   formatTrustTimestampId,
-  isQrReceiveMethod,
   shortenDeviceIdForDisplay
 } from "@/lib/receipt-trust"
+
+/** Matches root --primary-color for QR Server `color` param (no #) */
+const PRIMARY_QR_HEX = "3E2723"
+const QR_PX = 128
 
 function formatTanggalIndonesia(dateString: string) {
   if (!dateString) return "-"
@@ -78,21 +81,13 @@ function normalizeReceiveEvent(ev: unknown) {
   return ev as Record<string, unknown>
 }
 
-function firstHandoverItemPhotoUrl(
-  items: Array<{ id?: string; photo_url?: string | null }> | undefined
-): string | undefined {
-  const found = items?.find(
-    (item) => item.photo_url && String(item.photo_url).trim()
-  )
-  return found?.photo_url != null ? String(found.photo_url).trim() : undefined
-}
-
 export default function ReceiptPage() {
   const params = useParams()
   const token = params.token as string
 
   const [handover, setHandover] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [origin, setOrigin] = useState("")
 
   async function load() {
     const res = await fetch(`/api/handover/receipt-data?token=${token}`)
@@ -107,20 +102,10 @@ export default function ReceiptPage() {
   }, [token])
 
   useEffect(() => {
-    if (!handover?.handover_items) return
-    const raw = firstHandoverItemPhotoUrl(handover.handover_items)
-    const resolved = resolveEvidencePhotoUrl(raw)
-    console.log("[receipt] Product photo (debug)", {
-      rawPhotoPath: raw ?? null,
-      resolvedUrl: resolved,
-      itemsSnapshot: handover.handover_items.map(
-        (i: { id?: string; photo_url?: string | null }) => ({
-          id: i.id,
-          photo_url: i.photo_url
-        })
-      )
-    })
-  }, [handover])
+    if (typeof window !== "undefined") {
+      setOrigin(window.location.origin)
+    }
+  }, [])
 
   if (loading) {
     return (
@@ -171,20 +156,18 @@ export default function ReceiptPage() {
       : null)
 
   const receiverWhatsapp = String(
-    handover.receiver_whatsapp ??
-      handover.receiver_contact ??
-      handover.receiver_target_phone ??
-      ""
+    handover.receiver_whatsapp ?? handover.receiver_contact ?? ""
   ).trim()
-  const receiverEmailRaw = handover.receiver_email ?? handover.receiver_target_email
   const receiverEmail =
-    typeof receiverEmailRaw === "string" && receiverEmailRaw.trim()
-      ? receiverEmailRaw.trim()
+    typeof handover.receiver_email === "string" && handover.receiver_email.trim()
+      ? handover.receiver_email.trim()
       : null
 
-  const photoSrc = resolveEvidencePhotoUrl(
-    firstHandoverItemPhotoUrl(handover.handover_items)
-  )
+  const notesRaw =
+    typeof handover.notes === "string" ? handover.notes.trim() : ""
+  const notesDisplay = notesRaw
+    ? notesRaw
+    : "Tidak ada catatan tambahan"
 
   const gps = ev
     ? parseGps(ev.gps_lat, ev.gps_lng)
@@ -192,9 +175,17 @@ export default function ReceiptPage() {
   const mapsUrl = gps
     ? `https://www.google.com/maps?q=${gps.lat},${gps.lng}`
     : null
-  const qrSrc = mapsUrl
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=48x48&color=3E2723&data=${encodeURIComponent(
+  const mapsQrSrc = mapsUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=${QR_PX}x${QR_PX}&color=${PRIMARY_QR_HEX}&data=${encodeURIComponent(
         mapsUrl
+      )}`
+    : null
+
+  const evidencePath = `/receipt/${encodeURIComponent(token)}/evidence`
+  const evidenceAbsolute = origin ? `${origin}${evidencePath}` : ""
+  const evidenceQrSrc = evidenceAbsolute
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=${QR_PX}x${QR_PX}&color=${PRIMARY_QR_HEX}&data=${encodeURIComponent(
+        evidenceAbsolute
       )}`
     : null
 
@@ -209,7 +200,6 @@ export default function ReceiptPage() {
   const gpsCoords = ev
     ? formatGpsCoords(ev.gps_lat, ev.gps_lng)
     : "—"
-  const isQr = isQrReceiveMethod(ev?.receive_method as string | undefined)
   const acceptedTs =
     handover.status === "accepted"
       ? formatTrustTimestampId(
@@ -220,6 +210,9 @@ export default function ReceiptPage() {
   const formattedDateOnly = receiveWhen
     ? formatTanggalIndonesia(receiveWhen)
     : "-"
+
+  const qrImgClass =
+    "h-[128px] w-[128px] shrink-0 rounded-sm border border-[var(--primary-color)] bg-white p-1"
 
   return (
     <div
@@ -258,6 +251,7 @@ export default function ReceiptPage() {
 
         <div className="my-2 border-t border-[#ECE7E3]" />
 
+        {/* Section 2 — Kontak */}
         <div className="mt-2 space-y-1.5 text-sm">
           <div className="flex justify-between gap-2">
             <span className="shrink-0 text-[#9A8F88]">Pengirim:</span>
@@ -299,44 +293,25 @@ export default function ReceiptPage() {
 
         <div className="my-1 border-t border-[#ECE7E3]" />
 
+        {/* Section 3 — Item details only (no product photo) */}
         <div className="space-y-2">
-          <div className="mt-6 flex gap-3 items-start">
-            {photoSrc ? (
-              <div className="relative h-[104px] w-[104px] shrink-0 overflow-hidden rounded-[10px] border border-[#E5E0DB]">
-                <img
-                  src={photoSrc}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  onError={() => {
-                    console.error(
-                      "[receipt] Product photo failed to load:",
-                      photoSrc
-                    )
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="h-[104px] w-[104px] shrink-0 rounded-[10px] border border-[#E5E0DB] bg-[#FAF9F6]" />
+          <div className="text-[11px] uppercase tracking-widest text-[#9A8F88]">
+            Rincian Paket
+          </div>
+          <div className="space-y-1 text-sm text-[var(--primary-color)]">
+            {handover.handover_items?.map(
+              (item: { id?: string; description?: string }, idx: number) => (
+                <div key={item.id ?? `item-${idx}`}>
+                  • {item.description}
+                </div>
+              )
             )}
-
-            <div className="flex-1 min-w-0">
-              <div className="mb-1 text-[11px] uppercase tracking-widest text-[#9A8F88]">
-                Rincian Paket
-              </div>
-
-              <div className="space-y-1 text-sm text-[var(--primary-color)]">
-                {handover.handover_items?.map((item: any) => (
-                  <div key={item.id}>
-                    • {item.description}
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 
         <div className="my-2 border-t border-[#ECE7E3]" />
 
+        {/* Detail Penerimaan (no QR here) */}
         <div className="space-y-2 text-sm">
           <div className="text-[11px] uppercase tracking-widest text-[#9A8F88]">
             Detail Penerimaan
@@ -376,35 +351,8 @@ export default function ReceiptPage() {
                 </span>
               </div>
             )}
-
-            {gps && mapsUrl && qrSrc ? (
-              <div className="mt-3 flex flex-row items-start gap-3 pt-1">
-                <Image
-                  src={qrSrc}
-                  alt=""
-                  width={48}
-                  height={48}
-                  className="h-12 w-12 shrink-0 rounded-sm border border-[var(--primary-color)] bg-white p-0.5"
-                />
-                <div className="min-w-0 flex-1 space-y-1">
-                  <p className="text-[11px] leading-snug text-[#9A8F88]">
-                    Verified Location: {gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}
-                  </p>
-                  <a
-                    href={mapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block text-xs text-[var(--primary-color)] underline"
-                  >
-                    Buka di Google Maps
-                  </a>
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>
-
-        <div className="my-2 border-t border-[#ECE7E3]" />
 
         <p className="text-sm leading-relaxed text-[var(--primary-color)]">
           Paket telah diterima oleh {String(ev?.receiver_name || "-")} pada{" "}
@@ -414,26 +362,77 @@ export default function ReceiptPage() {
 
         <div className="my-2 border-t border-[#ECE7E3]" />
 
-        {isQr ? (
-          <div className="rounded-lg border border-[#E5E0DB] bg-[#FAF9F6] p-4">
-            <div className="mb-3 text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--primary-color)]">
-              Tanda tangan digital (QR)
+        {/* Section 4 — QR hub (2 columns, long-press friendly <a>) */}
+        <div className="space-y-3">
+          <div className="text-[11px] uppercase tracking-widest text-[#9A8F88]">
+            Pusat QR
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex min-h-[180px] flex-col items-center justify-start text-center">
+              <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-[#9A8F88]">
+                Google Maps
+              </p>
+              {mapsUrl && mapsQrSrc ? (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-color)]"
+                >
+                  <Image
+                    src={mapsQrSrc}
+                    alt="Buka lokasi di Google Maps"
+                    width={QR_PX}
+                    height={QR_PX}
+                    className={qrImgClass}
+                  />
+                </a>
+              ) : (
+                <span className="text-xs text-[#9A8F88]">—</span>
+              )}
             </div>
-            <div className="space-y-3 text-sm">
-              <div>
-                <div className="text-[11px] text-[#9A8F88]">Device ID</div>
-                <div className="font-semibold leading-snug text-[var(--primary-color)] break-words">
-                  {deviceIdDisplay}
-                </div>
-              </div>
-              <div>
-                <div className="text-[11px] text-[#9A8F88]">Timestamp</div>
-                <div className="font-semibold text-[var(--primary-color)]">{handoverTs}</div>
-              </div>
+
+            <div className="flex min-h-[180px] flex-col items-center justify-start text-center">
+              <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-[#9A8F88]">
+                Evidence
+              </p>
+              {evidenceAbsolute && evidenceQrSrc ? (
+                <a
+                  href={evidenceAbsolute}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-color)]"
+                >
+                  <Image
+                    src={evidenceQrSrc}
+                    alt="Buka halaman bukti foto"
+                    width={QR_PX}
+                    height={QR_PX}
+                    className={qrImgClass}
+                  />
+                </a>
+              ) : (
+                <span className="text-xs text-[#9A8F88]">Memuat…</span>
+              )}
             </div>
           </div>
-        ) : null}
+        </div>
 
+        <div className="my-2 border-t border-[#ECE7E3]" />
+
+        {/* Section 5 — Notes */}
+        <div className="space-y-2">
+          <div className="text-[11px] uppercase tracking-widest text-[#9A8F88]">
+            Keterangan
+          </div>
+          <p className="text-sm leading-relaxed text-[var(--primary-color)]">
+            {notesDisplay}
+          </p>
+        </div>
+
+        <div className="my-2 border-t border-[#ECE7E3]" />
+
+        {/* Section 6 — Digital verification */}
         <div className="text-[11px] uppercase tracking-widest text-[#9A8F88]">
           Verifikasi digital
         </div>
@@ -470,13 +469,6 @@ export default function ReceiptPage() {
         </div>
 
         <div className="my-3 border-t border-[#ECE7E3]" />
-
-        <Link
-          href={`/receipt/${encodeURIComponent(token)}/evidence`}
-          className="flex w-full items-center justify-center rounded-sm border border-[var(--primary-color)] bg-[var(--primary-color)] px-4 py-3 text-center text-sm font-semibold text-[#FAF9F6] shadow-sm transition-opacity hover:opacity-95 active:opacity-90"
-        >
-          Lihat Bukti Foto & Evidence
-        </Link>
 
         <p className="text-center text-[9px] leading-relaxed text-[#9A8F88]">
           Dokumen ini merupakan Tanda Terima Sah yang diterbitkan secara

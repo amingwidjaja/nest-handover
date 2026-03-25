@@ -25,6 +25,10 @@ export async function GET(req: Request) {
         receiver_target_name,
         receiver_target_phone,
         receiver_target_email,
+        notes,
+        receiver_whatsapp,
+        receiver_contact,
+        receiver_email,
         status,
         received_at,
         receipt_url,
@@ -53,7 +57,12 @@ export async function GET(req: Request) {
       .eq("id", handover.user_id)
       .maybeSingle()
 
-    const { user_id: _uid, ...handoverPublic } = handover
+    const {
+      user_id: _uid,
+      receiver_target_phone: _rtp,
+      receiver_target_email: _rte,
+      ...handoverPublic
+    } = handover
 
     const payload = {
       ...handoverPublic,
