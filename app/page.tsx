@@ -1,119 +1,184 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import type { Metadata } from "next"
-import { AuthAwarePaketCta } from "@/components/auth-aware-paket-cta"
 
-export const metadata: Metadata = {
-  title: "NEST76 | Studio Sistem Digital",
-  description: "Membangun infrastruktur digital yang presisi.",
-}
+/** Matches root --primary-color for consistency (no #) */
+const PRIMARY_QR_HEX = "3E2723"
 
-export default function Home() {
-  return (
-    <main className="bg-[#0A0A0A] text-[#EDEDED] min-h-screen selection:bg-[#EDEDED] selection:text-[#0A0A0A] font-sans relative overflow-hidden">
-      
-      {/* BACKGROUND GRADIENT */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(30,30,30,1)_0%,rgba(10,10,10,1)_70%)]" />
+export default function HomePage() {
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Simulasi loading sebentar biar kerasa premium
+    setTimeout(() => setLoading(false), 800)
+  }, [])
+
+  if (loading) {
+    return (
+      <div 
+        className="min-h-screen flex items-center justify-center bg-[#FAF9F6]"
+        style={{ ["--primary-color" as string]: "#3E2723" }}
+      >
+        <div className="text-center space-y-2">
+          <p className="text-sm text-[#9A8F88] animate-pulse italic">Menyiapkan Home Page NEST76...</p>
+        </div>
       </div>
+    )
+  }
 
-      <div className="max-w-6xl mx-auto px-6 py-20 md:py-32 relative z-10">
+  return (
+    <div 
+      className="min-h-screen bg-[#FAF9F6] selection:bg-[#3E2723]/10" 
+      style={{ "--primary-color": "#3E2723" } as any}
+    >
+      <main className="max-w-7xl mx-auto w-full p-8 md:p-16 lg:p-20 space-y-32 text-[var(--primary-color)] font-sans">
         
-        {/* HEADER SECTION - EXACTLY LIKE SCREENSHOT */}
-        <header className="mb-32">
-          <div className="flex items-center gap-2 mb-12">
-            <div className="h-1.5 w-1.5 rounded-full bg-[#40C057] shadow-[0_0_10px_rgba(64,192,87,0.5)]" />
-            <div className="text-[10px] tracking-[0.5em] uppercase opacity-40 font-mono">
-              Systems Online / Jakarta, ID
+        {/* --- 1. Status Line (Sesuai Vibes NEST76) --- */}
+        <div className="flex justify-end text-[10px] font-black uppercase tracking-[0.2em] text-[#9A8F88]">
+          <span className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span>SYSTEMS ONLINE / JAKARTA, ID</span>
+          </span>
+        </div>
+
+        {/* --- 2. HERO SECTION --- */}
+        <section className="space-y-6">
+          <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-none">
+            NEST<span className="opacity-20">76</span>
+          </h1>
+          <p className="text-2xl md:text-3xl max-w-4xl leading-tight font-medium">
+            Membangun <span className="font-bold underline underline-offset-4 decoration-[var(--primary-color)]/20">infrastruktur digital</span> yang presisi. Kami menyederhanakan alur kerja yang rumit menjadi sistem yang reliabel.
+          </p>
+        </section>
+
+        {/* --- Divider Tipis --- */}
+        <div className="h-px bg-gradient-to-r from-[#3E2723]/20 via-[#3E2723]/5 to-transparent" />
+
+        {/* --- 3. DIGITAL SOLUTIONS Section --- */}
+        <section className="space-y-16">
+          <div className="space-y-1">
+            <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-[#9A8F88]">Solusi Digital</h2>
+            <div className="border-b-2 border-[var(--primary-color)] w-12 rounded-full"></div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-16 items-start">
+            {/* Left Side: Solution Placeholder/Highlight */}
+            <div className="space-y-10">
+               {/* Placeholder Box */}
+              <div className="aspect-[16/10] bg-[#3E2723] rounded-3xl flex items-center justify-center p-6 text-center border-4 border-white shadow-xl shadow-[#3E2723]/10">
+                <span className="text-xs uppercase tracking-[0.2em] font-black text-white">NEST HUB / PLATFORM LIVE</span>
+              </div>
+
+              {/* Solusi Utama Highlight */}
+              <div className="space-y-3 p-8 bg-[#3E2723]/5 border border-[#3E2723]/5 rounded-2xl relative overflow-hidden shadow-inner">
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#3E2723]/5 rounded-full -mr-16 -mt-16" />
+                <div className="flex items-center gap-3">
+                  <h3 className="text-xl font-bold uppercase tracking-tight">Authorized Provider</h3>
+                  <span className="px-3 py-1 bg-[#3E2723]/10 text-[var(--primary-color)] text-[10px] uppercase font-bold rounded-full tracking-wider">Aktif</span>
+                </div>
+                <p className="text-sm leading-relaxed font-medium">
+                  Manajemen sistem perusahaan terpadu dengan validasi data real-time,Geo-tagging, dan infrastruktur aman.
+                </p>
+              </div>
+            </div>
+
+            {/* Right Side: Solution List (Sleek & Clean) */}
+            <div className="space-y-16">
+              {/* Solution 1 */}
+              <div className="space-y-2 group">
+                <h3 className="text-xl font-bold uppercase tracking-tight group-hover:text-[var(--primary-color)]/80 transition-colors">NEST Factory</h3>
+                <p className="text-sm leading-relaxed opacity-80 font-medium">
+                  Sistem pemantauan lini produksi dan sinkronisasi stok untuk efisiensi manufaktur kelas industri.
+                </p>
+                <div className="border-b border-[#3E2723]/5 pt-4"></div>
+              </div>
+              {/* Solution 2 */}
+              <div className="space-y-2 group">
+                <h3 className="text-xl font-bold uppercase tracking-tight group-hover:text-[var(--primary-color)]/80 transition-colors">NEST School</h3>
+                <p className="text-sm leading-relaxed opacity-80 font-medium">
+                  Kerangka kerja operasional institusi pendidikan. Mengelola administrasi tanpa repot dan sinkronisasi data siswa.
+                </p>
+                <div className="border-b border-[#3E2723]/5 pt-4"></div>
+              </div>
             </div>
           </div>
-          
-          <h1 className="text-7xl md:text-[120px] font-light tracking-[-0.08em] leading-none mb-12 flex items-baseline">
-            NEST<span className="text-[#1A1A1A] ml-1">76</span>
-          </h1>
+        </section>
 
-          <p className="text-xl md:text-[28px] font-extralight text-[#888] max-w-2xl leading-[1.4] tracking-tight">
-            Membangun <strong className="text-white font-light underline underline-offset-8 decoration-white/10">infrastruktur digital</strong> yang presisi. Kami menyederhanakan alur kerja yang rumit menjadi sistem yang reliabel.
-          </p>
-        </header>
+        {/* --- Divider Tipis --- */}
+        <div className="h-px bg-gradient-to-r from-transparent via-[#3E2723]/5 to-[#3E2723]/20" />
 
-        {/* SOLUSI DIGITAL SECTION */}
-        <section className="mb-48">
-          <div className="text-[10px] tracking-[0.5em] uppercase opacity-20 mb-16 font-mono">Solusi Digital</div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-start">
-            {/* BIG CARD LEFT */}
-            <div className="md:col-span-7 group">
-              <AuthAwarePaketCta
-                loggedInHref="/paket"
-                guestHref="/choose-type?redirect=/paket"
-                className="block cursor-pointer"
-              >
-                <div className="aspect-[16/10] bg-[#0F0F0F] border border-white/5 rounded-sm flex items-center justify-center relative transition-all duration-700 group-hover:border-white/20 shadow-2xl">
-                   <div className="text-[10px] tracking-[0.5em] uppercase opacity-20 group-hover:opacity-100 transition-opacity font-mono">Nest Paket / System Live</div>
-                </div>
-                
-                <div className="mt-8">
-                  <h3 className="text-2xl font-light flex items-center gap-3">
-                    NEST Paket
-                    <span className="text-[9px] tracking-widest font-bold bg-white text-black px-1.5 py-0.5 rounded-sm">AKTIF</span>
-                  </h3>
-                  <p className="mt-4 text-[#666] font-extralight leading-relaxed max-w-md">
-                    Manajemen serah terima paket dan logistik. Verifikasi lokasi <span className="text-white italic">real-time</span> dengan antarmuka yang ramah untuk siapa saja.
+        {/* --- 4. PHILOSOPHY Section --- */}
+        <section className="space-y-16">
+          <div className="space-y-1">
+            <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-[#9A8F88]">Filosofi</h2>
+            <div className="border-b-2 border-[var(--primary-color)] w-12 rounded-full"></div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-16 items-start">
+            {/* Left Side: Statement */}
+            <div className="p-8 bg-white border border-[#3E2723]/5 rounded-2xl shadow-xl shadow-[#3E2723]/5">
+              <p className="text-base leading-relaxed font-bold">
+                NEST76 adalah muara dari perjalanan panjang personal sejak 1976. Kami membangun alat yang membantu manusia, bukan menggantikannya.
+              </p>
+            </div>
+
+            {/* Right Side: Numbered List (Vibes Home Page) */}
+            <div className="space-y-12">
+              {/* Item 1 */}
+              <div className="flex gap-6 group">
+                <span className="text-3xl font-black text-[#9A8F88] opacity-30 tracking-tight group-hover:opacity-100 transition-opacity">01</span>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-bold uppercase tracking-tight">UI Sederhana, Engine Canggih</h3>
+                  <p className="text-sm leading-relaxed font-medium opacity-80">
+                    Didesain agar orang paling "gaptek" pun bisa mengoperasikannya dalam hitungan menit tanpa pelatihan rumit.
                   </p>
                 </div>
-              </AuthAwarePaketCta>
-            </div>
-
-            {/* LIST RIGHT */}
-            <div className="md:col-span-5 space-y-20 pt-4">
-              <div className="opacity-30">
-                <h4 className="text-xl font-light mb-2 italic">NEST Factory</h4>
-                <p className="text-sm text-[#888] font-extralight leading-relaxed">Sistem pemantauan lini produksi dan sinkronisasi stok untuk efisiensi manufaktur.</p>
               </div>
-              <div className="opacity-30">
-                <h4 className="text-xl font-light mb-2 italic">NEST School</h4>
-                <p className="text-sm text-[#888] font-extralight leading-relaxed">Kerangka kerja operasional institusi pendidikan. Mengelola administrasi tanpa repot.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* PHILOSOPHY SECTION */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-20 py-32 border-t border-white/5">
-          <div>
-            <div className="text-[10px] tracking-[0.5em] uppercase opacity-20 mb-8 font-mono font-bold">Filosofi</div>
-            <p className="text-lg text-[#888] font-extralight leading-relaxed max-w-sm">
-              NEST76 adalah muara dari perjalanan panjang personal sejak 1976. Kami membangun alat yang membantu manusia, bukan menggantikannya.
-            </p>
-          </div>
-          
-          <div className="space-y-12">
-            {[
-              { id: '01', title: 'UI Sederhana, Engine Canggih.', desc: 'Didesain agar orang paling "gaptek" pun bisa mengoperasikannya dalam hitungan menit.' },
-              { id: '02', title: 'Fokus pada Kejelasan.', desc: 'Menghilangkan kebisingan fitur yang tidak perlu agar Anda bisa fokus bekerja.' },
-              { id: '03', title: 'Integritas Data.', desc: 'Setiap koordinat, detik, dan input data adalah amanah yang kami jaga keakuratannya.' }
-            ].map((item) => (
-              <div key={item.id} className="flex gap-6 items-start">
-                <span className="text-xl font-mono opacity-10">{item.id}</span>
-                <div>
-                  <h5 className="text-white font-light mb-2">{item.title}</h5>
-                  <p className="text-sm text-[#666] font-extralight leading-relaxed">{item.desc}</p>
+               {/* Item 2 */}
+              <div className="flex gap-6 group">
+                <span className="text-3xl font-black text-[#9A8F88] opacity-30 tracking-tight group-hover:opacity-100 transition-opacity">02</span>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-bold uppercase tracking-tight">Fokus pada Kejelasan</h3>
+                  <p className="text-sm leading-relaxed font-medium opacity-80">
+                    Menghilangkan kebisingan fitur yang tidak perlu agar Anda bisa fokus bekerja dan mengambil keputusan tepat.
+                  </p>
                 </div>
               </div>
-            ))}
+               {/* Item 3 */}
+              <div className="flex gap-6 group">
+                <span className="text-3xl font-black text-[#9A8F88] opacity-30 tracking-tight group-hover:opacity-100 transition-opacity">03</span>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-bold uppercase tracking-tight">Integritas Data</h3>
+                  <p className="text-sm leading-relaxed font-medium opacity-80">
+                    Setiap koordinat, detik, dan input data adalah amanah yang kami jaga keakuratannya melalui enkripsi berlapis.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* FOOTER */}
-        <footer className="mt-20 pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8 text-[10px] tracking-[0.3em] uppercase opacity-20 font-mono font-bold">
-          <div>© 2026 NEST76 STUDIO · BORN IN '76, BUILT FOR THE FUTURE.</div>
-          <div className="flex gap-8">
-            <span className="hover:opacity-100 cursor-pointer">Instagram</span>
-            <span className="hover:opacity-100 cursor-pointer">Github</span>
-            <span className="hover:opacity-100 cursor-pointer">Hubungi Kami</span>
+      </main>
+
+      {/* --- Footer (Clean & Sesuai Vibes Home Page) --- */}
+      <footer className="border-t border-[#3E2723]/5 mt-20 bg-white">
+        <div className="max-w-7xl mx-auto p-10 md:p-16 lg:px-20 py-12 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] uppercase font-bold tracking-[0.2em] text-[#9A8F88]">
+          <span className="text-center md:text-left leading-relaxed">
+            © 2026 NEST76 STUDIO • BORN IN '76, BUILT FOR THE FUTURE.
+          </span>
+          <div className="flex gap-3 items-center flex-wrap justify-center">
+            <a href="#" className="hover:text-[var(--primary-color)] transition-colors">Instagram</a>
+            <span>•</span>
+            <a href="#" className="hover:text-[var(--primary-color)] transition-colors">Github</a>
+            <span>•</span>
+            <a href="#" className="hover:text-[var(--primary-color)] transition-colors border-b border-[#3E2723]/20 pb-0.5">Hubungi Kami</a>
           </div>
-        </footer>
-      </div>
-    </main>
+        </div>
+      </footer>
+    </div>
   )
 }
