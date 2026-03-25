@@ -16,19 +16,41 @@ export function LoginForm() {
   const [msg, setMsg] = useState<string | null>(null)
 
   async function submit() {
+    // 1. Cek isi field
     if (!email.trim() || !password) {
       setMsg("Email dan password wajib diisi")
       return
     }
+
+    // 2. Cek minimum 6 digit (PENTING!)
+    if (password.length < 6) {
+      setMsg("Password minimal 6 digit ya, Bro! 🛡️")
+      return
+    }
+
     setLoading(true)
     setMsg(null)
     const supabase = createBrowserSupabaseClient()
+    
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password
       })
-      if (error) throw error
+      
+      // Jika user belum terdaftar (error invalid login), 
+      // kita arahkan ke onboarding pilih tipe user (Personal/UMKM)
+      if (error) {
+        if (error.message.includes("Invalid login credentials")) {
+           setMsg("Email belum terdaftar. Mengalihkan ke pendaftaran...")
+           setTimeout(() => {
+             router.push(`/choose-type?redirect=${encodeURIComponent(redirect)}`)
+           }, 1500)
+           return
+        }
+        throw error
+      }
+
       router.replace(redirect)
       router.refresh()
     } catch (e: unknown) {
@@ -72,14 +94,14 @@ export function LoginForm() {
             <input
               className="w-full bg-transparent border-b border-[#D7CCC8] py-3 px-1 focus:border-[#3E2723] outline-none transition-all placeholder:text-[#D7CCC8] text-sm"
               type="email"
-              placeholder="Email Akses"
+              placeholder="Alamat e-mail yg masih aktif"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
             <input
               className="w-full bg-transparent border-b border-[#D7CCC8] py-3 px-1 focus:border-[#3E2723] outline-none transition-all placeholder:text-[#D7CCC8] text-sm"
               type="password"
-              placeholder="Password"
+              placeholder="Password minimum 6 digit"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -97,7 +119,7 @@ export function LoginForm() {
             disabled={loading}
             className="flex w-full items-center justify-center gap-2 bg-[#3E2723] text-white py-4 hover:bg-[#2D1B19] transition-all disabled:opacity-50 uppercase tracking-[0.2em] text-xs font-bold shadow-md"
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Masuk ke Protokol"}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "DAFTAR GRATIS"}
           </button>
         </div>
 

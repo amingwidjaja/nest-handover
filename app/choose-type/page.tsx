@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useCallback } from "react"
 import { HANDOVER_ACTIVE_LIMITS } from "@/lib/handover-limits"
+import { User, Store, ArrowRight, ShieldCheck } from "lucide-react"
 
 function ChooseTypeInner() {
   const router = useRouter()
@@ -15,83 +16,92 @@ function ChooseTypeInner() {
       try {
         localStorage.setItem("nest_onboarding_type", type)
         localStorage.setItem("nest_onboarding_redirect", redirect)
-      } catch {
-        /* ignore */
-      }
-      router.push(
-        `/register?type=${type}&redirect=${encodeURIComponent(redirect)}`
-      )
+      } catch { /* ignore */ }
+      router.push(`/register?type=${type}&redirect=${encodeURIComponent(redirect)}`)
     },
     [redirect, router]
   )
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col">
-      <main className="flex-1 px-6 py-12 max-w-lg mx-auto w-full flex flex-col">
-        <p className="text-[10px] tracking-[0.35em] uppercase opacity-40 font-mono mb-4">
-          NEST76 STUDIO · Tanda Terima Digital
-        </p>
-        <h1 className="text-2xl font-light mb-2">Pilih jenis akun</h1>
-        <p className="text-sm text-[#8D6E63] mb-8 leading-relaxed">
-          Sebelum daftar, tentukan profil yang sesuai. Batas paket aktif dan fitur
-          berbeda untuk Personal vs UMKM.
-        </p>
+    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col items-center p-6 md:p-12">
+      <main className="max-w-md w-full flex flex-col">
+        
+        {/* Branding Header */}
+        <div className="text-center mb-10 space-y-4">
+          <ShieldCheck className="w-10 h-10 mx-auto text-[#3E2723] opacity-80" strokeWidth={1.5} />
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold tracking-tighter uppercase">Mulai Sekarang</h1>
+            <p className="text-[10px] font-bold text-[#A1887F] tracking-[0.2em] uppercase opacity-70">
+              Pilih Profil Anda
+            </p>
+          </div>
+        </div>
 
-        <div className="space-y-4 flex-1">
+        <div className="space-y-4">
+          {/* PERSONAL OPTION */}
           <button
             type="button"
             onClick={() => go("personal")}
-            className="w-full text-left rounded-sm border border-[#E0DED7] bg-white/60 hover:border-[#3E2723] transition-colors p-5 shadow-sm"
+            className="group w-full text-left bg-white border border-[#D7CCC8]/50 p-6 hover:border-[#3E2723] transition-all shadow-sm relative overflow-hidden"
           >
-            <div className="text-xs font-bold uppercase tracking-[0.2em] text-[#5D4037] mb-1">
-              Personal
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-2 bg-[#FAF9F6] text-[#3E2723]">
+                <User className="w-6 h-6" strokeWidth={1.5} />
+              </div>
+              <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all text-[#3E2723]" />
             </div>
-            <p className="text-sm leading-relaxed opacity-90">
-              Untuk pengiriman pribadi. Batas{" "}
-              <span className="font-medium text-[#3E2723]">
-                {HANDOVER_ACTIVE_LIMITS.personal} paket aktif
-              </span>{" "}
-              sekaligus. Cukup nama & email untuk mulai.
+            <h3 className="text-xs font-black uppercase tracking-widest text-[#3E2723] mb-2">
+              Akun Pribadi
+            </h3>
+            <p className="text-sm text-[#8D6E63] leading-relaxed">
+              Untuk penggunaan pribadi & kirim bingkisan. Batas <span className="font-bold text-[#3E2723]">{HANDOVER_ACTIVE_LIMITS.personal} paket aktif</span>.
             </p>
           </button>
 
+          {/* UMKM OPTION */}
           <button
             type="button"
             onClick={() => go("umkm")}
-            className="w-full text-left rounded-sm border border-[#E0DED7] bg-white/60 hover:border-[#3E2723] transition-colors p-5 shadow-sm"
+            className="group w-full text-left bg-white border border-[#D7CCC8]/50 p-6 hover:border-[#3E2723] transition-all shadow-sm relative overflow-hidden"
           >
-            <div className="text-xs font-bold uppercase tracking-[0.2em] text-[#5D4037] mb-1">
-              UMKM
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-2 bg-[#3E2723] text-white font-bold">
+                <Store className="w-6 h-6" strokeWidth={1.5} />
+              </div>
+              <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all text-[#3E2723]" />
             </div>
-            <p className="text-sm leading-relaxed opacity-90">
-              Untuk bisnis. Batas{" "}
-              <span className="font-medium text-[#3E2723]">
-                {HANDOVER_ACTIVE_LIMITS.umkm} paket aktif
-              </span>
-              . Sertakan{" "}
-              <span className="font-medium">nama bisnis, alamat, dan logo</span>{" "}
-              (logo opsional saat daftar).
+            <h3 className="text-xs font-black uppercase tracking-widest text-[#3E2723] mb-2">
+              Akun UMKM / Bisnis
+            </h3>
+            <p className="text-sm text-[#8D6E63] leading-relaxed">
+              Profesional & terpercaya. Batas <span className="font-bold text-[#3E2723]">{HANDOVER_ACTIVE_LIMITS.umkm} paket aktif</span>. Sertakan Nama Usaha & Logo.
             </p>
           </button>
         </div>
 
-        <p className="text-[11px] text-[#A1887F] leading-relaxed mt-10 mb-6 border-t border-[#E8E4DD] pt-6">
-          <span className="font-medium text-[#6D4C41]">Disclaimer:</span> Data
-          kamu hanya untuk identitas Tanda Terima Digital &amp; tidak
-          disebarluaskan.
-        </p>
+        {/* Info Box */}
+        <div className="mt-10 p-5 bg-[#EFEBE9]/40 border-l-[3px] border-[#3E2723]">
+          <p className="text-[11px] text-[#5D4037] leading-relaxed">
+            <strong className="uppercase">Keamanan Data:</strong> Pilihan profil menentukan fitur tanda terima Anda. Akun UMKM memberikan kesan lebih profesional bagi pelanggan Anda.
+          </p>
+        </div>
 
-        <div className="flex justify-between text-sm text-[#A1887F]">
+        {/* Navigation Footer */}
+        <div className="mt-12 flex flex-col gap-6 items-center">
           <Link
             href={`/login?redirect=${encodeURIComponent(redirect)}`}
-            className="underline underline-offset-2"
+            className="text-xs font-bold text-[#3E2723] underline underline-offset-4 decoration-[#D7CCC8] hover:decoration-[#3E2723] transition-all"
           >
-            Sudah punya akun? Masuk
+            SUDAH PUNYA AKUN? MASUK
           </Link>
-          <Link href="/" className="opacity-70">
-            ← Beranda
+          <Link href="/" className="text-[10px] tracking-[0.3em] uppercase opacity-40 hover:opacity-100 transition-opacity">
+            ← BERANDA
           </Link>
         </div>
+
+        <p className="mt-16 text-[9px] text-center text-[#3E2723] font-mono tracking-[0.2em] uppercase font-bold opacity-60">
+          © 2026 NEST76 STUDIO • Build with Passion and Integrity
+        </p>
       </main>
     </div>
   )
@@ -101,8 +111,11 @@ export default function ChooseTypePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center text-sm text-[#A1887F]">
-          Memuat…
+        <div className="min-h-screen bg-[#FAF9F6] flex flex-col items-center justify-center space-y-4">
+          <div className="w-8 h-8 border-2 border-[#3E2723]/20 border-t-[#3E2723] rounded-full animate-spin" />
+          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#A1887F]">
+            Menyiapkan NEST76 PAKET...
+          </p>
         </div>
       }
     >
