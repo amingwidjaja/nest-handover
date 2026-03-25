@@ -2,9 +2,26 @@ import { NextResponse } from "next/server"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 import { HANDOVER_ACTIVE_LIMITS } from "@/lib/handover-limits"
+import {
+  normalizeIndonesianPhoneTo628,
+  sendNESTNotification
+} from "@/lib/whatsapp"
 
 function generateToken() {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 16)
+}
+
+function publicAppBaseUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim()
+  if (explicit) {
+    return explicit.replace(/\/$/, "")
+  }
+  const vercel = process.env.VERCEL_URL?.trim()
+  if (vercel) {
+    const host = vercel.replace(/^https?:\/\//, "").replace(/\/$/, "")
+    return `https://${host}`
+  }
+  return ""
 }
 
 export async function POST(req: Request) {
@@ -163,6 +180,46 @@ export async function POST(req: Request) {
           { success: false, error: itemsError.message },
           { status: 500 }
         )
+      }
+    }
+
+    const waForNotify = String(wa ?? "").trim()
+    if (waForNotify) {
+      const base = publicAppBaseUrl()
+      const handoverLink = base
+        ? `${base}/handover/${data.id}`
+        : `/handover/${data.id}`
+      const firstDesc =
+        Array.isArray(items) &&
+        items[0] &&
+        typeof (items[0] as { description?: string }).description === "string"
+          ? String((items[0] as { description: string }).description).trim()
+          : ""
+      const packageLabel = firstDesc || "Paket"
+      const receiverLabel = String(receiver_target_name ?? "").trim() || "Penerima"
+
+      try {
+        const waResult = await sendNESTNotification(
+          waForNotify,
+          receiverLabel,
+          packageLabel,
+          handoverLink
+        )
+        const logTo =
+          normalizeIndonesianPhoneTo628(waForNotify) ?? waForNotify
+        console.log(
+          `WA Protocol: Notification Sent to ${logTo} | Status: ${waResult.ok ? "Success" : "Fail"}`
+        )
+        if (!waResult.ok && waResult.error) {
+          console.warn("[whatsapp] sendNESTNotification:", waResult.error)
+        }
+      } catch (err) {
+        const logTo =
+          normalizeIndonesianPhoneTo628(waForNotify) ?? waForNotify
+        console.log(
+          `WA Protocol: Notification Sent to ${logTo} | Status: Fail`
+        )
+        console.warn("[whatsapp] sendNESTNotification threw:", err)
       }
     }
 

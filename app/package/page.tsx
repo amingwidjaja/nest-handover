@@ -7,6 +7,7 @@ import {
   Home,
   ChevronRight,
   ChevronLeft,
+  Loader2,
   User,
   X
 } from "lucide-react"
@@ -15,6 +16,7 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 import { readHandoverMode, HANDOVER_MODE_KEY } from "@/lib/handover-mode"
 import { compressEvidenceWebpUnder100kb } from "@/lib/image-evidence"
 import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
+import { NestPrimaryButton } from "@/components/nest/primary-button"
 
 const PRIMARY = "#3E2723"
 
@@ -47,6 +49,9 @@ export default function PackagePage() {
   const previewUrlRef = useRef<string | null>(null)
   const [photoProcessing, setPhotoProcessing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [submitMode, setSubmitMode] = useState<"save" | "handover" | null>(
+    null
+  )
 
   function handleItemChange(index: number, value: string) {
     const copy = [...items]
@@ -100,6 +105,7 @@ export default function PackagePage() {
       return
     }
     if (saving) return
+    setSubmitMode(mode)
     setSaving(true)
 
     const supabase = createBrowserSupabaseClient()
@@ -108,6 +114,7 @@ export default function PackagePage() {
     } = await supabase.auth.getSession()
     if (!session) {
       setSaving(false)
+      setSubmitMode(null)
       router.push("/login?redirect=/package")
       return
     }
@@ -116,6 +123,7 @@ export default function PackagePage() {
     const limJson = await lim.json()
     if (limJson.authenticated && limJson.at_limit) {
       setSaving(false)
+      setSubmitMode(null)
       alert(limJson.error || "Batas paket aktif tercapai.")
       return
     }
@@ -130,6 +138,8 @@ export default function PackagePage() {
     const receiver_target_phone = receiver_whatsapp
 
     if (!sender_name || !receiver_target_name) {
+      setSaving(false)
+      setSubmitMode(null)
       alert("Data belum lengkap. Mulai dari awal.")
       router.push("/handover/create")
       return
@@ -190,16 +200,19 @@ export default function PackagePage() {
       const data = await res.json()
       if (res.status === 401) {
         setSaving(false)
+        setSubmitMode(null)
         router.push("/login?redirect=/package")
         return
       }
       if (res.status === 429) {
         setSaving(false)
+        setSubmitMode(null)
         alert(data.error || "Batas paket tercapai")
         return
       }
       if (!data.success) {
         setSaving(false)
+        setSubmitMode(null)
         alert(data.error || "Gagal membuat Tanda Terima Digital")
         return
       }
@@ -232,6 +245,7 @@ export default function PackagePage() {
         } catch (err) {
           console.error("UPLOAD_DEBUG:", err)
           setSaving(false)
+          setSubmitMode(null)
           alert(
             `Gagal mengunggah foto paket (bucket: ${NEST_EVIDENCE_BUCKET}). ${
               err instanceof Error ? err.message : ""
@@ -270,6 +284,7 @@ export default function PackagePage() {
     } catch (err) {
       console.error("UPLOAD_DEBUG:", err)
       setSaving(false)
+      setSubmitMode(null)
       alert("Terjadi kesalahan koneksi")
     }
   }
@@ -437,19 +452,29 @@ export default function PackagePage() {
               disabled={saving || photoProcessing}
               className="flex items-center justify-between rounded-2xl border-2 border-[var(--primary-color)]/25 bg-white px-4 py-3.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--primary-color)] transition active:scale-[0.98] disabled:opacity-35"
             >
-              <ChevronLeft size={14} />
-              <span className="leading-tight">Simpan Draft</span>
+              {saving && submitMode === "save" ? (
+                <span className="flex w-full items-center justify-center gap-2">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  Memproses…
+                </span>
+              ) : (
+                <>
+                  <ChevronLeft size={14} />
+                  <span className="leading-tight">Simpan Draft</span>
+                </>
+              )}
             </button>
 
-            <button
+            <NestPrimaryButton
               type="button"
               onClick={() => createHandover("handover")}
-              disabled={saving || photoProcessing}
-              className="flex items-center justify-between rounded-2xl bg-[var(--primary-color)] px-4 py-3.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#FAF9F6] shadow-sm transition active:scale-[0.98] disabled:opacity-45"
+              disabled={photoProcessing}
+              loading={saving && submitMode === "handover"}
+              className="flex w-full items-center justify-between rounded-2xl bg-[var(--primary-color)] px-4 py-3.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#FAF9F6] shadow-sm disabled:opacity-45"
             >
               <span>Tanda Terima</span>
               <ChevronRight size={14} />
-            </button>
+            </NestPrimaryButton>
           </div>
         </div>
       </main>

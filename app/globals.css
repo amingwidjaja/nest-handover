@@ -69,3 +69,39 @@ body {
     transform: translateY(0);
   }
 }
+
+/* Enterprise skeleton shimmer — NEST76 */
+@keyframes nest-shimmer {
+  0% {
+    background-position: -180% 0;
+  }
+  100% {
+    background-position: 180% 0;
+  }
+}
+
+.nest-shimmer {
+  background: linear-gradient(
+    105deg,
+    #ebe8e2 0%,
+    #f5f3ef 42%,
+    #faf9f6 50%,
+    #f5f3ef 58%,
+    #ebe8e2 100%
+  );
+  background-size: 220% 100%;
+  animation: nest-shimmer 1.35s ease-in-out infinite;
+}
+
+/* Technical drawing — hairline ink */
+.nest-border-drawing {
+  border-style: solid;
+  border-width: 0.5px;
+  border-color: color-mix(in srgb, #3e2723 16%, transparent);
+}
+
+.nest-border-drawing-dashed {
+  border-style: dashed;
+  border-width: 0.5px;
+  border-color: color-mix(in srgb, #3e2723 14%, transparent);
+}
