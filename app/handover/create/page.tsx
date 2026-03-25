@@ -2,12 +2,17 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   fetchForwardGeocodeSuggestions,
   type MapboxGeocodeFeature
 } from "@/lib/mapbox-forward-geocode"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 import { parseNominatimReverse } from "@/lib/nominatim-parse"
+import {
+  readHandoverMode,
+  type HandoverMode
+} from "@/lib/handover-mode"
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
@@ -34,6 +39,9 @@ function useDebouncedCallback<T extends unknown[]>(
 }
 
 export default function HandoverCreatePage() {
+  const router = useRouter()
+  const [handoverMode, setHandoverMode] = useState<HandoverMode | null>(null)
+
   const [senderType, setSenderType] = useState("self")
 
   const [senderName, setSenderName] = useState("")
@@ -65,6 +73,17 @@ export default function HandoverCreatePage() {
   } | null>(null)
 
   useEffect(() => {
+    const m = readHandoverMode()
+    if (!m) {
+      router.replace("/handover/select")
+      return
+    }
+    setHandoverMode(m)
+  }, [router])
+
+  useEffect(() => {
+    if (!handoverMode) return
+
     async function hydrate() {
       const name = localStorage.getItem("user_name")
       const contact = localStorage.getItem("user_contact")
@@ -96,21 +115,31 @@ export default function HandoverCreatePage() {
           }
         }
       }
-      const draftCity = localStorage.getItem("draft_destination_city")
-      const draftPost = localStorage.getItem("draft_destination_postcode")
-      if (draftCity) setDestinationCity(draftCity)
-      if (draftPost) setDestinationPostalCode(draftPost)
 
       const wa =
         localStorage.getItem("draft_receiver_whatsapp") ||
         localStorage.getItem("draft_receiver_contact") ||
         ""
-      const em = localStorage.getItem("draft_receiver_email") || ""
       if (wa) setReceiverWhatsapp(wa)
-      if (em) setReceiverEmail(em)
+
+      if (handoverMode === "pro") {
+        const draftCity = localStorage.getItem("draft_destination_city")
+        const draftPost = localStorage.getItem("draft_destination_postcode")
+        if (draftCity) setDestinationCity(draftCity)
+        if (draftPost) setDestinationPostalCode(draftPost)
+        const em = localStorage.getItem("draft_receiver_email") || ""
+        if (em) setReceiverEmail(em)
+      } else {
+        setReceiverEmail("")
+        setDestinationAddress("")
+        setDestinationCity("")
+        setDestinationPostalCode("")
+        setMapboxPick(null)
+        setSuggestions([])
+      }
     }
-    hydrate()
-  }, [])
+    void hydrate()
+  }, [handoverMode])
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) return
@@ -264,6 +293,8 @@ export default function HandoverCreatePage() {
   }
 
   async function submit() {
+    if (!handoverMode) return
+
     if (!receiverName.trim()) {
       showToast("Tulis nama penerima paket")
       return
@@ -285,25 +316,37 @@ export default function HandoverCreatePage() {
       }
     }
 
-    const addr = destinationAddress.trim()
-    if (!addr) {
-      showToast("Isi alamat tujuan")
-      return
-    }
-
+    let addr = ""
     let destLat: number
     let destLng: number
-    if (mapboxPick !== null) {
-      destLat = mapboxPick.lat
-      destLng = mapboxPick.lng
-    } else if (userProximity !== null) {
+
+    if (handoverMode === "pro") {
+      addr = destinationAddress.trim()
+      if (!addr) {
+        showToast("Isi alamat tujuan")
+        return
+      }
+      if (mapboxPick !== null) {
+        destLat = mapboxPick.lat
+        destLng = mapboxPick.lng
+      } else if (userProximity !== null) {
+        destLat = userProximity.lat
+        destLng = userProximity.lng
+      } else {
+        showToast(
+          "Izinkan lokasi GPS atau ketuk “Gunakan lokasi saat ini”, atau pilih patokan dari daftar"
+        )
+        return
+      }
+    } else {
+      if (userProximity === null) {
+        showToast(
+          "Mode Lite memerlukan lokasi GPS. Izinkan akses lokasi di browser, lalu coba lagi."
+        )
+        return
+      }
       destLat = userProximity.lat
       destLng = userProximity.lng
-    } else {
-      showToast(
-        "Izinkan lokasi GPS atau ketuk “Gunakan lokasi saat ini”, atau pilih patokan dari daftar"
-      )
-      return
     }
 
     const supabase = createBrowserSupabaseClient()
@@ -329,7 +372,7 @@ export default function HandoverCreatePage() {
         : senderName
 
     const wa = receiverWhatsapp.trim()
-    const em = receiverEmail.trim()
+    const em = handoverMode === "pro" ? receiverEmail.trim() : ""
 
     localStorage.setItem("draft_sender_name", finalSender)
     localStorage.setItem("draft_sender_contact", senderContact)
@@ -337,14 +380,39 @@ export default function HandoverCreatePage() {
     localStorage.setItem("draft_receiver_whatsapp", wa)
     localStorage.setItem("draft_receiver_email", em)
     localStorage.setItem("draft_receiver_contact", wa)
-    localStorage.setItem("draft_destination_address", addr)
-    localStorage.setItem("draft_destination_lat", String(destLat))
-    localStorage.setItem("draft_destination_lng", String(destLng))
-    localStorage.setItem("draft_destination_city", destinationCity.trim())
-    localStorage.setItem("draft_destination_postcode", destinationPostalCode.trim())
+    if (handoverMode === "pro") {
+      localStorage.setItem("draft_destination_address", addr)
+      localStorage.setItem("draft_destination_lat", String(destLat))
+      localStorage.setItem("draft_destination_lng", String(destLng))
+      localStorage.setItem("draft_destination_city", destinationCity.trim())
+      localStorage.setItem("draft_destination_postcode", destinationPostalCode.trim())
+    } else {
+      try {
+        localStorage.removeItem("draft_destination_address")
+        localStorage.removeItem("draft_destination_city")
+        localStorage.removeItem("draft_destination_postcode")
+      } catch {
+        /* ignore */
+      }
+      localStorage.setItem("draft_destination_lat", String(destLat))
+      localStorage.setItem("draft_destination_lng", String(destLng))
+    }
 
     window.location.href = "/package"
   }
+
+  if (!handoverMode) {
+    return (
+      <div
+        className="min-h-screen bg-[#FAF9F6] flex items-center justify-center text-sm text-[#9A8F88]"
+        style={{ ["--primary-color" as string]: PRIMARY }}
+      >
+        Memuat…
+      </div>
+    )
+  }
+
+  const isPro = handoverMode === "pro"
 
   return (
     <div
@@ -352,6 +420,18 @@ export default function HandoverCreatePage() {
       style={{ ["--primary-color" as string]: PRIMARY }}
     >
       <main className="mx-auto w-full max-w-lg flex-1 px-6 pb-8 pt-14 space-y-12 sm:px-8">
+        <div className="space-y-2">
+          <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#9A8F88]">
+            NEST Paket
+          </p>
+          <Link
+            href="/handover/select"
+            className="inline-block text-[11px] text-[#A1887F] transition hover:text-[var(--primary-color)]/75 underline decoration-[#C4B8B0]/60 underline-offset-2"
+          >
+            Salah pilih mode? Kembali ke awal
+          </Link>
+        </div>
+
         <section className="space-y-6">
           <p className="text-base font-medium text-[var(--primary-color)]">
             Siapa yang kirim paket ini?
@@ -441,25 +521,28 @@ export default function HandoverCreatePage() {
               </p>
             </div>
 
-            <div>
-              <label className={labelClass}>Email penerima</label>
-              <input
-                className={inputClass}
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="nama@email.com"
-                value={receiverEmail}
-                onChange={(e) => setReceiverEmail(e.target.value)}
-              />
-              <p className="mt-2 text-[11px] leading-relaxed text-[#9A8F88]">
-                Opsional. Digunakan untuk pengiriman salinan tanda terima digital
-                (PDF).
-              </p>
-            </div>
+            {isPro && (
+              <div>
+                <label className={labelClass}>Email penerima</label>
+                <input
+                  className={inputClass}
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="nama@email.com"
+                  value={receiverEmail}
+                  onChange={(e) => setReceiverEmail(e.target.value)}
+                />
+                <p className="mt-2 text-[11px] leading-relaxed text-[#9A8F88]">
+                  Opsional. Digunakan untuk pengiriman salinan tanda terima digital
+                  (PDF).
+                </p>
+              </div>
+            )}
           </div>
         </section>
 
+        {isPro && (
         <section className="space-y-5">
           <p className="text-base font-medium text-[var(--primary-color)]">
             Alamat tujuan
@@ -554,6 +637,14 @@ export default function HandoverCreatePage() {
             </div>
           </div>
         </section>
+        )}
+
+        {!isPro && (
+          <p className="text-[12px] leading-relaxed text-[#9A8F88]">
+            Mode Lite memakai lokasi perangkat Anda sebagai koordinat penerimaan.
+            Pastikan izin lokasi aktif.
+          </p>
+        )}
 
         <p className="text-center text-[10px] leading-relaxed text-[#9A8F88]">
           © 2026 NEST76 STUDIO • Infrastruktur digital yang aman dan terverifikasi.
@@ -568,7 +659,10 @@ export default function HandoverCreatePage() {
       )}
 
       <div className="flex justify-between border-t border-[#ECE7E3] bg-[#FAF9F6]/95 px-6 py-6 text-sm backdrop-blur-sm sm:px-8">
-        <Link href="/" className="text-[#9A8F88] transition hover:text-[var(--primary-color)]">
+        <Link
+          href="/handover/select"
+          className="text-[#9A8F88] transition hover:text-[var(--primary-color)]"
+        >
           ← Sebelumnya
         </Link>
 

@@ -3,12 +3,12 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 
-/** Legacy URL: identity step now lives at `/handover/create`. */
+/** Legacy URL: handover flow starts at mode selection. */
 export default function CreatePageRedirect() {
   const router = useRouter()
 
   useEffect(() => {
-    router.replace("/handover/create")
+    router.replace("/handover/select")
   }, [router])
 
   return (

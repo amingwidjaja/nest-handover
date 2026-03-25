@@ -1,47 +1,52 @@
-'use client'
+"use client"
 
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Camera, Home, ChevronRight, ChevronLeft, User } from "lucide-react"
+import {
+  Camera,
+  Home,
+  ChevronRight,
+  ChevronLeft,
+  User,
+  X
+} from "lucide-react"
 import Link from "next/link"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
+import { readHandoverMode, HANDOVER_MODE_KEY } from "@/lib/handover-mode"
 import { compressEvidenceWebpUnder100kb } from "@/lib/image-evidence"
 import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
+
+const PRIMARY = "#3E2723"
+
+const inputClass =
+  "line-input min-h-[2.5rem] flex-1 w-full rounded-2xl border border-[#E0DED7] bg-white px-3 py-2 text-[14px] text-[var(--primary-color)] placeholder:text-[#9A8F88] outline-none transition focus:border-[var(--primary-color)] focus:ring-2 focus:ring-[var(--primary-color)]/15"
 
 export default function PackagePage() {
   const router = useRouter()
 
-// FORCE DISABLE ZOOM (Pemicu Utama Safari)
   useEffect(() => {
-    // Cari meta viewport yang sudah ada
-    const meta = document.querySelector('meta[name="viewport"]');
+    const meta = document.querySelector('meta[name="viewport"]')
     if (meta) {
-      // Tambahkan user-scalable=no secara paksa
-      meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0');
+      meta.setAttribute(
+        "content",
+        "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"
+      )
     }
-  }, []);
+  }, [])
 
-  /** Exactly 4 baris = 4 tipe barang (boleh kosong kecuali minimal satu terisi). */
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    if (!readHandoverMode()) {
+      router.replace("/handover/select")
+    }
+  }, [router])
+
   const [items, setItems] = useState(["", "", "", ""])
-  /** Compressed binary for upload — no base64 in multipart body. */
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const previewUrlRef = useRef<string | null>(null)
   const [photoProcessing, setPhotoProcessing] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [limitHint, setLimitHint] = useState<string | null>(null)
-
-  useEffect(() => {
-    async function loadLimits() {
-      const res = await fetch("/api/handover/limits")
-      if (!res.ok) return
-      const j = await res.json()
-      if (j.authenticated && typeof j.remaining === "number") {
-        setLimitHint(`${j.remaining}/${j.limit} paket aktif`)
-      }
-    }
-    loadLimits()
-  }, [])
 
   function handleItemChange(index: number, value: string) {
     const copy = [...items]
@@ -57,10 +62,18 @@ export default function PackagePage() {
     }
   }, [])
 
+  function clearPhoto() {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = null
+    }
+    setPreviewUrl(null)
+    setPhotoBlob(null)
+  }
+
   async function handlePhoto(file: File) {
     setPhotoProcessing(true)
     try {
-      /** Smaller initial edge = faster encode on mobile; still under ~100KB target */
       const cropped = await compressEvidenceWebpUnder100kb(
         file,
         100 * 1024,
@@ -122,7 +135,8 @@ export default function PackagePage() {
       return
     }
 
-    const destination_address = localStorage.getItem("draft_destination_address") || ""
+    const destination_address =
+      localStorage.getItem("draft_destination_address") || ""
     const destLatRaw = localStorage.getItem("draft_destination_lat")
     const destLngRaw = localStorage.getItem("draft_destination_lng")
     const draftCity = localStorage.getItem("draft_destination_city") || ""
@@ -147,7 +161,12 @@ export default function PackagePage() {
     if (destination_address.trim()) {
       payload.destination_address = destination_address
     }
-    if (destLatRaw != null && destLatRaw !== "" && destLngRaw != null && destLngRaw !== "") {
+    if (
+      destLatRaw != null &&
+      destLatRaw !== "" &&
+      destLngRaw != null &&
+      destLngRaw !== ""
+    ) {
       const dlat = Number(destLatRaw)
       const dlng = Number(destLngRaw)
       if (Number.isFinite(dlat) && Number.isFinite(dlng)) {
@@ -191,11 +210,7 @@ export default function PackagePage() {
           const fd = new FormData()
           fd.set("handover_id", data.handover_id)
           fd.set("mode", "package_first_item")
-          fd.set(
-            "file",
-            photoBlob,
-            `package.${ext}`
-          )
+          fd.set("file", photoBlob, `package.${ext}`)
 
           const up = await fetch("/api/handover/upload-photo", {
             method: "POST",
@@ -237,8 +252,14 @@ export default function PackagePage() {
       localStorage.removeItem("draft_destination_lng")
       localStorage.removeItem("draft_destination_city")
       localStorage.removeItem("draft_destination_postcode")
+      try {
+        localStorage.removeItem(HANDOVER_MODE_KEY)
+      } catch {
+        /* ignore */
+      }
 
-      const sn = typeof data.serial_number === "string" ? data.serial_number : ""
+      const sn =
+        typeof data.serial_number === "string" ? data.serial_number : ""
       router.push(
         mode === "save"
           ? sn
@@ -254,149 +275,183 @@ export default function PackagePage() {
   }
 
   return (
-    <div className="h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col overflow-hidden font-sans">
-      
-      {/* ANTI-ZOOM FIX: Kita tambahkan style global khusus di page ini */}
+    <div
+      className="flex h-screen flex-col overflow-hidden bg-[#FAF9F6] font-sans text-[var(--primary-color)]"
+      style={{ ["--primary-color" as string]: PRIMARY }}
+    >
       <style jsx global>{`
-        /* Mencegah zoom otomatis di iOS Safari tapi tetap menjaga visual font kecil */
-        input, textarea {
+        input,
+        textarea {
           font-size: 16px !important;
         }
         @media screen and (max-width: 768px) {
           .line-input {
-            font-size: 14px !important; /* Visual tetap 14px, tapi sistem 'dibohongi' */
+            font-size: 14px !important;
             transform: scale(1);
           }
         }
       `}</style>
 
-      <main className="px-8 py-6 flex-1 flex flex-col max-w-md mx-auto w-full">
-        
-        {/* HEADER */}
-        <div className="flex justify-between items-start mb-4 gap-2">
-          <div>
-            <h2 className="text-lg font-medium uppercase tracking-[0.2em] opacity-60">
-              Daftar Barang
-            </h2>
-            {limitHint && (
-              <p className="text-[9px] text-[#A1887F] mt-1 tracking-wide">{limitHint}</p>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Link href="/profile" className="p-1 active:scale-90 transition-transform" title="Profil">
-              <User size={20} strokeWidth={1.5} className="opacity-60" />
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col overflow-y-auto px-5 py-5">
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <h2 className="text-base font-semibold uppercase tracking-[0.18em] text-[var(--primary-color)] opacity-90">
+            Daftar Barang
+          </h2>
+          <div className="flex gap-1">
+            <Link
+              href="/profile"
+              className="rounded-xl p-2 text-[var(--primary-color)] opacity-70 transition active:scale-95"
+              title="Profil"
+            >
+              <User size={20} strokeWidth={1.5} />
             </Link>
-            <Link href="/paket" className="p-1 active:scale-90 transition-transform">
-              <Home size={20} strokeWidth={1.5} className="opacity-60" />
+            <Link
+              href="/paket"
+              className="rounded-xl p-2 text-[var(--primary-color)] opacity-70 transition active:scale-95"
+            >
+              <Home size={20} strokeWidth={1.5} />
             </Link>
           </div>
         </div>
 
-        {/* ITEMS — tepat 4 baris, 1 baris = 1 tipe barang */}
-        <div className="space-y-2 mb-4">
+        <p className="mb-3 text-[10px] uppercase tracking-wider text-[#9A8F88]">
+          Foto baris 1
+        </p>
+
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          id="cameraInput"
+          className="hidden"
+          disabled={photoProcessing}
+          onChange={(e) => {
+            if (!e.target.files) return
+            handlePhoto(e.target.files[0])
+            e.target.value = ""
+          }}
+        />
+
+        <div className="mb-3 space-y-1.5">
           {items.map((item, i) => (
-            <div key={i} className="flex gap-3 items-start">
-              <span
-                className="shrink-0 w-5 pt-2 text-[13px] opacity-45 font-medium tabular-nums text-right"
-                aria-hidden
-              >
-                {i + 1}.
-              </span>
-              <textarea
-                value={item}
-                onChange={(e) => handleItemChange(i, e.target.value)}
-                className="min-h-0 flex-1 w-full bg-transparent border-b border-[#E0DED7] focus:border-[#3E2723] outline-none py-2 text-[14px] resize-none placeholder:opacity-35 transition-all leading-tight line-input"
-                rows={1}
-                placeholder={i === 0 ? "Contoh: Sepatu" : `Barang ${i + 1}`}
-              />
+            <div key={i} className="flex items-start gap-2">
+              <div className="w-20 shrink-0 pt-0.5">
+                {i === 0 ? (
+                  <div className="relative">
+                    {!previewUrl ? (
+                      <label
+                        htmlFor="cameraInput"
+                        className={`flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--primary-color)]/35 bg-white/80 transition active:scale-95 ${
+                          photoProcessing
+                            ? "pointer-events-none opacity-50"
+                            : "hover:border-[var(--primary-color)]/60"
+                        }`}
+                      >
+                        <Camera
+                          className="text-[var(--primary-color)]/50"
+                          size={18}
+                          strokeWidth={1.5}
+                        />
+                        <span className="mt-0.5 text-[7px] font-semibold uppercase tracking-tighter text-[#9A8F88]">
+                          Foto
+                        </span>
+                      </label>
+                    ) : (
+                      <div className="relative h-20 w-20 overflow-hidden rounded-2xl border border-[var(--primary-color)]/30 bg-white shadow-sm">
+                        <img
+                          src={previewUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            clearPhoto()
+                          }}
+                          disabled={photoProcessing || saving}
+                          className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--primary-color)]/20 bg-[#FAF9F6] text-[var(--primary-color)] shadow-sm transition hover:bg-white active:scale-95 disabled:opacity-40"
+                          aria-label="Hapus foto"
+                        >
+                          <X size={12} strokeWidth={2.5} />
+                        </button>
+                        <label
+                          htmlFor="cameraInput"
+                          className={`absolute bottom-0.5 right-0.5 rounded bg-white/95 px-1 py-0.5 text-[6px] font-bold uppercase tracking-wide text-[var(--primary-color)] shadow-sm ${
+                            photoProcessing ? "pointer-events-none opacity-50" : ""
+                          }`}
+                        >
+                          Ganti
+                        </label>
+                      </div>
+                    )}
+                    {photoProcessing && (
+                      <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-[#FAF9F6]/85 backdrop-blur-[1px]">
+                        <span className="text-[9px] font-medium text-[var(--primary-color)] animate-pulse">
+                          …
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-20 w-20 shrink-0" aria-hidden />
+                )}
+              </div>
+
+              <div className="flex min-w-0 flex-1 items-start gap-1.5 pt-0.5">
+                <span
+                  className="w-4 shrink-0 pt-2 text-right text-[12px] font-medium tabular-nums text-[#9A8F88]"
+                  aria-hidden
+                >
+                  {i + 1}.
+                </span>
+                <textarea
+                  value={item}
+                  onChange={(e) => handleItemChange(i, e.target.value)}
+                  className={inputClass}
+                  rows={1}
+                  placeholder={
+                    i === 0 ? "Contoh: Sepatu" : `Barang ${i + 1}`
+                  }
+                />
+              </div>
             </div>
           ))}
         </div>
 
-        {/* PHOTO AREA */}
-        <div className="flex-1 flex flex-col min-h-0 mb-6">
-          <p className="text-[9px] uppercase tracking-[0.2em] text-[#9A8F88] mb-2">
-            Photo Produk
-          </p>
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            id="cameraInput"
-            className="hidden"
-            disabled={photoProcessing}
-            onChange={(e) => {
-              if (!e.target.files) return
-              handlePhoto(e.target.files[0])
-            }}
-          />
-
-          {!previewUrl ? (
-            <div className="relative w-full flex-1 min-h-[140px]">
-              <label
-                htmlFor="cameraInput"
-                className={`w-full h-full min-h-[140px] border border-dashed border-[#E0DED7] flex flex-col items-center justify-center rounded-sm bg-white/30 active:bg-[#F2F1ED] transition-colors ${photoProcessing ? "pointer-events-none opacity-60" : ""}`}
-              >
-                <Camera className="text-[#A1887F] mb-2" size={24} strokeWidth={1.5} />
-                <span className="text-[9px] text-[#A1887F] uppercase tracking-[0.3em] font-bold">
-                  Ambil Foto Paket
-                </span>
-              </label>
-              {photoProcessing && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center rounded-sm bg-[#FAF9F6]/80 backdrop-blur-[1px]">
-                  <span className="text-[10px] font-medium tracking-wide text-[#3E2723] animate-pulse">
-                    Memproses…
-                  </span>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="relative flex-1 min-h-0 group">
-              <img
-                src={previewUrl}
-                alt=""
-                className="w-full h-full object-cover rounded-sm border border-[#E0DED7] shadow-sm"
-              />
-              {photoProcessing && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center rounded-sm bg-[#FAF9F6]/75 backdrop-blur-[2px]">
-                  <span className="text-[10px] font-medium tracking-wide text-[#3E2723] animate-pulse">
-                    Memproses…
-                  </span>
-                </div>
-              )}
-              <label
-                htmlFor="cameraInput"
-                className={`absolute bottom-3 right-3 bg-white/90 backdrop-blur px-3 py-2 rounded-sm text-[8px] uppercase tracking-[0.2em] font-bold shadow-sm border border-[#E0DED7] active:scale-95 transition-transform ${photoProcessing ? "pointer-events-none opacity-50" : ""}`}
-              >
-                Ganti Foto
-              </label>
-            </div>
-          )}
-        </div>
-
-        {/* BALANCED ACTION BUTTONS */}
-        <div className="grid grid-cols-2 gap-3 mb-2">
-          
+        <div className="mt-auto space-y-3 pb-1 pt-2">
           <button
-            onClick={() => createHandover("save")}
+            type="button"
+            onClick={() => router.push("/handover/create")}
             disabled={saving || photoProcessing}
-            className="border border-[#E0DED7] text-[#3E2723] py-4 px-5 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] flex justify-between items-center active:bg-zinc-50 transition-all disabled:opacity-30"
+            className="w-full rounded-xl border border-transparent py-2 text-left text-[11px] text-[#A1887F] transition hover:text-[var(--primary-color)] disabled:opacity-40"
           >
-            <ChevronLeft size={14} />
-            <span>Simpan Draft</span>
+            ← Kembali ke detail pengiriman
           </button>
 
-          <button
-            onClick={() => createHandover("handover")}
-            disabled={saving || photoProcessing}
-            className="bg-[#3E2723] text-[#FAF9F6] py-4 px-5 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] flex justify-between items-center shadow-md active:scale-[0.97] transition-all disabled:opacity-50"
-          >
-            <span>Tanda Terima</span>
-            <ChevronRight size={14} />
-          </button>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => createHandover("save")}
+              disabled={saving || photoProcessing}
+              className="flex items-center justify-between rounded-2xl border-2 border-[var(--primary-color)]/25 bg-white px-4 py-3.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--primary-color)] transition active:scale-[0.98] disabled:opacity-35"
+            >
+              <ChevronLeft size={14} />
+              <span className="leading-tight">Simpan Draft</span>
+            </button>
 
+            <button
+              type="button"
+              onClick={() => createHandover("handover")}
+              disabled={saving || photoProcessing}
+              className="flex items-center justify-between rounded-2xl bg-[var(--primary-color)] px-4 py-3.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#FAF9F6] shadow-sm transition active:scale-[0.98] disabled:opacity-45"
+            >
+              <span>Tanda Terima</span>
+              <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
-
       </main>
     </div>
   )

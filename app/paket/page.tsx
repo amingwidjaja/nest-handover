@@ -123,7 +123,7 @@ export default function HomePage() {
         </p>
 
         <Link
-          href="/handover/create"
+          href="/handover/select"
           className="block w-full max-w-xs mx-auto py-4 bg-[#3E2723] text-[#FAF9F6] rounded-sm font-medium"
         >
           Buat Tanda Terima Digital
