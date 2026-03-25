@@ -47,19 +47,22 @@ export function LoginForm() {
           <img 
             src="/logo-nest-paket.png" 
             alt="NEST76 Paket Logo" 
-            className="mx-auto w-40 drop-shadow-sm" // Ukuran w-40 biar tegas
+            className="mx-auto w-40 drop-shadow-sm"
           />
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tighter uppercase">NEST76 Paket</h1>
-            <p className="text-[10px] font-bold text-[#A1887F] tracking-[0.3em] uppercase opacity-70">Studio Edition</p>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tighter uppercase text-[#3E2723]">
+              NEST76 Paket
+            </h1>
+            <p className="text-[10px] font-bold text-[#A1887F] tracking-[0.2em] uppercase opacity-80 max-w-[280px] mx-auto leading-relaxed">
+              Tanda Terima Digital Gratis untuk Indonesia
+            </p>
           </div>
-        </div>
+        </div> {/* <-- Tadi yang ini ketinggalan penutupnya, Bro! */}
 
         {/* SECTION 2: Deskripsi Produk (The "What is") */}
         <div className="bg-[#EFEBE9]/40 p-6 border-l-[3px] border-[#3E2723] space-y-3">
-          <h2 className="text-[11px] font-black uppercase tracking-widest text-[#3E2723]">Info Protokol</h2>
           <p className="text-sm text-[#5D4037] leading-relaxed">
-            <strong>NEST76 Paket</strong> adalah sistem serah terima digital profesional. Memastikan setiap paket tervalidasi secara <strong>GPS-Lock</strong> dan terkirim otomatis via <strong>WhatsApp</strong> tanpa resi kertas.
+            <strong>NEST76 Paket</strong> adalah sistem serah terima digital profesional. Memastikan setiap paket tervalidasi secara <strong>GPS-Lock</strong> dan terkirim otomatis via <strong>WhatsApp</strong> tanpa resi kertas. Sistem ini dirancang untuk segala kebutuhan, mulai dari dokumentasi <strong>barang pribadi</strong> (titipan/kado), hingga <strong>operasional UMKM</strong> (kirim Laundry/Air Galon).
           </p>
         </div>
 
@@ -115,9 +118,8 @@ export function LoginForm() {
         </div>
 
         {/* Branding Footer */}
-        <p className="text-[9px] text-center text-[#D7CCC8] font-mono tracking-widest uppercase">
+        <p className="text-[9px] text-center text-[#3E2723] font-mono tracking-[0.2em] uppercase font-bold opacity-60 pt-6">
           © 2026 NEST76 STUDIO • Build with Passion and Integrity
-
         </p>
       </div>
     </div>
