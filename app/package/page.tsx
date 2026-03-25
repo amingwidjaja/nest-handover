@@ -109,7 +109,12 @@ export default function PackagePage() {
 
     const sender_name = localStorage.getItem("draft_sender_name") || ""
     const receiver_target_name = localStorage.getItem("draft_receiver_name") || ""
-    const receiver_target_phone = localStorage.getItem("draft_receiver_contact") || ""
+    const receiver_whatsapp =
+      localStorage.getItem("draft_receiver_whatsapp") ||
+      localStorage.getItem("draft_receiver_contact") ||
+      ""
+    const receiver_email = localStorage.getItem("draft_receiver_email") || ""
+    const receiver_target_phone = receiver_whatsapp
 
     if (!sender_name || !receiver_target_name) {
       alert("Data belum lengkap. Mulai dari awal.")
@@ -133,7 +138,9 @@ export default function PackagePage() {
       sender_name,
       receiver_target_name,
       receiver_target_phone,
-      receiver_target_email: "",
+      receiver_whatsapp,
+      receiver_email,
+      receiver_target_email: receiver_email,
       items: itemRows
     }
 
@@ -223,6 +230,8 @@ export default function PackagePage() {
       localStorage.removeItem("draft_sender_contact")
       localStorage.removeItem("draft_receiver_name")
       localStorage.removeItem("draft_receiver_contact")
+      localStorage.removeItem("draft_receiver_whatsapp")
+      localStorage.removeItem("draft_receiver_email")
       localStorage.removeItem("draft_destination_address")
       localStorage.removeItem("draft_destination_lat")
       localStorage.removeItem("draft_destination_lng")

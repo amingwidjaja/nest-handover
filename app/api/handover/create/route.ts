@@ -28,6 +28,8 @@ export async function POST(req: Request) {
       receiver_target_name,
       receiver_target_phone,
       receiver_target_email,
+      receiver_whatsapp,
+      receiver_email,
       destination_lat,
       destination_lng,
       destination_address,
@@ -36,6 +38,9 @@ export async function POST(req: Request) {
       sender_address_info,
       items
     } = body
+
+    const wa = String(receiver_whatsapp ?? receiver_target_phone ?? "").trim()
+    const em = String(receiver_email ?? receiver_target_email ?? "").trim()
 
     const admin = getSupabaseAdmin()
 
@@ -102,10 +107,11 @@ export async function POST(req: Request) {
       serial_number,
       sender_name: sender_name ?? "",
       receiver_target_name: receiver_target_name ?? "",
-      receiver_target_phone: receiver_target_phone ?? "",
-      receiver_target_email: receiver_target_email ?? "",
-      receiver_contact: receiver_target_phone ?? "",
-      receiver_email: receiver_target_email ?? "",
+      receiver_target_phone: wa || String(receiver_target_phone ?? ""),
+      receiver_target_email: em || String(receiver_target_email ?? ""),
+      receiver_whatsapp: wa,
+      receiver_contact: wa,
+      receiver_email: em,
       sender_address_info:
         sender_address_info && typeof sender_address_info === "object"
           ? sender_address_info

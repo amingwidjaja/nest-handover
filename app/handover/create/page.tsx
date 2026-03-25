@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
@@ -10,6 +10,14 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 import { parseNominatimReverse } from "@/lib/nominatim-parse"
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+
+const PRIMARY = "#3E2723"
+
+const inputClass =
+  "w-full rounded-2xl border border-[#E0DED7] bg-white text-sm text-[var(--primary-color)] placeholder:text-[#9A8F88] px-4 py-3.5 outline-none transition focus:border-[var(--primary-color)] focus:ring-2 focus:ring-[var(--primary-color)]/20"
+
+const labelClass =
+  "block text-xs font-semibold uppercase tracking-wider text-[var(--primary-color)] mb-2"
 
 function useDebouncedCallback<T extends unknown[]>(
   fn: (...args: T) => void,
@@ -32,32 +40,25 @@ export default function HandoverCreatePage() {
   const [senderContact, setSenderContact] = useState("")
 
   const [receiverName, setReceiverName] = useState("")
-  const [receiverContact, setReceiverContact] = useState("")
+  const [receiverWhatsapp, setReceiverWhatsapp] = useState("")
+  const [receiverEmail, setReceiverEmail] = useState("")
 
   const [destinationAddress, setDestinationAddress] = useState("")
   const [destinationCity, setDestinationCity] = useState("")
   const [destinationPostalCode, setDestinationPostalCode] = useState("")
-  /** Set only when user picks a row from the Mapbox dropdown (patokan). */
   const [mapboxPick, setMapboxPick] = useState<{ lat: number; lng: number } | null>(
     null
   )
 
   const [suggestions, setSuggestions] = useState<MapboxGeocodeFeature[]>([])
   const [geocodeLoading, setGeocodeLoading] = useState(false)
-  
-  // FIX: Deklarasi state yang hilang
-  const [locationRefreshing, setLocationRefreshing] = useState(false)
-  
-  /** idle → gps → reverse */
   const [locationPhase, setLocationPhase] = useState<
     "idle" | "gps" | "reverse"
   >("idle")
 
   const [toast, setToast] = useState("")
-  const [limitHint, setLimitHint] = useState<string | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
 
-  /** Live GPS — used for Mapbox proximity, fallback lat/lng when no patokan selected. */
   const [userProximity, setUserProximity] = useState<{
     lng: number
     lat: number
@@ -99,20 +100,16 @@ export default function HandoverCreatePage() {
       const draftPost = localStorage.getItem("draft_destination_postcode")
       if (draftCity) setDestinationCity(draftCity)
       if (draftPost) setDestinationPostalCode(draftPost)
+
+      const wa =
+        localStorage.getItem("draft_receiver_whatsapp") ||
+        localStorage.getItem("draft_receiver_contact") ||
+        ""
+      const em = localStorage.getItem("draft_receiver_email") || ""
+      if (wa) setReceiverWhatsapp(wa)
+      if (em) setReceiverEmail(em)
     }
     hydrate()
-  }, [])
-
-  useEffect(() => {
-    async function loadLimits() {
-      const res = await fetch("/api/handover/limits")
-      if (!res.ok) return
-      const j = await res.json()
-      if (j.authenticated && typeof j.remaining === "number" && j.limit != null) {
-        setLimitHint(`${j.remaining}/${j.limit} paket aktif tersisa`)
-      }
-    }
-    loadLimits()
   }, [])
 
   useEffect(() => {
@@ -143,24 +140,27 @@ export default function HandoverCreatePage() {
     return () => document.removeEventListener("mousedown", onDocDown)
   }, [])
 
-  const runGeocode = useCallback(async (query: string) => {
-    if (!MAPBOX_TOKEN || query.trim().length < 2) {
-      setSuggestions([])
-      return
-    }
-    setGeocodeLoading(true)
-    try {
-      const features = await fetchForwardGeocodeSuggestions(query, MAPBOX_TOKEN, {
-        limit: 5,
-        proximity: userProximity ?? undefined
-      })
-      setSuggestions(features)
-    } catch {
-      setSuggestions([])
-    } finally {
-      setGeocodeLoading(false)
-    }
-  }, [userProximity])
+  const runGeocode = useCallback(
+    async (query: string) => {
+      if (!MAPBOX_TOKEN || query.trim().length < 2) {
+        setSuggestions([])
+        return
+      }
+      setGeocodeLoading(true)
+      try {
+        const features = await fetchForwardGeocodeSuggestions(query, MAPBOX_TOKEN, {
+          limit: 5,
+          proximity: userProximity ?? undefined
+        })
+        setSuggestions(features)
+      } catch {
+        setSuggestions([])
+      } finally {
+        setGeocodeLoading(false)
+      }
+    },
+    [userProximity]
+  )
 
   const debouncedGeocode = useDebouncedCallback(runGeocode, 320)
 
@@ -203,9 +203,7 @@ export default function HandoverCreatePage() {
       showToast("GPS tidak didukung di perangkat ini")
       return
     }
-    
-    // FIX: Sinkronisasi state loading
-    setLocationRefreshing(true)
+
     setLocationPhase("gps")
 
     navigator.geolocation.getCurrentPosition(
@@ -214,7 +212,7 @@ export default function HandoverCreatePage() {
         const lng = pos.coords.longitude
         setUserProximity({ lng, lat })
         setMapboxPick({ lat, lng })
-        
+
         setLocationPhase("reverse")
 
         try {
@@ -250,12 +248,10 @@ export default function HandoverCreatePage() {
             "Koordinat tersimpan; isi alamat/kota/kode pos jika perlu"
           )
         } finally {
-          setLocationRefreshing(false)
           setLocationPhase("idle")
         }
       },
       () => {
-        setLocationRefreshing(false)
         setLocationPhase("idle")
         showToast("Tidak bisa mengambil lokasi. Izinkan akses lokasi di browser.")
       },
@@ -273,8 +269,8 @@ export default function HandoverCreatePage() {
       return
     }
 
-    if (!receiverContact.trim()) {
-      showToast("Nomor WA atau email penerima paket")
+    if (!receiverWhatsapp.trim()) {
+      showToast("Isi nomor WhatsApp penerima paket")
       return
     }
 
@@ -332,10 +328,15 @@ export default function HandoverCreatePage() {
         ? localStorage.getItem("user_name") || "Sender"
         : senderName
 
+    const wa = receiverWhatsapp.trim()
+    const em = receiverEmail.trim()
+
     localStorage.setItem("draft_sender_name", finalSender)
     localStorage.setItem("draft_sender_contact", senderContact)
     localStorage.setItem("draft_receiver_name", receiverName)
-    localStorage.setItem("draft_receiver_contact", receiverContact)
+    localStorage.setItem("draft_receiver_whatsapp", wa)
+    localStorage.setItem("draft_receiver_email", em)
+    localStorage.setItem("draft_receiver_contact", wa)
     localStorage.setItem("draft_destination_address", addr)
     localStorage.setItem("draft_destination_lat", String(destLat))
     localStorage.setItem("draft_destination_lng", String(destLng))
@@ -346,107 +347,146 @@ export default function HandoverCreatePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
-      <main className="p-8 pt-16 space-y-12">
-        <section>
-          <p className="text-sm font-medium mb-6">
+    <div
+      className="min-h-screen bg-[#FAF9F6] text-[var(--primary-color)] flex flex-col"
+      style={{ ["--primary-color" as string]: PRIMARY }}
+    >
+      <main className="mx-auto w-full max-w-lg flex-1 px-6 pb-8 pt-14 space-y-12 sm:px-8">
+        <section className="space-y-6">
+          <p className="text-base font-medium text-[var(--primary-color)]">
             Siapa yang kirim paket ini?
           </p>
 
-          <div className="flex gap-8 mb-8">
+          <div className="flex flex-wrap gap-10">
             <button
               type="button"
               onClick={() => setSenderType("self")}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2.5 text-sm"
             >
-              <div className="w-4 h-4 border border-[#3E2723] rounded-full flex items-center justify-center">
+              <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-[var(--primary-color)]">
                 {senderType === "self" && (
-                  <div className="w-2 h-2 bg-[#3E2723] rounded-full" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-[var(--primary-color)]" />
                 )}
               </div>
-              <span className="text-sm">Saya</span>
+              <span>Saya</span>
             </button>
 
             <button
               type="button"
               onClick={() => setSenderType("other")}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2.5 text-sm"
             >
-              <div className="w-4 h-4 border border-[#3E2723] rounded-full flex items-center justify-center">
+              <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-[var(--primary-color)]">
                 {senderType === "other" && (
-                  <div className="w-2 h-2 bg-[#3E2723] rounded-full" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-[var(--primary-color)]" />
                 )}
               </div>
-              <span className="text-sm">Orang lain</span>
+              <span>Orang lain</span>
             </button>
           </div>
 
           {senderType === "other" && (
-            <div className="space-y-4 mb-8">
-              <input
-                className="line-input"
-                placeholder="Tulis nama pengirim paket"
-                value={senderName}
-                onChange={(e) => setSenderName(e.target.value)}
-              />
-              <input
-                className="line-input"
-                placeholder="Nomor WA atau email pengirim paket"
-                value={senderContact}
-                onChange={(e) => setSenderContact(e.target.value)}
-              />
+            <div className="space-y-5 pt-2">
+              <div>
+                <label className={labelClass}>Nama pengirim</label>
+                <input
+                  className={inputClass}
+                  placeholder="Tulis nama pengirim paket"
+                  value={senderName}
+                  onChange={(e) => setSenderName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Kontak pengirim</label>
+                <input
+                  className={inputClass}
+                  placeholder="Nomor WA atau email pengirim paket"
+                  value={senderContact}
+                  onChange={(e) => setSenderContact(e.target.value)}
+                />
+              </div>
             </div>
           )}
         </section>
 
-        <section>
-          <p className="text-sm font-medium mb-6">
+        <section className="space-y-6">
+          <p className="text-base font-medium text-[var(--primary-color)]">
             Paket ini untuk siapa?
           </p>
 
-          <div className="space-y-4">
-            <input
-              className="line-input"
-              placeholder="Tulis nama penerima paket"
-              value={receiverName}
-              onChange={(e) => setReceiverName(e.target.value)}
-            />
-            <input
-              className="line-input"
-              placeholder="Nomor WA atau email penerima paket"
-              value={receiverContact}
-              onChange={(e) => setReceiverContact(e.target.value)}
-            />
+          <div className="space-y-6">
+            <div>
+              <label className={labelClass}>Nama penerima</label>
+              <input
+                className={inputClass}
+                placeholder="Tulis nama penerima paket"
+                value={receiverName}
+                onChange={(e) => setReceiverName(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>WhatsApp penerima</label>
+              <input
+                className={inputClass}
+                placeholder="Contoh: 62812xxxxxxxx"
+                inputMode="tel"
+                autoComplete="tel"
+                value={receiverWhatsapp}
+                onChange={(e) => setReceiverWhatsapp(e.target.value)}
+              />
+              <p className="mt-2 text-[11px] leading-relaxed text-[#9A8F88]">
+                Nomor ini akan digunakan untuk mengirimkan notifikasi status
+                pengiriman secara otomatis melalui sistem.
+              </p>
+            </div>
+
+            <div>
+              <label className={labelClass}>Email penerima</label>
+              <input
+                className={inputClass}
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="nama@email.com"
+                value={receiverEmail}
+                onChange={(e) => setReceiverEmail(e.target.value)}
+              />
+              <p className="mt-2 text-[11px] leading-relaxed text-[#9A8F88]">
+                Opsional. Digunakan untuk pengiriman salinan tanda terima digital
+                (PDF).
+              </p>
+            </div>
           </div>
         </section>
 
-        <section>
-          <p className="text-sm font-medium mb-2">
-            Alamat Tujuan
+        <section className="space-y-5">
+          <p className="text-base font-medium text-[var(--primary-color)]">
+            Alamat tujuan
           </p>
-          {limitHint && (
-            <p className="text-[10px] text-[#A1887F] mb-2">{limitHint}</p>
-          )}
-          <p className="text-[11px] text-[#A1887F] leading-relaxed mb-4">
-            Ketik alamat lengkap jika perlu. Patokan dari peta (opsional) membantu nama tempat.
-            Koordinat tujuan memakai patokan jika Anda memilihnya; jika tidak, dipakai lokasi GPS Anda
-            saat ini.
+          <p className="text-[12px] leading-relaxed text-[#9A8F88]">
+            Ketik alamat lengkap jika perlu. Patokan dari peta (opsional) membantu
+            nama tempat. Koordinat tujuan memakai patokan jika Anda memilihnya;
+            jika tidak, dipakai lokasi GPS Anda saat ini.
           </p>
 
-          <div ref={wrapRef} className="relative space-y-2">
-            <input
-              className="line-input w-full"
-              placeholder="Alamat tujuan (boleh diketik bebas)"
-              autoComplete="off"
-              value={destinationAddress}
-              onChange={(e) => onDestinationInputChange(e.target.value)}
-            />
+          <div ref={wrapRef} className="relative space-y-4">
+            <div>
+              <label className={labelClass}>Alamat lengkap</label>
+              <input
+                className={inputClass}
+                placeholder="Alamat tujuan (boleh diketik bebas)"
+                autoComplete="off"
+                value={destinationAddress}
+                onChange={(e) => onDestinationInputChange(e.target.value)}
+              />
+            </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
               <button
                 type="button"
                 onClick={useCurrentLocation}
-                disabled={locationRefreshing}
-                className="text-[#3E2723] underline underline-offset-2 disabled:opacity-50"
+                disabled={locationPhase !== "idle"}
+                className="font-medium text-[var(--primary-color)] underline underline-offset-2 disabled:opacity-50"
               >
                 {locationPhase === "gps"
                   ? "Mengambil lokasi…"
@@ -455,9 +495,7 @@ export default function HandoverCreatePage() {
                     : "Gunakan lokasi saat ini"}
               </button>
               {userProximity && (
-                <span className="text-[#A1887F]">
-                  GPS siap
-                </span>
+                <span className="text-[#A1887F]">GPS siap</span>
               )}
             </div>
             {(mapboxPick || userProximity) && (
@@ -471,16 +509,16 @@ export default function HandoverCreatePage() {
               <span className="text-[10px] opacity-50">Mencari patokan…</span>
             )}
             {MAPBOX_TOKEN && suggestions.length > 0 && (
-              <div className="mt-2 space-y-1">
+              <div className="space-y-1">
                 <p className="text-[10px] font-medium uppercase tracking-wider text-[#A1887F]">
                   Patokan / POI
                 </p>
-                <ul className="max-h-48 overflow-auto rounded border border-[#E0DED7] bg-white text-sm shadow">
+                <ul className="max-h-48 overflow-auto rounded-2xl border border-[#E0DED7] bg-white text-sm shadow-sm">
                   {suggestions.map((f) => (
                     <li key={f.id}>
                       <button
                         type="button"
-                        className="w-full text-left px-3 py-2 hover:bg-[#F5F4F0]"
+                        className="w-full px-4 py-3 text-left hover:bg-[#F5F4F0]"
                         onClick={() => selectSuggestion(f)}
                       >
                         {f.place_name}
@@ -491,13 +529,11 @@ export default function HandoverCreatePage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div className="grid grid-cols-1 gap-5 pt-2 sm:grid-cols-2">
               <div>
-                <label className="block text-[10px] font-medium uppercase tracking-wider text-[#A1887F] mb-1">
-                  Kota (opsional)
-                </label>
+                <label className={labelClass}>Kota (opsional)</label>
                 <input
-                  className="line-input w-full"
+                  className={inputClass}
                   placeholder="Kota"
                   autoComplete="off"
                   value={destinationCity}
@@ -505,11 +541,9 @@ export default function HandoverCreatePage() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-medium uppercase tracking-wider text-[#A1887F] mb-1">
-                  Kode pos (opsional)
-                </label>
+                <label className={labelClass}>Kode pos (opsional)</label>
                 <input
-                  className="line-input w-full"
+                  className={inputClass}
                   placeholder="Kode pos"
                   autoComplete="off"
                   inputMode="numeric"
@@ -520,20 +554,29 @@ export default function HandoverCreatePage() {
             </div>
           </div>
         </section>
+
+        <p className="text-center text-[10px] leading-relaxed text-[#9A8F88]">
+          © 2026 NEST76 STUDIO • Infrastruktur digital yang aman dan terverifikasi.
+          Data kontak Anda terenkripsi dalam ekosistem kami.
+        </p>
       </main>
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3E2723] text-white text-sm px-6 py-3 rounded-full shadow-lg z-30">
+        <div className="fixed bottom-24 left-1/2 z-30 -translate-x-1/2 rounded-full bg-[var(--primary-color)] px-6 py-3 text-sm text-[#FAF9F6] shadow-lg sm:bottom-8">
           {toast}
         </div>
       )}
 
-      <div className="flex justify-between px-8 pb-8 text-sm">
-        <Link href="/" className="opacity-60">
+      <div className="flex justify-between border-t border-[#ECE7E3] bg-[#FAF9F6]/95 px-6 py-6 text-sm backdrop-blur-sm sm:px-8">
+        <Link href="/" className="text-[#9A8F88] transition hover:text-[var(--primary-color)]">
           ← Sebelumnya
         </Link>
 
-        <button type="button" onClick={submit} className="font-medium">
+        <button
+          type="button"
+          onClick={submit}
+          className="font-semibold text-[var(--primary-color)] transition active:scale-95"
+        >
           Lanjut →
         </button>
       </div>
