@@ -90,9 +90,12 @@ export default function ReceiptEvidencePage() {
                       Tidak ada foto
                     </div>
                   )}
-                  {item.description ? (
-                    <p className="border-t border-[#ECE7E3] px-3 py-2 text-sm">{String(item.description)}</p>
-                  ) : null}
+                  {/* Pakai optional chaining atau as any biar TypeScript diem pas build */}
+{(item as any).description ? (
+  <p className="border-t border-[#ECE7E3] px-3 py-2 text-sm">
+    {String((item as any).description)}
+  </p>
+) : null}
                 </div>
               )
             })}
