@@ -11,6 +11,7 @@ export default function DashboardPage(){
   const router = useRouter()
 
   const [handovers,setHandovers] = useState<any[]>([])
+  const [studioRole,setStudioRole] = useState<string | null>(null)
   const [selectMode,setSelectMode] = useState(false)
   const [selected,setSelected] = useState<string[]>([])
   const [highlightId,setHighlightId] = useState<string | null>(null)
@@ -349,15 +350,62 @@ export default function DashboardPage(){
 
       <header className="px-6 py-8 shrink-0 flex items-center justify-between">
 
-        <h1 className="text-xl font-medium tracking-tight">
-          Daftar Paket
-        </h1>
+        <div>
+          <p className="text-[9px] font-mono uppercase tracking-[0.25em] text-[#A1887F] mb-1">
+            NEST76 STUDIO
+          </p>
+          <h1 className="text-xl font-medium tracking-tight">
+            {studioRole === "STAFF" ? "Paket Anda" : "Daftar Paket"}
+          </h1>
+        </div>
 
         <Link href="/paket">
           <Home size={20} strokeWidth={1.5} className="opacity-60"/>
         </Link>
 
       </header>
+
+      {studioRole === "STAFF" && (
+        <div className="shrink-0 border-b border-[#E0DED7] bg-[#FAF9F6] px-6 py-4">
+          <Link
+            href="/handover/select"
+            className="text-sm font-medium text-[#3E2723] underline decoration-[#3E2723]/30 underline-offset-4"
+          >
+            Formulir baru — buat tanda terima
+          </Link>
+        </div>
+      )}
+
+      {studioRole === "OWNER" && (
+        <section className="shrink-0 border-b border-[#E0DED7] bg-[#F7F6F3]/90 px-6 py-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#A1887F] mb-3">
+            Aktivitas tim
+          </p>
+          <div className="max-h-36 space-y-2 overflow-y-auto">
+            {handovers
+              .filter((h) => h.staff_display_name)
+              .slice(0, 12)
+              .map((h) => (
+                <div
+                  key={`feed-${h.id}`}
+                  className="flex items-center justify-between gap-3 border-t border-[#E0DED7]/70 pt-2 first:border-t-0 first:pt-0"
+                >
+                  <span className="text-[11px] font-semibold text-[#5D4037]">
+                    {h.staff_display_name}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-right text-[10px] text-[#A1887F]">
+                    {h.receiver_target_name || "—"}
+                  </span>
+                </div>
+              ))}
+            {handovers.filter((h) => h.staff_display_name).length === 0 && (
+              <p className="text-[11px] italic text-[#A1887F]">
+                Belum ada aktivitas staf tercatat.
+              </p>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="flex flex-col flex-1 min-h-0 overflow-hidden border-b border-[#E0DED7]">
 

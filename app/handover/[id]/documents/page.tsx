@@ -114,7 +114,7 @@ export default function DocumentPage() {
           <div>
 
             <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
-              NEST Paket
+              NEST76 STUDIO
             </div>
 
             <h1 className="mt-1 text-2xl font-light tracking-tight">

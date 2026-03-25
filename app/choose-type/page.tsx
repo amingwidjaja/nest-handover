@@ -29,7 +29,7 @@ function ChooseTypeInner() {
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col">
       <main className="flex-1 px-6 py-12 max-w-lg mx-auto w-full flex flex-col">
         <p className="text-[10px] tracking-[0.35em] uppercase opacity-40 font-mono mb-4">
-          NEST · Tanda Terima Digital
+          NEST76 STUDIO · Tanda Terima Digital
         </p>
         <h1 className="text-2xl font-light mb-2">Pilih jenis akun</h1>
         <p className="text-sm text-[#8D6E63] mb-8 leading-relaxed">

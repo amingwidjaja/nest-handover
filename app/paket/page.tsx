@@ -47,9 +47,17 @@ export default function HomePage() {
       }
       const pr = await fetch("/api/profile")
       const pj = await pr.json()
-      const profile = pj.profile as { onboarded_at?: string | null } | null
+      const profile = pj.profile as {
+        onboarded_at?: string | null
+        user_type?: string
+        org_id?: string | null
+      } | null
       if (!profile || !profile.onboarded_at) {
         router.replace("/choose-type?redirect=/paket")
+        return
+      }
+      if (profile.user_type === "umkm" && !profile.org_id) {
+        router.replace("/studio?redirect=/paket")
         return
       }
       setAuthReady(true)
@@ -127,13 +135,13 @@ export default function HomePage() {
         <motion.div variants={item}>
           <img
             src="/logo-nest-paket.png"
-            alt="NEST Paket"
+            alt="NEST76 STUDIO"
             className="mx-auto mt-20 w-44"
           />
         </motion.div>
 
         <motion.div variants={item} className="mt-2 text-base tracking-widest opacity-60">
-          NEST PAKET
+          NEST76 STUDIO
         </motion.div>
 
         <motion.h1

@@ -80,7 +80,7 @@ export default function HandoverSelectModePage() {
             className="text-[10px] font-medium uppercase tracking-[0.32em]"
             style={{ color: PRIMARY }}
           >
-            NEST Paket
+            NEST76 STUDIO
           </p>
           <h1
             className="text-[1.65rem] font-light leading-tight tracking-tight sm:text-3xl"

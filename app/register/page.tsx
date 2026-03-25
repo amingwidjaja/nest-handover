@@ -492,7 +492,7 @@ function RegisterInner() {
       <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16 sm:px-8">
         <div className="mb-8 space-y-2 text-center">
           <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-[#9A8F88]">
-            NEST · Pendaftaran
+            NEST76 STUDIO · Pendaftaran
           </p>
           <h1 className="text-2xl font-light tracking-tight">Buat akun</h1>
           <p className="text-[12px] leading-relaxed text-[#6D5D54]">

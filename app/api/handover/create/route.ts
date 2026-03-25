@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin"
 import { HANDOVER_ACTIVE_LIMITS } from "@/lib/handover-limits"
 import {
   normalizeIndonesianPhoneTo628,
-  sendNESTNotification
+  sendNest76StudioHandoff
 } from "@/lib/whatsapp"
 
 function generateToken() {
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
 
     const { data: profile } = await admin
       .from("profiles")
-      .select("user_type")
+      .select("user_type, org_id, role, company_name, display_name")
       .eq("id", user.id)
       .maybeSingle()
 
@@ -71,11 +71,24 @@ export async function POST(req: Request) {
       profile?.user_type === "umkm" ? "umkm" : ("personal" as const)
     const limit = HANDOVER_ACTIVE_LIMITS[userType]
 
-    const { count: activeCount, error: countErr } = await admin
+    let countQuery = admin
       .from("handover")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
       .eq("record_status", "active")
+
+    if (profile?.org_id) {
+      if (profile.role === "OWNER") {
+        countQuery = countQuery.eq("org_id", profile.org_id)
+      } else {
+        countQuery = countQuery
+          .eq("org_id", profile.org_id)
+          .eq("staff_id", user.id)
+      }
+    } else {
+      countQuery = countQuery.eq("user_id", user.id)
+    }
+
+    const { count: activeCount, error: countErr } = await countQuery
 
     if (countErr) {
       return NextResponse.json(
@@ -120,6 +133,8 @@ export async function POST(req: Request) {
       share_token: token,
       status: "created",
       user_id: user.id,
+      staff_id: user.id,
+      org_id: profile?.org_id ?? null,
       record_status: "active",
       serial_number,
       sender_name: sender_name ?? "",
@@ -186,40 +201,53 @@ export async function POST(req: Request) {
     const waForNotify = String(wa ?? "").trim()
     if (waForNotify) {
       const base = publicAppBaseUrl()
-      const handoverLink = base
-        ? `${base}/handover/${data.id}`
-        : `/handover/${data.id}`
-      const firstDesc =
-        Array.isArray(items) &&
-        items[0] &&
-        typeof (items[0] as { description?: string }).description === "string"
-          ? String((items[0] as { description: string }).description).trim()
-          : ""
-      const packageLabel = firstDesc || "Paket"
-      const receiverLabel = String(receiver_target_name ?? "").trim() || "Penerima"
+      const proofLink = base ? `${base}/handover/${data.id}` : ""
 
-      try {
-        const waResult = await sendNESTNotification(
-          waForNotify,
-          receiverLabel,
-          packageLabel,
-          handoverLink
-        )
-        const logTo =
-          normalizeIndonesianPhoneTo628(waForNotify) ?? waForNotify
-        console.log(
-          `WA Protocol: Notification Sent to ${logTo} | Status: ${waResult.ok ? "Success" : "Fail"}`
-        )
-        if (!waResult.ok && waResult.error) {
-          console.warn("[whatsapp] sendNESTNotification:", waResult.error)
+      let organizationName = "NEST76 STUDIO"
+      if (profile?.org_id) {
+        const { data: orgRow } = await admin
+          .from("organizations")
+          .select("name")
+          .eq("id", profile.org_id)
+          .maybeSingle()
+        if (orgRow?.name && String(orgRow.name).trim()) {
+          organizationName = String(orgRow.name).trim()
         }
-      } catch (err) {
-        const logTo =
-          normalizeIndonesianPhoneTo628(waForNotify) ?? waForNotify
-        console.log(
-          `WA Protocol: Notification Sent to ${logTo} | Status: Fail`
+      } else if (profile?.user_type === "umkm") {
+        const cn = String(profile?.company_name ?? "").trim()
+        if (cn) organizationName = cn
+      } else {
+        const dn = String(profile?.display_name ?? "").trim()
+        if (dn) organizationName = dn
+      }
+
+      if (!proofLink) {
+        console.warn(
+          "[NEST76 STUDIO] WA skipped: configure NEXT_PUBLIC_APP_URL or VERCEL_URL for absolute proof links."
         )
-        console.warn("[whatsapp] sendNESTNotification threw:", err)
+      } else {
+        try {
+          const waResult = await sendNest76StudioHandoff({
+            to: waForNotify,
+            organizationName,
+            proofLink
+          })
+          const logTo =
+            normalizeIndonesianPhoneTo628(waForNotify) ?? waForNotify
+          console.log(
+            `[NEST76 STUDIO] WA Protocol: Notification Sent to ${logTo} | Status: ${waResult.ok ? "Success" : "Fail"}`
+          )
+          if (!waResult.ok && waResult.error) {
+            console.warn("[NEST76 STUDIO] whatsapp:", waResult.error)
+          }
+        } catch (err) {
+          const logTo =
+            normalizeIndonesianPhoneTo628(waForNotify) ?? waForNotify
+          console.log(
+            `[NEST76 STUDIO] WA Protocol: Notification Sent to ${logTo} | Status: Fail`
+          )
+          console.warn("[NEST76 STUDIO] whatsapp threw:", err)
+        }
       }
     }
 

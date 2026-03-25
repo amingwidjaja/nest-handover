@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NEST",
-  description: "NEST Ecosystem",
+  title: "NEST76 STUDIO",
+  description:
+    "NEST76 STUDIO — Tanda Terima Digital multi-pengguna untuk UMKM dan profesional.",
 };
 
 export default function RootLayout({

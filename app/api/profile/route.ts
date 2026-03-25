@@ -16,7 +16,7 @@ export async function GET() {
   const { data: profile, error } = await admin
     .from("profiles")
     .select(
-      "user_type, company_name, company_logo_url, display_name, company_address, onboarded_at"
+      "user_type, company_name, company_logo_url, display_name, company_address, onboarded_at, org_id, role"
     )
     .eq("id", user.id)
     .maybeSingle()
@@ -25,9 +25,27 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  let organization: {
+    id: string
+    name: string
+    logo_url: string | null
+    invite_code: string
+  } | null = null
+
+  if (profile?.org_id) {
+    const { data: org } = await admin
+      .from("organizations")
+      .select("id, name, logo_url, invite_code")
+      .eq("id", profile.org_id)
+      .maybeSingle()
+    if (org) organization = org
+  }
+
   return NextResponse.json({
     email: user.email,
-    profile: profile ?? null
+    profile: profile
+      ? { ...profile, organization }
+      : null
   })
 }
 

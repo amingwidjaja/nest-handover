@@ -1,9 +1,14 @@
 /**
- * Server-side WhatsApp (Meta Cloud API) utilities.
+ * Server-side WhatsApp (Meta Cloud API) utilities for NEST76 STUDIO.
  * Do not import this module from client components.
  */
 
 const GRAPH_VERSION = "v22.0"
+
+export type SendNestNotificationResult = {
+  ok: boolean
+  error?: string
+}
 
 /**
  * Normalizes Indonesian mobile input to digits-only international form: 628xxxxxxxxxx.
@@ -33,23 +38,22 @@ export function normalizeIndonesianPhoneTo628(input: string): string | null {
   return null
 }
 
-export type SendNestNotificationResult = {
-  ok: boolean
-  error?: string
-}
-
 /**
- * Sends a WhatsApp template message via Meta Graph API.
- * Uses the pre-approved `hello_world` template (en_US). Context fields are reserved for future NEST templates.
+ * Sends a branded NEST76 STUDIO handoff notification via WhatsApp template.
+ * Requires a Meta-approved template whose body matches:
+ * "Halo, Anda menerima paket dari {{1}} via NEST76 STUDIO. Lihat bukti: {{2}}"
+ * Configure WA_TEMPLATE_NAME and WA_TEMPLATE_LANG in the environment.
  */
-export async function sendNESTNotification(
-  to: string,
-  userName: string,
-  packageName: string,
-  link: string
-): Promise<SendNestNotificationResult> {
+export async function sendNest76StudioHandoff(params: {
+  to: string
+  organizationName: string
+  proofLink: string
+}): Promise<SendNestNotificationResult> {
   const token = process.env.WA_TOKEN
   const phoneNumberId = process.env.WA_PHONE_NUMBER_ID
+  const templateName =
+    process.env.WA_TEMPLATE_NAME?.trim() || "nest76_studio_handoff"
+  const templateLang = process.env.WA_TEMPLATE_LANG?.trim() || "id"
 
   if (!token || !phoneNumberId) {
     return {
@@ -58,28 +62,34 @@ export async function sendNESTNotification(
     }
   }
 
-  const normalized = normalizeIndonesianPhoneTo628(to)
+  const normalized = normalizeIndonesianPhoneTo628(params.to)
   if (!normalized) {
     return { ok: false, error: "Invalid phone number" }
   }
 
-  // Reserved for a future NEST-specific template (body parameters).
-  const _ctx = { userName, packageName, link }
-  if (process.env.NODE_ENV === "development") {
-    console.debug("[whatsapp] template context", _ctx)
-  }
+  const org =
+    params.organizationName.trim() || "Studio"
+  const link = params.proofLink.trim()
+  const bodyText = `Halo, Anda menerima paket dari ${org} via NEST76 STUDIO. Lihat bukti: ${link}`
 
   const url = `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/messages`
 
-  const body = {
+  const templatePayload = {
     messaging_product: "whatsapp" as const,
     to: normalized,
     type: "template" as const,
     template: {
-      name: "hello_world",
-      language: {
-        code: "en_US"
-      }
+      name: templateName,
+      language: { code: templateLang },
+      components: [
+        {
+          type: "body" as const,
+          parameters: [
+            { type: "text" as const, text: org },
+            { type: "text" as const, text: link }
+          ]
+        }
+      ]
     }
   }
 
@@ -90,22 +100,70 @@ export async function sendNESTNotification(
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(templatePayload)
     })
 
     const raw = await res.text()
-    if (!res.ok) {
-      return {
-        ok: false,
-        error: raw || `HTTP ${res.status}`
-      }
+    if (res.ok) {
+      return { ok: true }
     }
 
-    return { ok: true }
+    // Fallback: some deployments only have hello_world approved during rollout.
+    if (raw.includes("template") || res.status === 400 || res.status === 404) {
+      console.warn(
+        "[NEST76 STUDIO] WA template failed; retrying hello_world. Details:",
+        raw
+      )
+      const fallback = {
+        messaging_product: "whatsapp" as const,
+        to: normalized,
+        type: "template" as const,
+        template: {
+          name: "hello_world",
+          language: { code: "en_US" }
+        }
+      }
+      const res2 = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(fallback)
+      })
+      const raw2 = await res2.text()
+      if (!res2.ok) {
+        return { ok: false, error: raw2 || raw }
+      }
+      console.warn(
+        "[NEST76 STUDIO] WA sent hello_world fallback; branded copy not delivered:",
+        bodyText
+      )
+      return { ok: true }
+    }
+
+    return {
+      ok: false,
+      error: raw || `HTTP ${res.status}`
+    }
   } catch (e) {
     return {
       ok: false,
       error: e instanceof Error ? e.message : "network_error"
     }
   }
+}
+
+/** @deprecated Use sendNest76StudioHandoff */
+export async function sendNESTNotification(
+  to: string,
+  userName: string,
+  packageName: string,
+  link: string
+): Promise<SendNestNotificationResult> {
+  return sendNest76StudioHandoff({
+    to,
+    organizationName: userName || packageName || "NEST76 STUDIO",
+    proofLink: link
+  })
 }

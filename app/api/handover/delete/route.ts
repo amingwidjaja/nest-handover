@@ -28,14 +28,28 @@ export async function POST(req: Request) {
 
   const { data: rows, error: checkError } = await admin
     .from("handover")
-    .select("id, user_id, status")
+    .select("id, user_id, status, org_id, staff_id")
     .in("id", idList)
 
   if (checkError) {
     return NextResponse.json({ error: checkError.message }, { status: 500 })
   }
 
-  const mine = (rows ?? []).filter((r) => r.user_id === user.id)
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("org_id, role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  const mine = (rows ?? []).filter((r) => {
+    if (!profile?.org_id) {
+      return r.user_id === user.id
+    }
+    if (profile.role === "OWNER") {
+      return r.org_id === profile.org_id
+    }
+    return r.staff_id === user.id && r.org_id === profile.org_id
+  })
 
   if (mine.length === 0) {
     return NextResponse.json(
