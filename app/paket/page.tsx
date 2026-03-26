@@ -86,7 +86,7 @@ export default function PaketHomePage() {
 
       <motion.main 
         /* pt-16 pas setinggi header. pb-4 biar footer ga beneran 'nyium' pinggiran HP */
-        className="flex flex-1 flex-col px-6 pt-16 pb-4" 
+        className="flex flex-1 flex-col px-6 pt-2 pb-4" 
         variants={container}
         initial="hidden"
         animate="show"
@@ -147,22 +147,24 @@ export default function PaketHomePage() {
           </div>
         </div>
 
-        {/* BOTTOM SECTION: mt-auto maksa bagian ini ke paling bawah */}
-        <div className="mt-auto space-y-4"> 
+        {/* BOTTOM SECTION: mt-auto maksa nempel bawah */}
+        {/* KURANGIN JARAK: Ubah mt-auto jadi mt-12 kalau mau deket ke tombol, 
+            tapi biarin mt-auto kalau mau nempel dasar layar */}
+        <div className="mt-auto space-y-4 pt-4"> 
           <motion.div
             variants={item}
-            className="mx-auto w-full max-w-sm rounded-xl border border-[#3E2723]/5 bg-[#EFEBE9]/40 px-5 py-4"
+            className="mx-auto w-full max-w-sm rounded-xl border border-[#3E2723]/10 bg-[#EFEBE9]/60 px-5 py-4"
           >
             <div className="flex items-center justify-between gap-4">
               <div className="flex flex-col">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#5D4037]/60">Paket aktif</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-[#5D4037]/80">Paket aktif</span>
                 <span className="text-2xl font-black tabular-nums text-[#3E2723] leading-none mt-1">
                   {pending}
                 </span>
               </div>
-              <div className="h-10 w-px bg-[#3E2723]/10" />
+              <div className="h-10 w-px bg-[#3E2723]/20" />
               <div className="flex flex-col text-right">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#5D4037]/60">Terakhir update</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-[#5D4037]/80">Terakhir update</span>
                 <span className="text-xs font-bold text-[#3E2723] mt-1 uppercase tracking-tight">
                   {last ?? "—"}
                 </span>
@@ -170,7 +172,10 @@ export default function PaketHomePage() {
             </div>
           </motion.div>
 
-          <StudioFooter className="pb-0" /> {/* pb-0 karena parent sudah ada pb-4 */}
+          {/* FIX BENING: Kita paksa warnanya lebih solid di sini */}
+          <div className="opacity-80 brightness-50">
+            <StudioFooter />
+          </div>
         </div>
       </motion.main>
     </div>
