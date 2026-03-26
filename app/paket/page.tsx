@@ -5,7 +5,6 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
-import { NestPrimaryLink } from "@/components/nest/primary-button"
 import { PaketHubSkeleton } from "@/components/nest/paket-skeleton"
 import { LayoutDashboard, UserCircle, Plus } from "lucide-react"
 
@@ -20,15 +19,24 @@ const container = {
 }
 
 const item = {
-  hidden: { opacity: 0, y: 12 },
+  hidden: { opacity: 0, y: 14 },
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease }
+    transition: { duration: 0.45, ease }
   }
 }
 
-export default function HomePage() {
+const btn =
+  "transition-transform active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3E2723]/20"
+
+function firstName(displayName: string | null | undefined): string {
+  const t = displayName?.trim()
+  if (!t) return "User"
+  return t.split(/\s+/)[0] || "User"
+}
+
+export default function PaketHomePage() {
   const router = useRouter()
   const [pending, setPending] = useState(0)
   const [last, setLast] = useState<string | null>(null)
@@ -38,30 +46,46 @@ export default function HomePage() {
   useEffect(() => {
     async function gate() {
       const supabase = createBrowserSupabaseClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.replace("/login?redirect=/paket"); return; }
+      const {
+        data: { session }
+      } = await supabase.auth.getSession()
+
+      if (!session) {
+        router.replace("/login?redirect=/paket")
+        return
+      }
 
       const pr = await fetch("/api/profile")
       const pj = await pr.json()
       const profile = pj.profile
-      if (!profile || !profile.onboarded_at) { router.replace("/choose-type?redirect=/paket"); return; }
-      
-      setUserName(profile.display_name?.split(' ')[0] || "User")
+
+      if (!profile || !profile.onboarded_at) {
+        router.replace("/choose-type?redirect=/paket")
+        return
+      }
+
+      setUserName(firstName(profile.display_name))
       setAuthReady(true)
 
-      async function load() {
-        try {
-          const res = await fetch("/api/handover/list")
-          const data = await res.json()
-          if (!data.handovers) return
-          const pendingList = data.handovers.filter((h: any) => h.status !== "accepted")
-          setPending(pendingList.length)
-          if (data.handovers.length) {
-            setLast(new Date(data.handovers[0].created_at).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }))
-          }
-        } catch (e) { console.error(e) }
+      try {
+        const res = await fetch("/api/handover/list")
+        const data = await res.json()
+        if (!data.handovers) return
+        const pendingList = data.handovers.filter(
+          (h: { status: string }) => h.status !== "accepted"
+        )
+        setPending(pendingList.length)
+        if (data.handovers.length) {
+          setLast(
+            new Date(data.handovers[0].created_at).toLocaleDateString("id-ID", {
+              day: "2-digit",
+              month: "short"
+            })
+          )
+        }
+      } catch (e) {
+        console.error(e)
       }
-      load()
     }
     gate()
   }, [router])
@@ -69,89 +93,91 @@ export default function HomePage() {
   if (!authReady) return <PaketHubSkeleton />
 
   return (
-    <div className="relative flex h-screen w-full flex-col items-center justify-center overflow-hidden bg-[#FAF9F6] px-8 text-center text-[#3E2723]">
-      
-      {/* Background Subtle Branding - Pemanis Visual */}
-      <div className="absolute top-10 flex w-full items-center justify-center gap-3 opacity-20">
-        <span className="h-[1px] w-8 bg-[#3E2723]" />
-        <p className="text-[10px] font-bold uppercase tracking-[0.5em]">NEST76 PAKET</p>
-        <span className="h-[1px] w-8 bg-[#3E2723]" />
-      </div>
-
+    <div className="flex h-screen flex-col overflow-hidden bg-[#FAF9F6] text-[#3E2723]">
       <motion.div
-        className="flex w-full max-w-sm flex-col items-center"
+        className="flex min-h-0 flex-1 flex-col"
         variants={container}
         initial="hidden"
         animate="show"
       >
-        {/* 1. Profile Logo Image */}
-        <motion.div variants={item} className="mb-6">
-          <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-white p-2 shadow-sm border border-[#3E2723]/5">
-            <img 
-              src="/logo-nest-paket.png" 
-              alt="Logo NEST76" 
-              className="h-full w-full object-contain"
+        <div className="flex min-h-0 flex-1 flex-col justify-center px-6 py-5">
+        <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-6">
+          <motion.div variants={item} className="flex flex-col items-center gap-3">
+            <img
+              src="/logo-nest-paket.png"
+              alt="NEST76 Paket"
+              className="h-16 w-auto rounded-2xl shadow-lg shadow-[#3E2723]/10 ring-1 ring-[#3E2723]/5"
             />
-          </div>
-        </motion.div>
+            <h2 className="text-center text-xl font-bold tracking-tight text-[#3E2723]">
+              NEST76 PAKET
+            </h2>
+          </motion.div>
 
-        {/* 2. Greeting Section */}
-        <motion.div variants={item} className="mb-10">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#9A8F88]">Selamat Datang,</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">{userName}</h1>
-        </motion.div>
+          <motion.div variants={item} className="space-y-1 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[#9A8F88]">
+              Selamat datang,
+            </p>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Halo, {userName}
+            </h1>
+          </motion.div>
 
-        {/* 3. Main Action Buttons */}
-        <div className="w-full space-y-3.5">
-          <motion.div variants={item}>
-            <NestPrimaryLink
+          <motion.div variants={item} className="w-full space-y-3">
+            <Link
               href="/handover/select"
-              className="flex w-full items-center justify-center gap-3 rounded-sm bg-[#3E2723] py-5 font-bold uppercase tracking-widest text-[#FAF9F6] shadow-xl transition-all active:scale-[0.96]"
+              className={`${btn} flex w-full items-center justify-center gap-2 rounded-xl bg-[#3E2723] py-4 text-sm font-bold uppercase tracking-[0.28em] text-[#FAF9F6] shadow-lg shadow-[#3E2723]/25`}
             >
-              <Plus className="h-5 w-5" /> Buat Tanda Terima
-            </NestPrimaryLink>
-          </motion.div>
+              <Plus className="h-5 w-5 shrink-0" strokeWidth={2.5} />
+              Buat Tanda Terima
+            </Link>
 
-          <motion.div variants={item} className="grid grid-cols-2 gap-3.5">
-            <Link
-              href="/dashboard"
-              className="flex flex-col items-center justify-center gap-2 rounded-sm border border-[#3E2723]/10 bg-white py-4 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all hover:bg-[#F5F4F0] active:scale-[0.94]"
-            >
-              <LayoutDashboard className="h-5 w-5 opacity-80" />
-              Daftar Paket
-            </Link>
-            <Link
-              href="/profile"
-              className="flex flex-col items-center justify-center gap-2 rounded-sm border border-[#3E2723]/10 bg-white py-4 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all hover:bg-[#F5F4F0] active:scale-[0.94]"
-            >
-              <UserCircle className="h-5 w-5 opacity-80" />
-              Profil Saya
-            </Link>
+            <div className="grid grid-cols-2 gap-3">
+              <Link
+                href="/dashboard"
+                className={`${btn} flex flex-col items-center justify-center gap-2 rounded-xl border border-[#3E2723]/12 bg-white py-4 text-[10px] font-bold uppercase tracking-wider text-[#3E2723] shadow-sm`}
+              >
+                <LayoutDashboard className="h-5 w-5 text-[#3E2723]" strokeWidth={1.75} />
+                Daftar Paket
+              </Link>
+              <Link
+                href="/profile"
+                className={`${btn} flex flex-col items-center justify-center gap-2 rounded-xl border border-[#3E2723]/12 bg-white py-4 text-[10px] font-bold uppercase tracking-wider text-[#3E2723] shadow-sm`}
+              >
+                <UserCircle className="h-5 w-5 text-[#3E2723]" strokeWidth={1.75} />
+                Profil Saya
+              </Link>
+            </div>
           </motion.div>
         </div>
-
-        {/* 4. Stats & Signature (Tightened Spacing) */}
-        <div className="mt-12 w-full space-y-8">
-          {(pending > 0 || last) && (
-            <motion.div 
-              variants={item}
-              className="flex justify-around rounded-sm bg-[#3E2723]/5 py-3 text-[10px] font-bold uppercase tracking-[0.2em] opacity-70"
-            >
-              {pending > 0 && <div>{pending} PAKET AKTIF</div>}
-              {last && <div>TERAKHIR: {last}</div>}
-            </motion.div>
-          )}
-
-          <motion.div variants={item} className="space-y-1.5">
-            <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-[#3E2723]/40">
-              A PRODUCT OF NEST76 STUDIO
-            </p>
-            <p className="text-[8px] font-mono opacity-20 tracking-widest uppercase">
-              2026 Edition • Local Build
-            </p>
-          </motion.div>
         </div>
 
+        <footer className="shrink-0 space-y-3 px-6 pb-6 pt-2">
+          <motion.div
+            variants={item}
+            className="mx-auto w-full max-w-sm rounded-xl border border-[#3E2723]/8 bg-[#EFEBE9]/50 px-4 py-3 text-center"
+          >
+            <div className="flex items-center justify-around gap-4 text-[10px] font-semibold uppercase tracking-widest text-[#5D4037]">
+              <div>
+                <span className="block text-lg font-bold tabular-nums text-[#3E2723]">
+                  {pending}
+                </span>
+                <span className="opacity-80">Paket aktif</span>
+              </div>
+              <div className="h-8 w-px bg-[#3E2723]/10" aria-hidden />
+              <div className="min-w-0 flex-1">
+                <span className="block text-[9px] opacity-70">Terakhir update</span>
+                <span className="font-bold text-[#3E2723]">{last ?? "—"}</span>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.p
+            variants={item}
+            className="text-center text-[10px] font-medium tracking-[0.28em] text-[#3E2723]/40"
+          >
+            Product of NEST76 STUDIO
+          </motion.p>
+        </footer>
       </motion.div>
     </div>
   )
