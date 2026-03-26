@@ -54,7 +54,7 @@ export default function HomePage() {
         return
       }
       
-      setUserName(profile.display_name?.split(' ')[0] || "User") // Ambil nama depan aja biar akrab
+      setUserName(profile.display_name?.split(' ')[0] || "User")
       setAuthReady(true)
 
       async function load() {
@@ -79,75 +79,93 @@ export default function HomePage() {
   if (!authReady) return <PaketHubSkeleton />
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#FAF9F6] px-8 py-10 text-center text-[#3E2723]">
+    // ANTI-SCROLL: Gunakan h-screen overflow-hidden. safe area padding buat mobile notch.
+    <div className="flex h-screen flex-col items-center justify-center overflow-hidden bg-[#FAF9F6] px-8 text-center text-[#3E2723] pt-[safe] pb-[safe]">
       <motion.div
-        className="flex w-full max-w-sm flex-col items-center"
+        // Container utama dipaksa full height h-full dan justify-between buat misahin header, middle, footer
+        className="flex h-full w-full max-w-sm flex-col items-center justify-between"
         variants={container}
         initial="hidden"
         animate="show"
       >
-        {/* Logo Branding */}
-        <motion.div variants={item} className="mb-6">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#3E2723] text-[#FAF9F6] shadow-lg">
-             <Package2 className="h-7 w-7" />
-          </div>
+        
+        {/* 1. Header: Product Logo (User Request - Back in Business!) */}
+        <motion.div variants={item} className="flex w-full items-center justify-center gap-2 pt-8">
+            <span className="h-[1px] w-6 bg-[#3E2723]/30" />
+            <h2 className="text-[11px] font-black uppercase tracking-[0.5em] text-[#3E2723]">
+                NEST76 PAKET
+            </h2>
+            <span className="h-[1px] w-6 bg-[#3E2723]/30" />
         </motion.div>
 
-        {/* Header Title */}
-        <motion.div variants={item} className="mb-8">
-          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#9A8F88]">NEST76 PAKET</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Halo, {userName}</h1>
-        </motion.div>
+        {/* 2. Middle Content Stack (Centered) */}
+        <div className="flex flex-col items-center justify-center flex-grow -mt-10 w-full">
+            {/* Branding Icon */}
+            <motion.div variants={item} className="mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#3E2723] text-[#FAF9F6] shadow-md">
+                 <Package2 className="h-6 w-6" />
+              </div>
+            </motion.div>
 
-        {/* Action Stack */}
-        <div className="w-full space-y-4">
-          <motion.div variants={item}>
-            <NestPrimaryLink
-              href="/handover/select"
-              className="flex w-full items-center justify-center gap-3 rounded-sm bg-[#3E2723] py-5 font-bold uppercase tracking-widest text-[#FAF9F6] shadow-xl transition-all active:scale-[0.96]"
-            >
-              <Plus className="h-5 w-5" /> Buat Tanda Terima
-            </NestPrimaryLink>
-          </motion.div>
+            {/* Greeting */}
+            <motion.div variants={item} className="mb-10 space-y-1">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-[#9A8F88]">Selamat Datang,</p>
+              <h1 className="text-3xl font-semibold tracking-tight">Halo, {userName}</h1>
+            </motion.div>
 
-          <motion.div variants={item} className="grid grid-cols-2 gap-3">
-            <Link
-              href="/dashboard"
-              className="flex flex-col items-center justify-center gap-2 rounded-sm border-[1.5px] border-[#3E2723]/10 bg-white py-4 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all hover:bg-[#EFEBE9] active:scale-[0.94]"
-            >
-              <LayoutDashboard className="h-5 w-5 opacity-80" />
-              Daftar Paket
-            </Link>
-            <Link
-              href="/profile"
-              className="flex flex-col items-center justify-center gap-2 rounded-sm border-[1.5px] border-[#3E2723]/10 bg-white py-4 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all hover:bg-[#EFEBE9] active:scale-[0.94]"
-            >
-              <UserCircle className="h-5 w-5 opacity-80" />
-              Profil Saya
-            </Link>
-          </motion.div>
+            {/* Action Buttons (The Gaptek-Proof) */}
+            <div className="w-full max-w-xs space-y-3">
+              <motion.div variants={item}>
+                <NestPrimaryLink
+                  href="/handover/select"
+                  className="flex w-full items-center justify-center gap-2 rounded-sm bg-[#3E2723] py-4.5 font-bold uppercase tracking-widest text-[#FAF9F6] shadow-xl transition-all active:scale-[0.95]"
+                >
+                  <Plus className="h-5 w-5" /> Buat Tanda Terima
+                </NestPrimaryLink>
+              </motion.div>
+
+              <motion.div variants={item} className="grid grid-cols-2 gap-3">
+                <Link
+                  href="/dashboard"
+                  className="flex flex-col items-center justify-center gap-2 rounded-sm border border-[#3E2723]/10 bg-white py-4 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all hover:bg-[#EFEBE9] active:scale-[0.93]"
+                >
+                  <LayoutDashboard className="h-5 w-5 opacity-70" />
+                  Daftar Paket
+                </Link>
+                <Link
+                  href="/profile"
+                  className="flex flex-col items-center justify-center gap-2 rounded-sm border border-[#3E2723]/10 bg-white py-4 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all hover:bg-[#EFEBE9] active:scale-[0.93]"
+                >
+                  <UserCircle className="h-5 w-5 opacity-70" />
+                  Profil Saya
+                </Link>
+              </motion.div>
+            </div>
         </div>
 
-        {/* Status Mini-Card */}
-        {(pending > 0 || last) && (
-          <motion.div 
-            variants={item}
-            className="mt-10 w-full rounded-sm bg-[#3E2723]/5 p-4 text-[10px] uppercase tracking-widest opacity-80"
-          >
-            <div className="flex justify-around">
-              {pending > 0 && <div><span className="font-bold">{pending}</span> Paket Aktif</div>}
-              {last && <div>Terakhir: <span className="font-bold">{last}</span></div>}
-            </div>
-          </motion.div>
-        )}
+        {/* 3. Footer Content Stack (Stats & Signature) */}
+        <div className="w-full pb-8 flex flex-col items-center gap-6">
+            {/* Status Mini-Card */}
+            {(pending > 0 || last) && (
+              <motion.div
+                variants={item}
+                className="w-full rounded-sm bg-[#3E2723]/5 p-3 text-[10px] uppercase tracking-widest opacity-80"
+              >
+                <div className="flex justify-around">
+                  {pending > 0 && <div><span className="font-black text-xs">{pending}</span> PAKET AKTIF</div>}
+                  {last && <div>TERAKHIR: <span className="font-black text-xs">{last}</span></div>}
+                </div>
+              </motion.div>
+            )}
 
-        {/* Signature */}
-        <motion.div variants={item} className="mt-12 space-y-1">
-          <p className="text-[9px] font-bold uppercase tracking-[0.3em] opacity-40 italic">
-            Product of NEST76 STUDIO
-          </p>
-          <p className="text-[8px] font-mono opacity-25">VER 2.0.26</p>
-        </motion.div>
+            {/* Signature */}
+            <motion.div variants={item} className="space-y-0.5">
+              <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-[#3E2723]/50">
+                A PRODUCT OF NEST76 STUDIO
+              </p>
+              <p className="text-[8px] font-mono opacity-30">© 2026 EDITION</p>
+            </motion.div>
+        </div>
       </motion.div>
     </div>
   )
