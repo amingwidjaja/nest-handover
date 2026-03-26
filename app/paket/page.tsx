@@ -82,32 +82,32 @@ export default function PaketHomePage() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#FAF9F6] text-[#3E2723]">
-      <StudioHeader /> {/* Biar ga belang sama halaman lain */}
+      <StudioHeader />
 
       <motion.main 
-        /* 1. FIX MARGIN ATAS: pt-24 -> pt-8 (Header h-16 + gap dikit) */
-        /* 2. FIX MARGIN BAWAH: pb-8 -> pb-2 */
-        className="flex flex-1 flex-col px-6 pt-2 pb-2" 
+        /* pt-16 pas setinggi header. pb-4 biar footer ga beneran 'nyium' pinggiran HP */
+        className="flex flex-1 flex-col px-6 pt-16 pb-4" 
         variants={container}
         initial="hidden"
         animate="show"
       >
-        <div className="flex flex-1 flex-col items-center justify-center">
+        {/* AREA TENGAH: Ganti justify-center ke justify-start biar ga nendang footer */}
+        <div className="flex flex-1 flex-col items-center justify-start pt-8"> 
           <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-8">
+            
+            {/* LOGO GAHAR */}
             <motion.div variants={item} className="flex flex-col items-center gap-4">
-              <div className="relative">
-                <img
-                  src="/logo-nest-paket.png"
-                  alt="NEST76"
-                  /* 3. FIX LOGO: h-20 -> h-32 (Biar makin gahar & ga kekecilan) */
-                  className="h-42 w-auto rounded-lg grayscale brightness-90 contrast-125"
-                />
-              </div>
+              <img
+                src="/logo-nest-paket.png"
+                alt="NEST76"
+                className="h-36 w-auto rounded-lg grayscale brightness-90 contrast-125"
+              />
               <h2 className="text-center text-sm font-black tracking-[0.4em] text-[#3E2723] uppercase opacity-80">
                 Studio Archive
               </h2>
             </motion.div>
 
+            {/* GREETING */}
             <motion.div variants={item} className="space-y-1 text-center">
               <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[#9A8F88]">
                 Selamat datang,
@@ -117,6 +117,7 @@ export default function PaketHomePage() {
               </h1>
             </motion.div>
 
+            {/* BUTTONS */}
             <motion.div variants={item} className="w-full space-y-3">
               <Link
                 href="/handover/select"
@@ -146,8 +147,8 @@ export default function PaketHomePage() {
           </div>
         </div>
 
-        {/* BOTTOM SECTION - Stats & Footer dipaku di bawah */}
-        <div className="mt-auto space-y-6">
+        {/* BOTTOM SECTION: mt-auto maksa bagian ini ke paling bawah */}
+        <div className="mt-auto space-y-4"> 
           <motion.div
             variants={item}
             className="mx-auto w-full max-w-sm rounded-xl border border-[#3E2723]/5 bg-[#EFEBE9]/40 px-5 py-4"
@@ -169,7 +170,7 @@ export default function PaketHomePage() {
             </div>
           </motion.div>
 
-          <StudioFooter className="pb-2" />
+          <StudioFooter className="pb-0" /> {/* pb-0 karena parent sudah ada pb-4 */}
         </div>
       </motion.main>
     </div>
