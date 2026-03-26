@@ -17,7 +17,11 @@ function ChooseTypeInner() {
         localStorage.setItem("nest_onboarding_type", type)
         localStorage.setItem("nest_onboarding_redirect", redirect)
       } catch { /* ignore */ }
-      router.push(`/register?type=${type}&redirect=${encodeURIComponent(redirect)}`)
+      const path =
+        type === "umkm"
+          ? `/register/umkm?redirect=${encodeURIComponent(redirect)}`
+          : `/register?redirect=${encodeURIComponent(redirect)}`
+      router.push(path)
     },
     [redirect, router]
   )
@@ -40,10 +44,10 @@ function ChooseTypeInner() {
         <div className="space-y-4">
           {/* PERSONAL OPTION */}
           <button
-            type="button"
-            onClick={() => go("personal")}
-            className="group w-full text-left bg-white border border-[#D7CCC8]/50 p-6 hover:border-[#3E2723] transition-all shadow-sm relative overflow-hidden"
-          >
+  type="button"
+  onClick={() => go("personal")}
+  className="group w-full text-left bg-white border border-[#D7CCC8]/50 p-6 hover:border-[#3E2723] active:scale-[0.98] active:bg-[#FAF9F6] active:shadow-none transition-all shadow-sm relative overflow-hidden"
+>
             <div className="flex justify-between items-start mb-4">
               <div className="p-2 bg-[#FAF9F6] text-[#3E2723]">
                 <User className="w-6 h-6" strokeWidth={1.5} />
@@ -60,10 +64,10 @@ function ChooseTypeInner() {
 
           {/* UMKM OPTION */}
           <button
-            type="button"
-            onClick={() => go("umkm")}
-            className="group w-full text-left bg-white border border-[#D7CCC8]/50 p-6 hover:border-[#3E2723] transition-all shadow-sm relative overflow-hidden"
-          >
+  type="button"
+  onClick={() => go("umkm")}
+  className="group w-full text-left bg-white border border-[#D7CCC8]/50 p-6 hover:border-[#3E2723] active:scale-[0.98] active:bg-[#FAF9F6] active:shadow-none transition-all shadow-sm relative overflow-hidden"
+>
             <div className="flex justify-between items-start mb-4">
               <div className="p-2 bg-[#3E2723] text-white font-bold">
                 <Store className="w-6 h-6" strokeWidth={1.5} />
@@ -84,12 +88,12 @@ function ChooseTypeInner() {
   <div className="flex items-center gap-2">
     <span className="h-1.5 w-1.5 rounded-full bg-[#3E2723] animate-pulse" />
     <p className="text-[10px] font-bold uppercase tracking-widest text-[#3E2723]">
-      Panduan Protokol
+      Panduan Memilih
     </p>
   </div>
   
   <p className="text-[11px] text-[#5D4037] leading-relaxed">
-    Mode <strong className="text-[#3E2723]">Pribadi</strong> dirancang untuk kecepatan tanpa embel-embel bisnis. Mode <strong className="text-[#3E2723]">UMKM</strong> mengaktifkan fitur Branding (Nama Bisnis & Logo) serta batas paket aktif yang lebih besar.
+    Mode <strong className="text-[#3E2723]">Pribadi</strong> dirancang untuk kecepatan tanpa embel-embel bisnis. Mode <strong className="text-[#3E2723]">UMKM</strong> mengaktifkan fitur Branding (Nama Usaha & Logo) serta batas paket aktif yang lebih besar.
   </p>
   
   <p className="text-[11px] font-medium text-[#8D6E63] italic border-t border-[#D7CCC8]/50 pt-2">

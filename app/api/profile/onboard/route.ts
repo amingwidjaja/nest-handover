@@ -35,6 +35,7 @@ export async function POST(req: Request) {
     if (type === "umkm") {
       const company_name = String(form.get("company_name") ?? "").trim()
       const company_address = String(form.get("company_address") ?? "").trim()
+      const whatsapp = String(form.get("whatsapp") ?? "").trim()
       const file = form.get("logo")
       if (!company_name || !company_address) {
         return NextResponse.json(
@@ -68,18 +69,18 @@ export async function POST(req: Request) {
         company_logo_url = pub.publicUrl
       }
 
-      const { error } = await admin
-        .from("profiles")
-        .update({
-          user_type: "umkm",
-          company_name,
-          company_address,
-          company_logo_url,
-          display_name: null,
-          onboarded_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", user.id)
+      const update: Record<string, unknown> = {
+        user_type: "umkm",
+        company_name,
+        company_address,
+        company_logo_url,
+        display_name: null,
+        onboarded_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      if (whatsapp) update.whatsapp = whatsapp
+
+      const { error } = await admin.from("profiles").update(update).eq("id", user.id)
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 })
@@ -135,8 +136,38 @@ export async function POST(req: Request) {
   if (type === "personal") {
     const display_name =
       typeof body.display_name === "string" ? body.display_name.trim() : ""
+    const whatsapp =
+      typeof body.whatsapp === "string" ? body.whatsapp.trim() : ""
+    const address =
+      typeof body.address === "string" ? body.address.trim() : ""
+
+    const lat =
+      typeof body.latitude === "number"
+        ? body.latitude
+        : typeof body.latitude === "string"
+          ? Number(body.latitude)
+          : NaN
+    const lng =
+      typeof body.longitude === "number"
+        ? body.longitude
+        : typeof body.longitude === "string"
+          ? Number(body.longitude)
+          : NaN
+
     if (!display_name) {
       return NextResponse.json({ error: "Nama wajib diisi" }, { status: 400 })
+    }
+    if (!whatsapp) {
+      return NextResponse.json({ error: "Nomor WhatsApp wajib diisi" }, { status: 400 })
+    }
+    if (!address) {
+      return NextResponse.json({ error: "Alamat wajib diisi" }, { status: 400 })
+    }
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return NextResponse.json(
+        { error: "Koordinat GPS wajib — gunakan PIN LOKASI SEKARANG." },
+        { status: 400 }
+      )
     }
 
     const { error } = await admin
@@ -144,6 +175,10 @@ export async function POST(req: Request) {
       .update({
         user_type: "personal",
         display_name,
+        whatsapp,
+        address,
+        latitude: lat,
+        longitude: lng,
         onboarded_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
