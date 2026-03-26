@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 import { LoginForm } from "./login-form"
 
+/** Smart gateway: debounced profile email check → MASUK vs DAFTAR, then /paket or /choose-type. */
 export default function LoginPage() {
   return (
     <Suspense
