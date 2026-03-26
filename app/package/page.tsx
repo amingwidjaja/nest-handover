@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense, useEffect, useState, useRef } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Camera,
   Home,
@@ -17,26 +17,35 @@ import { readHandoverMode, HANDOVER_MODE_KEY } from "@/lib/handover-mode"
 import { compressPackagePhotoForUpload } from "@/lib/compress-package-photo"
 import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
 import { NestPrimaryButton } from "@/components/nest/primary-button"
+import type { HandoverCreateInitialData } from "@/lib/handover-editable-types"
 
 const PRIMARY = "#3E2723"
 
 const inputClass =
   "line-input min-h-[2.5rem] flex-1 w-full rounded-2xl border border-[#E0DED7] bg-white px-3 py-2 text-[14px] text-[var(--primary-color)] placeholder:text-[#9A8F88] outline-none transition focus:border-[var(--primary-color)] focus:ring-2 focus:ring-[var(--primary-color)]/15"
 
-export default function PackagePage() {
+function PackagePageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const handoverIdParam = searchParams.get("handover_id")
 
   useEffect(() => {
     if (typeof window === "undefined") return
+    if (handoverIdParam) return
     if (!readHandoverMode()) {
       router.replace("/handover/select")
     }
-  }, [router])
+  }, [router, handoverIdParam])
 
   const [items, setItems] = useState(["", "", "", ""])
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const previewUrlRef = useRef<string | null>(null)
+  const [editingHandoverId, setEditingHandoverId] = useState<string | null>(null)
+  const [editingSerial, setEditingSerial] = useState<string | null>(null)
+  const [existingFirstItemPhotoPath, setExistingFirstItemPhotoPath] = useState<
+    string | null
+  >(null)
   const [photoProcessing, setPhotoProcessing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [submitMode, setSubmitMode] = useState<"save" | "handover" | null>(
@@ -51,19 +60,80 @@ export default function PackagePage() {
 
   useEffect(() => {
     return () => {
-      if (previewUrlRef.current) {
+      if (previewUrlRef.current?.startsWith("blob:")) {
         URL.revokeObjectURL(previewUrlRef.current)
       }
     }
   }, [])
 
-  function clearPhoto() {
-    if (previewUrlRef.current) {
-      URL.revokeObjectURL(previewUrlRef.current)
-      previewUrlRef.current = null
+  useEffect(() => {
+    const id = handoverIdParam?.trim()
+    if (!id) {
+      setEditingHandoverId(null)
+      setEditingSerial(null)
+      setExistingFirstItemPhotoPath(null)
+      return
     }
+    let cancelled = false
+    setEditingHandoverId(id)
+    fetch(`/api/handover/editable?id=${encodeURIComponent(id)}`)
+      .then((r) => r.json())
+      .then((data: HandoverCreateInitialData & { error?: string }) => {
+        if (cancelled || data.error || !data.handoverId) return
+        try {
+          localStorage.setItem(HANDOVER_MODE_KEY, data.mode)
+          localStorage.setItem("draft_sender_name", data.senderName)
+          localStorage.setItem("draft_receiver_name", data.receiverName)
+          localStorage.setItem("draft_receiver_whatsapp", data.receiverWhatsapp)
+          localStorage.setItem("draft_receiver_contact", data.receiverWhatsapp)
+          localStorage.setItem("draft_receiver_email", data.receiverEmail)
+          localStorage.setItem("draft_destination_address", data.destinationAddress)
+          localStorage.setItem(
+            "draft_destination_lat",
+            data.destinationLat != null ? String(data.destinationLat) : ""
+          )
+          localStorage.setItem(
+            "draft_destination_lng",
+            data.destinationLng != null ? String(data.destinationLng) : ""
+          )
+          localStorage.setItem("draft_destination_city", data.destinationCity)
+          localStorage.setItem(
+            "draft_destination_postcode",
+            data.destinationPostalCode
+          )
+        } catch {
+          /* ignore */
+        }
+        setEditingSerial(data.serialNumber ?? null)
+        const descs = (data.items ?? []).map((i) => i.description)
+        const padded = [...descs]
+        while (padded.length < 4) padded.push("")
+        setItems(padded.slice(0, 4))
+        const firstPath = data.items?.[0]?.photo_url ?? null
+        setExistingFirstItemPhotoPath(firstPath)
+        if (data.firstItemPhotoPublicUrl) {
+          if (previewUrlRef.current?.startsWith("blob:")) {
+            URL.revokeObjectURL(previewUrlRef.current)
+          }
+          previewUrlRef.current = data.firstItemPhotoPublicUrl
+          setPreviewUrl(data.firstItemPhotoPublicUrl)
+          setPhotoBlob(null)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [handoverIdParam])
+
+  function clearPhoto() {
+    if (previewUrlRef.current?.startsWith("blob:")) {
+      URL.revokeObjectURL(previewUrlRef.current)
+    }
+    previewUrlRef.current = null
     setPreviewUrl(null)
     setPhotoBlob(null)
+    setExistingFirstItemPhotoPath(null)
   }
 
   async function handlePhoto(file: File) {
@@ -71,7 +141,7 @@ export default function PackagePage() {
     try {
       const cropped = await compressPackagePhotoForUpload(file)
       setPhotoBlob(cropped)
-      if (previewUrlRef.current) {
+      if (previewUrlRef.current?.startsWith("blob:")) {
         URL.revokeObjectURL(previewUrlRef.current)
       }
       const url = URL.createObjectURL(cropped)
@@ -105,13 +175,17 @@ export default function PackagePage() {
       return
     }
 
-    const lim = await fetch("/api/handover/limits")
-    const limJson = await lim.json()
-    if (limJson.authenticated && limJson.at_limit) {
-      setSaving(false)
-      setSubmitMode(null)
-      alert(limJson.error || "Batas paket aktif tercapai.")
-      return
+    const updateId = (editingHandoverId ?? handoverIdParam ?? "").trim() || null
+
+    if (!updateId) {
+      const lim = await fetch("/api/handover/limits")
+      const limJson = await lim.json()
+      if (limJson.authenticated && limJson.at_limit) {
+        setSaving(false)
+        setSubmitMode(null)
+        alert(limJson.error || "Batas paket aktif tercapai.")
+        return
+      }
     }
 
     const sender_name = localStorage.getItem("draft_sender_name") || ""
@@ -127,7 +201,11 @@ export default function PackagePage() {
       setSaving(false)
       setSubmitMode(null)
       alert("Data belum lengkap. Mulai dari awal.")
-      router.push("/handover/create")
+      router.push(
+        updateId
+          ? `/handover/create?id=${encodeURIComponent(updateId)}`
+          : "/handover/create"
+      )
       return
     }
 
@@ -139,9 +217,14 @@ export default function PackagePage() {
     const draftPostcode = localStorage.getItem("draft_destination_postcode") || ""
 
     const descriptions = items.map((i) => i.trim()).filter(Boolean)
-    const itemRows = descriptions.map((description) => ({
+    const itemRows = descriptions.map((description, index) => ({
       description,
-      photo_url: null as string | null
+      photo_url:
+        index === 0
+          ? photoBlob
+            ? null
+            : existingFirstItemPhotoPath
+          : null
     }))
 
     const payload: Record<string, unknown> = {
@@ -178,14 +261,24 @@ export default function PackagePage() {
     }
 
     try {
-      const res = await fetch("/api/handover/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      })
+      const res = await fetch(
+        updateId ? "/api/handover/update" : "/api/handover/create",
+        {
+          method: updateId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            updateId ? { ...payload, handover_id: updateId } : payload
+          )
+        }
+      )
       const data = await res.json()
       if (process.env.NODE_ENV === "development") {
-        console.log("[package] POST /api/handover/create", res.status, data)
+        console.log(
+          "[package]",
+          updateId ? "PATCH /api/handover/update" : "POST /api/handover/create",
+          res.status,
+          data
+        )
       }
       if (res.status === 401) {
         setSaving(false)
@@ -199,14 +292,27 @@ export default function PackagePage() {
         alert(data.error || "Batas paket tercapai")
         return
       }
+      if (res.status === 409) {
+        setSaving(false)
+        setSubmitMode(null)
+        alert(data.error || "Paket tidak dapat diperbarui.")
+        return
+      }
       if (!data.success) {
         setSaving(false)
         setSubmitMode(null)
-        alert(data.error || "Gagal membuat Tanda Terima Digital")
+        alert(
+          data.error ||
+            (updateId
+              ? "Gagal memperbarui Tanda Terima Digital"
+              : "Gagal membuat Tanda Terima Digital")
+        )
         return
       }
 
-      if (photoBlob && data.handover_id && session.access_token) {
+      const effectiveId = (data.handover_id as string) || updateId || ""
+
+      if (photoBlob && effectiveId && session.access_token) {
         try {
           const ext = photoBlob.type.includes("webp")
         ? "webp"
@@ -214,7 +320,7 @@ export default function PackagePage() {
           ? "png"
           : "jpg"
           const fd = new FormData()
-          fd.set("handover_id", data.handover_id)
+          fd.set("handover_id", effectiveId)
           fd.set("mode", "package_first_item")
           fd.set("file", photoBlob, `package.${ext}`)
 
@@ -261,18 +367,21 @@ export default function PackagePage() {
       localStorage.removeItem("draft_destination_postcode")
       try {
         localStorage.removeItem(HANDOVER_MODE_KEY)
+        localStorage.removeItem("draft_handover_id")
       } catch {
         /* ignore */
       }
 
       const sn =
-        typeof data.serial_number === "string" ? data.serial_number : ""
+        typeof data.serial_number === "string"
+          ? data.serial_number
+          : editingSerial ?? ""
       router.push(
         mode === "save"
           ? sn
             ? `/paket?sn=${encodeURIComponent(sn)}`
             : "/paket"
-          : `/handover/${data.handover_id}`
+          : `/handover/${effectiveId}`
       )
     } catch (err) {
       console.error("UPLOAD_DEBUG:", err)
@@ -302,7 +411,7 @@ export default function PackagePage() {
 
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col overflow-y-auto px-5 py-5">
         <div className="mb-3 flex items-start justify-between gap-2">
-          <h2 className="text-base font-semibold uppercase tracking-[0.18em] text-[var(--primary-color)] opacity-90">
+          <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-[#3E2723]">
             Daftar Barang
           </h2>
           <div className="flex gap-1">
@@ -315,7 +424,7 @@ export default function PackagePage() {
             </Link>
             <Link
               href="/paket"
-              className="rounded-xl p-2 text-[var(--primary-color)] opacity-70 transition active:scale-95"
+              className="rounded-xl p-2 text-[var(--primary-color)] opacity-70 transition active:scale-[0.96]"
             >
               <Home size={20} strokeWidth={1.5} />
             </Link>
@@ -433,9 +542,16 @@ export default function PackagePage() {
         <div className="mt-3 shrink-0 space-y-2.5 pb-2 pt-0">
           <button
             type="button"
-            onClick={() => router.push("/handover/create")}
+            onClick={() => {
+              const id = editingHandoverId ?? handoverIdParam
+              router.push(
+                id
+                  ? `/handover/create?id=${encodeURIComponent(id)}`
+                  : "/handover/create"
+              )
+            }}
             disabled={saving || photoProcessing}
-            className="w-full rounded-xl border border-transparent py-2 text-left text-[11px] text-[#A1887F] transition hover:text-[var(--primary-color)] disabled:opacity-40"
+            className="w-full rounded-xl border border-transparent py-2 text-left text-[11px] text-[#A1887F] transition hover:text-[var(--primary-color)] active:scale-[0.96] disabled:opacity-40"
           >
             ← Kembali ke detail pengiriman
           </button>
@@ -474,5 +590,19 @@ export default function PackagePage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function PackagePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center bg-[#FAF9F6] text-sm text-[#9A8F88]">
+          Memuat…
+        </div>
+      }
+    >
+      <PackagePageInner />
+    </Suspense>
   )
 }

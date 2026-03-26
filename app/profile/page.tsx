@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { LogOut } from "lucide-react"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
+import { StudioFooter } from "@/components/nest/studio-footer"
+import { StudioHeader } from "@/components/nest/studio-header"
 
 function clearSessionLocalStorage() {
   const explicit = [
@@ -181,7 +183,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] p-8 max-w-md mx-auto space-y-10">
+    <>
+      <StudioHeader />
+      <div className="mx-auto flex min-h-screen max-w-md flex-col bg-[#FAF9F6] px-8 pb-8 pt-20 text-[#3E2723]">
+        <div className="flex-1 space-y-10">
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-medium mb-1">Profil</h1>
@@ -262,17 +267,16 @@ export default function ProfilePage() {
         </section>
       )}
 
-      <div className="flex justify-start text-sm pt-8 border-t border-[#E0DED7]">
-        <Link href="/paket" className="opacity-60">
-          ← Paket
-        </Link>
-      </div>
-
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3E2723] text-white text-xs px-4 py-2 rounded-full z-30">
-          {toast}
         </div>
-      )}
-    </div>
+
+        <StudioFooter className="mt-auto px-0 pb-0 pt-6" />
+
+        {toast && (
+          <div className="fixed bottom-6 left-1/2 z-30 -translate-x-1/2 rounded-full bg-[#3E2723] px-4 py-2 text-xs text-white">
+            {toast}
+          </div>
+        )}
+      </div>
+    </>
   )
 }

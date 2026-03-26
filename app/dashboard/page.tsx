@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useRef, useCallback } from "react"
 import Link from "next/link"
-import { Home } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { resolveNestEvidencePublicUrl } from "@/lib/nest-evidence-upload"
+import { StudioFooter } from "@/components/nest/studio-footer"
+import { StudioHeader } from "@/components/nest/studio-header"
 
 export default function DashboardPage(){
 
@@ -204,6 +205,11 @@ export default function DashboardPage(){
       return
     }
 
+    if(h.status === "created"){
+      router.push(`/handover/create?id=${encodeURIComponent(h.id)}`)
+      return
+    }
+
     router.push(`/handover/${h.id}`)
   }
 
@@ -346,24 +352,16 @@ export default function DashboardPage(){
 
   return(
 
-    <main className="flex flex-col min-h-full text-[#3E2723] bg-[#FAF9F6]">
+    <>
+    <StudioHeader />
 
-      <header className="px-6 py-8 shrink-0 flex items-center justify-between">
+    <main className="flex min-h-screen flex-col bg-[#FAF9F6] pt-20 text-[#3E2723]">
 
-        <div>
-          <p className="text-[9px] font-mono uppercase tracking-[0.25em] text-[#A1887F] mb-1">
-            NEST76 STUDIO
-          </p>
-          <h1 className="text-xl font-medium tracking-tight">
-            {studioRole === "STAFF" ? "Paket Anda" : "Daftar Paket"}
-          </h1>
-        </div>
-
-        <Link href="/paket">
-          <Home size={20} strokeWidth={1.5} className="opacity-60"/>
-        </Link>
-
-      </header>
+      <div className="shrink-0 px-6 pb-4 pt-2">
+        <h1 className="text-xl font-medium tracking-tight">
+          {studioRole === "STAFF" ? "Paket Anda" : "Daftar Paket"}
+        </h1>
+      </div>
 
       {studioRole === "STAFF" && (
         <div className="shrink-0 border-b border-[#E0DED7] bg-[#FAF9F6] px-6 py-4">
@@ -431,18 +429,19 @@ export default function DashboardPage(){
 
       </section>
 
-      <footer className="p-6 border-t border-[#E0DED7] shrink-0">
-
-        <p className="text-[10px] leading-relaxed text-[#A1887F] text-center italic">
-          Foto akan dihapus otomatis setelah 30 hari.
-          Paket yang dititipkan akan dianggap telah diterima oleh penerima setelah 3 hari.
+      <div className="mt-auto shrink-0 border-t border-[#E0DED7] p-6">
+        <p className="text-center text-[10px] italic leading-relaxed text-[#A1887F]">
+          Foto akan dihapus otomatis setelah 30 hari. Paket yang dititipkan akan
+          dianggap telah diterima oleh penerima setelah 3 hari.
         </p>
+      </div>
 
-      </footer>
+      <StudioFooter />
+    </main>
 
-      {selectMode && (
+    {selectMode && (
 
-        <div className="fixed bottom-0 left-0 right-0 bg-[#3E2723] text-white flex items-center justify-between px-6 py-4">
+        <div className="fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-between bg-[#3E2723] px-6 py-4 text-white">
 
           <span className="text-sm">
             {selected.length} dipilih
@@ -463,9 +462,7 @@ export default function DashboardPage(){
         </div>
 
       )}
-
-    </main>
-
+    </>
   )
 
 }

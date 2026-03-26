@@ -11,8 +11,11 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 import { parseNominatimReverse } from "@/lib/nominatim-parse"
 import {
   readHandoverMode,
+  HANDOVER_MODE_KEY,
   type HandoverMode
 } from "@/lib/handover-mode"
+import { StudioFooter } from "@/components/nest/studio-footer"
+import type { HandoverCreateInitialData } from "@/lib/handover-editable-types"
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
@@ -38,9 +41,17 @@ function useDebouncedCallback<T extends unknown[]>(
   )
 }
 
-export function HandoverCreateForm() {
+type HandoverCreateFormProps = {
+  initialData?: HandoverCreateInitialData | null
+}
+
+export function HandoverCreateForm({
+  initialData = null
+}: HandoverCreateFormProps) {
   const router = useRouter()
-  const [handoverMode, setHandoverMode] = useState<HandoverMode | null>(null)
+  const [handoverMode, setHandoverMode] = useState<HandoverMode | null>(
+    () => initialData?.mode ?? null
+  )
 
   const [senderType, setSenderType] = useState("self")
 
@@ -73,16 +84,47 @@ export function HandoverCreateForm() {
   } | null>(null)
 
   useEffect(() => {
+    if (initialData) {
+      try {
+        localStorage.setItem(HANDOVER_MODE_KEY, initialData.mode)
+      } catch {
+        /* ignore */
+      }
+      setHandoverMode(initialData.mode)
+      return
+    }
     const m = readHandoverMode()
     if (!m) {
       router.replace("/handover/select")
       return
     }
     setHandoverMode(m)
-  }, [router])
+  }, [router, initialData])
 
   useEffect(() => {
-    if (!handoverMode) return
+    if (!initialData) return
+    setSenderType(initialData.senderType)
+    setSenderName(initialData.senderName)
+    setSenderContact(initialData.senderContact)
+    setReceiverName(initialData.receiverName)
+    setReceiverWhatsapp(initialData.receiverWhatsapp)
+    setReceiverEmail(initialData.receiverEmail)
+    setDestinationAddress(initialData.destinationAddress)
+    setDestinationCity(initialData.destinationCity)
+    setDestinationPostalCode(initialData.destinationPostalCode)
+    if (
+      initialData.destinationLat != null &&
+      initialData.destinationLng != null
+    ) {
+      const lat = initialData.destinationLat
+      const lng = initialData.destinationLng
+      setMapboxPick({ lat, lng })
+      setUserProximity({ lat, lng })
+    }
+  }, [initialData])
+
+  useEffect(() => {
+    if (!handoverMode || initialData) return
 
     async function hydrate() {
       const name = localStorage.getItem("user_name")
@@ -139,7 +181,7 @@ export function HandoverCreateForm() {
       }
     }
     void hydrate()
-  }, [handoverMode])
+  }, [handoverMode, initialData])
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) return
@@ -359,11 +401,13 @@ export function HandoverCreateForm() {
       return
     }
 
-    const limRes = await fetch("/api/handover/limits")
-    const lim = await limRes.json()
-    if (lim.authenticated && lim.at_limit) {
-      showToast("Batas paket aktif tercapai untuk akun Anda.")
-      return
+    if (!initialData?.handoverId) {
+      const limRes = await fetch("/api/handover/limits")
+      const lim = await limRes.json()
+      if (lim.authenticated && lim.at_limit) {
+        showToast("Batas paket aktif tercapai untuk akun Anda.")
+        return
+      }
     }
 
     const finalSender =
@@ -398,6 +442,16 @@ export function HandoverCreateForm() {
       localStorage.setItem("draft_destination_lng", String(destLng))
     }
 
+    if (initialData?.handoverId) {
+      try {
+        localStorage.setItem("draft_handover_id", initialData.handoverId)
+      } catch {
+        /* ignore */
+      }
+      window.location.href = `/package?handover_id=${encodeURIComponent(initialData.handoverId)}`
+      return
+    }
+
     window.location.href = "/package"
   }
 
@@ -419,14 +473,17 @@ export function HandoverCreateForm() {
       className="flex min-h-screen flex-col overflow-y-auto bg-[#FAF9F6] text-[var(--primary-color)]"
       style={{ ["--primary-color" as string]: PRIMARY }}
     >
-      <main className="mx-auto w-full max-w-lg flex-1 space-y-10 px-6 pb-8 pt-12 sm:px-8">
+      <main className="mx-auto min-h-0 w-full max-w-lg flex-1 space-y-10 px-6 pb-8 pt-20 sm:px-8">
         <div className="space-y-2">
-          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-[#3E2723]">
-            NEST76 PAKET
-          </p>
+          {initialData?.handoverId && (
+            <p className="text-[11px] font-medium text-[#5D4037]">
+              Melanjutkan paket
+              {initialData.serialNumber ? ` · ${initialData.serialNumber}` : ""}
+            </p>
+          )}
           <Link
             href="/handover/select"
-            className="inline-block text-[11px] text-[#A1887F] transition hover:text-[var(--primary-color)]/75 underline decoration-[#C4B8B0]/60 underline-offset-2"
+            className="inline-block text-[11px] text-[#A1887F] transition hover:text-[var(--primary-color)]/75 active:scale-[0.96] underline decoration-[#C4B8B0]/60 underline-offset-2"
           >
             Salah pilih mode? Kembali ke awal
           </Link>
@@ -441,7 +498,7 @@ export function HandoverCreateForm() {
             <button
               type="button"
               onClick={() => setSenderType("self")}
-              className="flex items-center gap-2.5 text-sm"
+              className="flex items-center gap-2.5 text-sm transition active:scale-[0.96]"
             >
               <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-[var(--primary-color)]">
                 {senderType === "self" && (
@@ -454,7 +511,7 @@ export function HandoverCreateForm() {
             <button
               type="button"
               onClick={() => setSenderType("other")}
-              className="flex items-center gap-2.5 text-sm"
+              className="flex items-center gap-2.5 text-sm transition active:scale-[0.96]"
             >
               <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-[var(--primary-color)]">
                 {senderType === "other" && (
@@ -569,7 +626,7 @@ export function HandoverCreateForm() {
                 type="button"
                 onClick={useCurrentLocation}
                 disabled={locationPhase !== "idle"}
-                className="font-medium text-[var(--primary-color)] underline underline-offset-2 disabled:opacity-50"
+                className="font-medium text-[var(--primary-color)] underline underline-offset-2 transition active:scale-[0.96] disabled:opacity-50"
               >
                 {locationPhase === "gps"
                   ? "Mengambil lokasi…"
@@ -601,7 +658,7 @@ export function HandoverCreateForm() {
                     <li key={f.id}>
                       <button
                         type="button"
-                        className="w-full px-4 py-3 text-left hover:bg-[#F5F4F0]"
+                        className="w-full px-4 py-3 text-left transition hover:bg-[#F5F4F0] active:scale-[0.98]"
                         onClick={() => selectSuggestion(f)}
                       >
                         {f.place_name}
@@ -647,8 +704,8 @@ export function HandoverCreateForm() {
         )}
 
         <p className="text-center text-[10px] leading-relaxed text-[#9A8F88]">
-          © 2026 NEST76 STUDIO • Infrastruktur digital yang aman dan terverifikasi.
-          Data kontak Anda terenkripsi dalam ekosistem kami.
+          Infrastruktur digital yang aman dan terverifikasi. Data kontak Anda
+          terenkripsi dalam ekosistem kami.
         </p>
       </main>
 
@@ -658,14 +715,7 @@ export function HandoverCreateForm() {
         </div>
       )}
 
-      <div className="flex justify-between border-t border-[#ECE7E3] bg-[#FAF9F6]/95 px-6 py-6 text-sm backdrop-blur-sm sm:px-8">
-        <Link
-          href="/handover/select"
-          className="text-[#9A8F88] transition hover:text-[var(--primary-color)]"
-        >
-          ← Sebelumnya
-        </Link>
-
+      <div className="mt-auto flex shrink-0 justify-end border-t border-[#ECE7E3] bg-[#FAF9F6]/95 px-6 py-6 text-sm backdrop-blur-sm sm:px-8">
         <button
           type="button"
           onClick={submit}
@@ -674,6 +724,8 @@ export function HandoverCreateForm() {
           Lanjut →
         </button>
       </div>
+
+      <StudioFooter className="shrink-0" />
     </div>
   )
 }

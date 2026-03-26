@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 import { PaketHubSkeleton } from "@/components/nest/paket-skeleton"
+import { StudioFooter } from "@/components/nest/studio-footer"
 import { LayoutDashboard, UserCircle, Plus } from "lucide-react"
 
 const ease = [0.22, 1, 0.36, 1] as const
@@ -100,8 +101,7 @@ export default function PaketHomePage() {
         initial="hidden"
         animate="show"
       >
-        {/* Ganti justify-center ke justify-start dan tambah pt-12 (atau pt-16) */}
-<div className="flex min-h-0 flex-1 flex-col justify-start px-6 pt-12 pb-5">
+        <div className="flex min-h-0 flex-1 flex-col justify-start px-6 pt-12 pb-5">
         <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-6">
           <motion.div variants={item} className="flex flex-col items-center gap-3">
       <img
@@ -152,35 +152,30 @@ export default function PaketHomePage() {
         </div>
         </div>
 
-        <footer className="shrink-0 space-y-4 px-6 pb-6 pt-2">
-  {/* Stats Box tetep sama */}
-  <motion.div
-    variants={item}
-    className="mx-auto w-full max-w-sm rounded-xl border border-[#3E2723]/8 bg-[#EFEBE9]/50 px-4 py-3 text-center"
-  >
-    <div className="flex items-center justify-around gap-4 text-[10px] font-semibold uppercase tracking-widest text-[#5D4037]">
-      <div>
-        <span className="block text-lg font-bold tabular-nums text-[#3E2723]">{pending}</span>
-        <span className="opacity-80">Paket aktif</span>
-      </div>
-      <div className="h-8 w-px bg-[#3E2723]/10" aria-hidden />
-      <div className="min-w-0 flex-1 text-left">
-        <span className="block text-[9px] opacity-70">Terakhir update</span>
-        <span className="font-bold text-[#3E2723] truncate block">{last ?? "—"}</span>
-      </div>
-    </div>
-  </motion.div>
+        <div className="mt-auto shrink-0 space-y-4 px-6 pb-2 pt-2">
+          <motion.div
+            variants={item}
+            className="mx-auto w-full max-w-sm rounded-xl border border-[#3E2723]/8 bg-[#EFEBE9]/50 px-4 py-3 text-center"
+          >
+            <div className="flex items-center justify-around gap-4 text-[10px] font-semibold uppercase tracking-widest text-[#5D4037]">
+              <div>
+                <span className="block text-lg font-bold tabular-nums text-[#3E2723]">
+                  {pending}
+                </span>
+                <span className="opacity-80">Paket aktif</span>
+              </div>
+              <div className="h-8 w-px bg-[#3E2723]/10" aria-hidden />
+              <div className="min-w-0 flex-1 text-left">
+                <span className="block text-[9px] opacity-70">Terakhir update</span>
+                <span className="block truncate font-bold text-[#3E2723]">
+                  {last ?? "—"}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        </div>
 
-  {/* THE ULTIMATE COPYRIGHT */}
-  <motion.div variants={item} className="space-y-1 text-center">
-    <p className="text-[9px] font-bold tracking-[0.3em] text-[#3E2723]/50 uppercase">
-      NEST76 STUDIO • PRODUCT OF THE ARCHIVE
-    </p>
-    <p className="text-[8px] font-medium tracking-[0.15em] text-[#3E2723]/30 uppercase">
-      © 2026 ALL RIGHTS RESERVED
-    </p>
-  </motion.div>
-</footer>
+        <StudioFooter className="pb-6" />
       </motion.div>
     </div>
   )
