@@ -104,15 +104,15 @@ export default function PaketHomePage() {
 <div className="flex min-h-0 flex-1 flex-col justify-start px-6 pt-12 pb-5">
         <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-6">
           <motion.div variants={item} className="flex flex-col items-center gap-3">
-            <img
-              src="/logo-nest-paket.png"
-              alt="NEST76 Paket"
-              className="h-16 w-auto rounded-2xl shadow-lg shadow-[#3E2723]/10 ring-1 ring-[#3E2723]/5"
-            />
-            <h2 className="text-center text-xl font-bold tracking-tight text-[#3E2723]">
-              NEST76 PAKET
-            </h2>
-          </motion.div>
+      <img
+        src="/logo-nest-paket.png"
+        alt="NEST76 Paket"
+        className="h-16 w-auto rounded-2xl shadow-lg shadow-[#3E2723]/10 ring-1 ring-[#3E2723]/5"
+      />
+      <h2 className="text-center text-xl font-bold tracking-tight text-[#3E2723]">
+        NEST76 PAKET
+      </h2>
+    </motion.div>
 
           <motion.div variants={item} className="space-y-1 text-center">
             <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[#9A8F88]">
@@ -152,32 +152,34 @@ export default function PaketHomePage() {
         </div>
         </div>
 
-        <footer className="shrink-0 space-y-3 px-6 pb-6 pt-2">
-          <motion.div
-            variants={item}
-            className="mx-auto w-full max-w-sm rounded-xl border border-[#3E2723]/8 bg-[#EFEBE9]/50 px-4 py-3 text-center"
-          >
-            <div className="flex items-center justify-around gap-4 text-[10px] font-semibold uppercase tracking-widest text-[#5D4037]">
-              <div>
-                <span className="block text-lg font-bold tabular-nums text-[#3E2723]">
-                  {pending}
-                </span>
-                <span className="opacity-80">Paket aktif</span>
-              </div>
-              <div className="h-8 w-px bg-[#3E2723]/10" aria-hidden />
-              <div className="min-w-0 flex-1">
-                <span className="block text-[9px] opacity-70">Terakhir update</span>
-                <span className="font-bold text-[#3E2723]">{last ?? "—"}</span>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.p
+        <footer className="shrink-0 space-y-4 px-6 pb-6 pt-2">
+  {/* Stats Box tetep sama */}
+  <motion.div
     variants={item}
-    className="text-center text-[9px] font-medium tracking-[0.2em] text-[#3E2723]/40 uppercase"
+    className="mx-auto w-full max-w-sm rounded-xl border border-[#3E2723]/8 bg-[#EFEBE9]/50 px-4 py-3 text-center"
   >
-    © 2026 NEST76 STUDIO • PRODUCT OF THE ARCHIVE
-  </motion.p>
+    <div className="flex items-center justify-around gap-4 text-[10px] font-semibold uppercase tracking-widest text-[#5D4037]">
+      <div>
+        <span className="block text-lg font-bold tabular-nums text-[#3E2723]">{pending}</span>
+        <span className="opacity-80">Paket aktif</span>
+      </div>
+      <div className="h-8 w-px bg-[#3E2723]/10" aria-hidden />
+      <div className="min-w-0 flex-1 text-left">
+        <span className="block text-[9px] opacity-70">Terakhir update</span>
+        <span className="font-bold text-[#3E2723] truncate block">{last ?? "—"}</span>
+      </div>
+    </div>
+  </motion.div>
+
+  {/* THE ULTIMATE COPYRIGHT */}
+  <motion.div variants={item} className="space-y-1 text-center">
+    <p className="text-[9px] font-bold tracking-[0.3em] text-[#3E2723]/50 uppercase">
+      NEST76 STUDIO • PRODUCT OF THE ARCHIVE
+    </p>
+    <p className="text-[8px] font-medium tracking-[0.15em] text-[#3E2723]/30 uppercase">
+      © 2026 ALL RIGHTS RESERVED
+    </p>
+  </motion.div>
 </footer>
       </motion.div>
     </div>
