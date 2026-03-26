@@ -169,7 +169,7 @@ export default function PaketHomePage() {
             </div>
           </motion.div>
 
-          <StudioFooter />
+          <StudioFooter className="pb-2" />
         </div>
       </motion.main>
     </div>
