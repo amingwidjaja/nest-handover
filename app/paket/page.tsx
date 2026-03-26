@@ -87,7 +87,7 @@ export default function PaketHomePage() {
       <motion.main 
         /* 1. FIX MARGIN ATAS: pt-24 -> pt-8 (Header h-16 + gap dikit) */
         /* 2. FIX MARGIN BAWAH: pb-8 -> pb-2 */
-        className="flex flex-1 flex-col px-6 pt-8 pb-2" 
+        className="flex flex-1 flex-col px-6 pt-2 pb-2" 
         variants={container}
         initial="hidden"
         animate="show"
@@ -100,7 +100,7 @@ export default function PaketHomePage() {
                   src="/logo-nest-paket.png"
                   alt="NEST76"
                   /* 3. FIX LOGO: h-20 -> h-32 (Biar makin gahar & ga kekecilan) */
-                  className="h-32 w-auto rounded-lg grayscale brightness-90 contrast-125"
+                  className="h-42 w-auto rounded-lg grayscale brightness-90 contrast-125"
                 />
               </div>
               <h2 className="text-center text-sm font-black tracking-[0.4em] text-[#3E2723] uppercase opacity-80">
