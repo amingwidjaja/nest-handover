@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
-import { fetchReversePlaceName } from "@/lib/mapbox-reverse-geocode"
+import { fetchReverseAddressParts } from "@/lib/mapbox-reverse-geocode"
 import { sanitizeWhatsappDigits } from "@/lib/whatsapp-sanitize"
 import { parseApiErrorBody } from "@/lib/parse-api-error"
 
@@ -22,7 +22,10 @@ function RegisterInner() {
   const redirect = searchParams.get("redirect") || "/paket"
   const [displayName, setDisplayName] = useState("")
   const [whatsapp, setWhatsapp] = useState("")
-  const [address, setAddress] = useState("")
+  const [streetAddress, setStreetAddress] = useState("")
+  const [district, setDistrict] = useState("")
+  const [city, setCity] = useState("")
+  const [postalCode, setPostalCode] = useState("")
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
@@ -73,8 +76,13 @@ function RegisterInner() {
         setLongitude(lng)
         try {
           if (MAPBOX) {
-            const place = await fetchReversePlaceName(lat, lng, MAPBOX)
-            if (place) setAddress(place)
+            const parts = await fetchReverseAddressParts(lat, lng, MAPBOX)
+            if (parts) {
+              setStreetAddress(parts.streetLine || parts.fullPlaceName)
+              setDistrict(parts.district)
+              setCity(parts.city)
+              setPostalCode(parts.postalCode)
+            }
           }
         } catch {
           setFormError("Gagal mengambil alamat dari Mapbox — isi manual.")
@@ -95,10 +103,16 @@ function RegisterInner() {
     setFormError(null)
     const name = displayName.trim()
     const wa = sanitizeWhatsappDigits(whatsapp)
-    const addr = address.trim()
+    const street = streetAddress.trim()
+    const dist = district.trim()
+    const kota = city.trim()
+    const pos = postalCode.trim()
     if (!name) return setFormError("Nama tampilan wajib diisi.")
     if (!wa) return setFormError("Nomor WhatsApp wajib diisi.")
-    if (!addr) return setFormError("Alamat wajib diisi.")
+    if (!street) return setFormError("Alamat jalan wajib diisi.")
+    if (!dist) return setFormError("Kecamatan/Kelurahan wajib diisi.")
+    if (!kota) return setFormError("Kota/Kabupaten wajib diisi.")
+    if (!pos) return setFormError("Kode pos wajib diisi.")
     if (latitude == null || longitude == null) {
       return setFormError("Gunakan PIN LOKASI SEKARANG untuk menyimpan koordinat GPS.")
     }
@@ -122,7 +136,10 @@ function RegisterInner() {
           type: "personal",
           display_name: name,
           whatsapp: wa,
-          address: addr,
+          street_address: street,
+          district: dist,
+          city: kota,
+          postal_code: pos,
           latitude,
           longitude
         })
@@ -211,30 +228,81 @@ function RegisterInner() {
               }}
             />
           </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-transparent pb-1">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#6D5D54]">
+              Alamat terstruktur
+            </p>
+            <button
+              type="button"
+              onClick={pinLocation}
+              disabled={pinning}
+              className="text-[10px] font-bold uppercase tracking-wider text-[#3E2723] underline-offset-4 hover:underline disabled:opacity-50"
+            >
+              {pinning ? "Memuat lokasi…" : "📍 PIN LOKASI SEKARANG"}
+            </button>
+          </div>
+
           <div>
-            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-              <label className={lbl}>
-                Alamat <span className="text-[#8D6E63]">*</span>
-              </label>
-              <button
-                type="button"
-                onClick={pinLocation}
-                disabled={pinning}
-                className="text-[10px] font-bold uppercase tracking-wider text-[#3E2723] underline-offset-4 hover:underline disabled:opacity-50"
-              >
-                {pinning ? "Memuat lokasi…" : "📍 PIN LOKASI SEKARANG"}
-              </button>
-            </div>
+            <label className={lbl}>
+              Alamat jalan <span className="text-[#8D6E63]">*</span>
+            </label>
             <textarea
-              className={`${inputClass} min-h-[88px] resize-y py-2`}
-              placeholder="Alamat lengkap untuk integritas Pro"
-              value={address}
+              className={`${inputClass} min-h-[72px] resize-y py-2`}
+              placeholder="No. rumah, nama jalan, RT/RW"
+              value={streetAddress}
               onChange={(e) => {
-                setAddress(e.target.value)
+                setStreetAddress(e.target.value)
                 clr()
               }}
             />
           </div>
+          <div>
+            <label className={lbl}>
+              Kecamatan / Kelurahan <span className="text-[#8D6E63]">*</span>
+            </label>
+            <input
+              className={inputClass}
+              placeholder="Kec. / Kel."
+              value={district}
+              onChange={(e) => {
+                setDistrict(e.target.value)
+                clr()
+              }}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <label className={lbl}>
+                Kota / Kabupaten <span className="text-[#8D6E63]">*</span>
+              </label>
+              <input
+                className={inputClass}
+                placeholder="Kota / Kab."
+                value={city}
+                onChange={(e) => {
+                  setCity(e.target.value)
+                  clr()
+                }}
+              />
+            </div>
+            <div>
+              <label className={lbl}>
+                Kode pos <span className="text-[#8D6E63]">*</span>
+              </label>
+              <input
+                className={inputClass}
+                inputMode="numeric"
+                placeholder="12345"
+                value={postalCode}
+                onChange={(e) => {
+                  setPostalCode(e.target.value)
+                  clr()
+                }}
+              />
+            </div>
+          </div>
+
           <div className="mt-8 space-y-3 border-l-[3px] border-[#3E2723] bg-[#EFEBE9]/40 p-5">
             <div className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#3E2723]" />
@@ -243,7 +311,9 @@ function RegisterInner() {
               </p>
             </div>
             <p className="text-[11px] leading-relaxed text-[#5D4037]">
-              Nama, WhatsApp, alamat, dan koordinat dipakai untuk identitas pengirim pada tanda terima. Kami tidak menjual data ke pihak ketiga.
+              Nama, WhatsApp, alamat terstruktur, dan koordinat dipakai untuk
+              identitas pengirim pada tanda terima. Kami tidak menjual data ke
+              pihak ketiga.
             </p>
           </div>
           {formError && (

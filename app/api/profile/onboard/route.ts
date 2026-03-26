@@ -138,8 +138,13 @@ export async function POST(req: Request) {
       typeof body.display_name === "string" ? body.display_name.trim() : ""
     const whatsapp =
       typeof body.whatsapp === "string" ? body.whatsapp.trim() : ""
-    const address =
-      typeof body.address === "string" ? body.address.trim() : ""
+    const street_address =
+      typeof body.street_address === "string" ? body.street_address.trim() : ""
+    const district =
+      typeof body.district === "string" ? body.district.trim() : ""
+    const city = typeof body.city === "string" ? body.city.trim() : ""
+    const postal_code =
+      typeof body.postal_code === "string" ? body.postal_code.trim() : ""
 
     const lat =
       typeof body.latitude === "number"
@@ -160,8 +165,20 @@ export async function POST(req: Request) {
     if (!whatsapp) {
       return NextResponse.json({ error: "Nomor WhatsApp wajib diisi" }, { status: 400 })
     }
-    if (!address) {
-      return NextResponse.json({ error: "Alamat wajib diisi" }, { status: 400 })
+    if (!street_address) {
+      return NextResponse.json({ error: "Alamat jalan wajib diisi" }, { status: 400 })
+    }
+    if (!district) {
+      return NextResponse.json(
+        { error: "Kecamatan/Kelurahan wajib diisi" },
+        { status: 400 }
+      )
+    }
+    if (!city) {
+      return NextResponse.json({ error: "Kota/Kabupaten wajib diisi" }, { status: 400 })
+    }
+    if (!postal_code) {
+      return NextResponse.json({ error: "Kode pos wajib diisi" }, { status: 400 })
     }
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       return NextResponse.json(
@@ -170,13 +187,20 @@ export async function POST(req: Request) {
       )
     }
 
+    const addressLine =
+      [street_address, district, city, postal_code].filter(Boolean).join(" · ")
+
     const { error } = await admin
       .from("profiles")
       .update({
         user_type: "personal",
         display_name,
         whatsapp,
-        address,
+        street_address,
+        district,
+        city,
+        postal_code,
+        address: addressLine,
         latitude: lat,
         longitude: lng,
         onboarded_at: new Date().toISOString(),

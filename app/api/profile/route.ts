@@ -16,7 +16,7 @@ export async function GET() {
   const { data: profile, error } = await admin
     .from("profiles")
     .select(
-      "user_type, company_name, company_logo_url, display_name, company_address, whatsapp, address, latitude, longitude, onboarded_at, org_id, role"
+      "user_type, company_name, company_logo_url, display_name, company_address, whatsapp, address, street_address, district, city, postal_code, latitude, longitude, onboarded_at, org_id, role"
     )
     .eq("id", user.id)
     .maybeSingle()
