@@ -85,9 +85,9 @@ export default function PaketHomePage() {
       <StudioHeader /> {/* Biar ga belang sama halaman lain */}
 
       <motion.main 
-        /* 1. FIX MARGIN ATAS: pt-24 -> pt-18 (Header h-16 + gap dikit) */
+        /* 1. FIX MARGIN ATAS: pt-24 -> pt-8 (Header h-16 + gap dikit) */
         /* 2. FIX MARGIN BAWAH: pb-8 -> pb-2 */
-        className="flex flex-1 flex-col px-6 pt-18 pb-2" 
+        className="flex flex-1 flex-col px-6 pt-8 pb-2" 
         variants={container}
         initial="hidden"
         animate="show"
