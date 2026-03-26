@@ -158,13 +158,13 @@ export default function LocationPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[var(--paper)] max-w-md mx-auto border-x border-[var(--line)] font-sans text-[var(--ink)] antialiased">
+    <div className="flex h-screen min-h-0 flex-col overflow-y-auto bg-[var(--paper)] font-sans text-[var(--ink)] antialiased max-w-md mx-auto border-x border-[var(--line)]">
       
       {/* HEADER */}
-      <div className="p-6 border-b border-[var(--line)] bg-white shadow-sm">
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-[10px] font-bold tracking-[0.2em] text-[#A1887F] uppercase">
-            NEST / UNIT / GPS-MUJI-V2
+      <div className="shrink-0 border-b border-[var(--line)] bg-white p-5 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-[11px] font-black uppercase tracking-[0.3em] text-[#3E2723]">
+            NEST76 PAKET
           </span>
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${
@@ -177,51 +177,56 @@ export default function LocationPage() {
             </span>
           </div>
         </div>
-        <h1 className="text-2xl font-light tracking-tight uppercase italic leading-none text-[#3E2723]">
+        <h1 className="text-lg font-black uppercase tracking-[0.2em] leading-tight text-[#3E2723]">
           Validasi Lokasi
         </h1>
       </div>
 
-      {/* MAP AREA */}
-      <div className="flex-1 relative bg-[var(--line)] overflow-hidden">
-        <ValidationMap coords={mapCoords} />
-
-        {/* LOADING & ERROR OVERLAY */}
-        {(loading || (errorMsg && !realCoords)) && (
-          <div className="absolute inset-0 bg-[var(--paper)]/95 z-20 flex items-center justify-center p-10 text-center">
-            <div className="flex flex-col items-center gap-8">
-               {loading ? (
-                 <>
-                  <div className="w-12 h-12 border-2 border-[var(--line)] border-t-[#3E2723] rounded-full animate-spin"></div>
-                  <div className="space-y-2">
-                    <span className="block text-[10px] tracking-[0.4em] uppercase text-[#3E2723] font-bold">
-                      MENYINKRONKAN...
-                    </span>
-                    <span className="block text-[8px] text-[#A1887F] uppercase tracking-widest leading-loose max-w-[180px]">
-                      Mohon tunggu sebentar, sistem sedang menghubungi satelit
-                    </span>
-                  </div>
-                 </>
-               ) : (
-                 <>
-                  <div className="p-5 border border-red-100 bg-red-50/30 rounded-full">
-                    <SignalLow className="text-red-800" size={32} />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="block text-[10px] font-bold text-red-800 tracking-widest uppercase">{errorMsg}</span>
-                    <p className="text-[9px] text-[#A1887F] leading-relaxed max-w-[200px]">Sinyal GPS iPhone terhambat. Silakan coba di area yang lebih terbuka.</p>
-                  </div>
-                  <button 
-                    onClick={startTracking} 
-                    className="px-8 py-4 bg-[#3E2723] text-[var(--paper)] text-[10px] font-bold uppercase tracking-[0.3em] shadow-lg active:scale-95 transition-all"
-                  >
-                    COBA LAGI
-                  </button>
-                 </>
-               )}
+      {/* MAP — h-56 + horizontal gutter (avoids map scroll-trap) */}
+      <div className="shrink-0 px-4 py-3 sm:px-5">
+        <div className="relative h-56 w-full overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--line)]">
+          <ValidationMap coords={mapCoords} />
+          {(loading || (errorMsg && !realCoords)) && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--paper)]/95 p-6 text-center">
+              <div className="flex flex-col items-center gap-6">
+                {loading ? (
+                  <>
+                    <div className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--line)] border-t-[#3E2723]" />
+                    <div className="space-y-2">
+                      <span className="block text-[10px] font-bold uppercase tracking-[0.35em] text-[#3E2723]">
+                        MENYINKRONKAN…
+                      </span>
+                      <span className="block max-w-[200px] text-[8px] uppercase leading-relaxed tracking-widest text-[#A1887F]">
+                        Menghubungkan ke satelit — mohon tunggu
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="rounded-full border border-red-100 bg-red-50/30 p-5">
+                      <SignalLow className="text-red-800" size={32} />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="block text-[10px] font-bold uppercase tracking-widest text-red-800">
+                        {errorMsg}
+                      </span>
+                      <p className="max-w-[220px] text-[9px] leading-relaxed text-[#A1887F]">
+                        Coba lagi di area terbuka atau periksa izin lokasi di Chrome.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={startTracking}
+                      className="bg-[#3E2723] px-8 py-3 text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--paper)] shadow-lg transition-all active:scale-[0.96]"
+                    >
+                      COBA LAGI
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* DATA STRIP - HIGH CONTRAST INK */}
@@ -243,7 +248,7 @@ export default function LocationPage() {
         <button 
           onClick={submitLocation}
           disabled={loading || !realCoords}
-          className="w-full bg-[#3E2723] text-[var(--paper)] py-6 text-xs font-bold tracking-[0.3em] uppercase flex justify-between items-center px-8 active:scale-[0.98] transition-all disabled:bg-[var(--line)] disabled:text-[#A1887F]"
+          className="w-full bg-[#3E2723] text-[var(--paper)] py-6 text-xs font-bold tracking-[0.3em] uppercase flex justify-between items-center px-8 active:scale-[0.96] transition-all disabled:bg-[var(--line)] disabled:text-[#A1887F]"
         >
           {loading ? 'LOADING GPS...' : 'KONFIRMASI LOKASI'}
           {!loading && <ChevronRight size={18} strokeWidth={2} />}

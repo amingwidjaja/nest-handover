@@ -104,6 +104,11 @@ export async function sendNest76StudioHandoff(params: {
     })
 
     const raw = await res.text()
+    console.log(
+      "[NEST76 STUDIO] WA Graph API",
+      res.status,
+      raw.length > 800 ? `${raw.slice(0, 800)}…` : raw
+    )
     if (res.ok) {
       return { ok: true }
     }

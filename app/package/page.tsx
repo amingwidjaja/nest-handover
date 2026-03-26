@@ -14,7 +14,7 @@ import {
 import Link from "next/link"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 import { readHandoverMode, HANDOVER_MODE_KEY } from "@/lib/handover-mode"
-import { compressEvidenceWebpUnder100kb } from "@/lib/image-evidence"
+import { compressPackagePhotoForUpload } from "@/lib/compress-package-photo"
 import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
 import { NestPrimaryButton } from "@/components/nest/primary-button"
 
@@ -25,16 +25,6 @@ const inputClass =
 
 export default function PackagePage() {
   const router = useRouter()
-
-  useEffect(() => {
-    const meta = document.querySelector('meta[name="viewport"]')
-    if (meta) {
-      meta.setAttribute(
-        "content",
-        "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"
-      )
-    }
-  }, [])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -79,11 +69,7 @@ export default function PackagePage() {
   async function handlePhoto(file: File) {
     setPhotoProcessing(true)
     try {
-      const cropped = await compressEvidenceWebpUnder100kb(
-        file,
-        100 * 1024,
-        720
-      )
+      const cropped = await compressPackagePhotoForUpload(file)
       setPhotoBlob(cropped)
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current)
@@ -198,6 +184,9 @@ export default function PackagePage() {
         body: JSON.stringify(payload)
       })
       const data = await res.json()
+      if (process.env.NODE_ENV === "development") {
+        console.log("[package] POST /api/handover/create", res.status, data)
+      }
       if (res.status === 401) {
         setSaving(false)
         setSubmitMode(null)
@@ -219,7 +208,11 @@ export default function PackagePage() {
 
       if (photoBlob && data.handover_id && session.access_token) {
         try {
-          const ext = photoBlob.type.includes("webp") ? "webp" : "jpg"
+          const ext = photoBlob.type.includes("webp")
+        ? "webp"
+        : photoBlob.type.includes("png")
+          ? "png"
+          : "jpg"
           const fd = new FormData()
           fd.set("handover_id", data.handover_id)
           fd.set("mode", "package_first_item")
@@ -329,7 +322,7 @@ export default function PackagePage() {
           </div>
         </div>
 
-        <p className="mb-3 text-[10px] uppercase tracking-wider text-[#9A8F88]">
+        <p className="mb-2 text-[10px] uppercase tracking-wider text-[#9A8F88]">
           Foto baris 1
         </p>
 
@@ -347,7 +340,8 @@ export default function PackagePage() {
           }}
         />
 
-        <div className="mb-3 space-y-1.5">
+        <div className="min-h-0 flex-1 overflow-y-auto pb-2">
+        <div className="space-y-1.5">
           {items.map((item, i) => (
             <div key={i} className="flex items-start gap-2">
               <div className="w-20 shrink-0 pt-0.5">
@@ -434,8 +428,9 @@ export default function PackagePage() {
             </div>
           ))}
         </div>
+        </div>
 
-        <div className="mt-auto space-y-3 pb-1 pt-2">
+        <div className="mt-3 shrink-0 space-y-2.5 pb-2 pt-0">
           <button
             type="button"
             onClick={() => router.push("/handover/create")}
@@ -450,7 +445,7 @@ export default function PackagePage() {
               type="button"
               onClick={() => createHandover("save")}
               disabled={saving || photoProcessing}
-              className="flex items-center justify-between rounded-2xl border-2 border-[var(--primary-color)]/25 bg-white px-4 py-3.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--primary-color)] transition active:scale-[0.98] disabled:opacity-35"
+              className="flex items-center justify-between rounded-2xl border-2 border-[var(--primary-color)]/25 bg-white px-4 py-3.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--primary-color)] transition active:scale-[0.96] disabled:opacity-35"
             >
               {saving && submitMode === "save" ? (
                 <span className="flex w-full items-center justify-center gap-2">
@@ -470,7 +465,7 @@ export default function PackagePage() {
               onClick={() => createHandover("handover")}
               disabled={photoProcessing}
               loading={saving && submitMode === "handover"}
-              className="flex w-full items-center justify-between rounded-2xl bg-[var(--primary-color)] px-4 py-3.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#FAF9F6] shadow-sm disabled:opacity-45"
+              className="flex w-full items-center justify-between rounded-2xl bg-[var(--primary-color)] px-4 py-3.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#FAF9F6] shadow-sm transition active:scale-[0.96] disabled:opacity-45"
             >
               <span>Tanda Terima</span>
               <ChevronRight size={14} />

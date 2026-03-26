@@ -235,18 +235,19 @@ export async function POST(req: Request) {
           const logTo =
             normalizeIndonesianPhoneTo628(waForNotify) ?? waForNotify
           console.log(
-            `[NEST76 STUDIO] WA Protocol: Notification Sent to ${logTo} | Status: ${waResult.ok ? "Success" : "Fail"}`
+            `[NEST76 STUDIO] WA notify to=${logTo} proofLink=${proofLink} ok=${waResult.ok}`,
+            waResult.error ?? ""
           )
           if (!waResult.ok && waResult.error) {
-            console.warn("[NEST76 STUDIO] whatsapp:", waResult.error)
+            console.warn("[NEST76 STUDIO] whatsapp error:", waResult.error)
           }
         } catch (err) {
           const logTo =
             normalizeIndonesianPhoneTo628(waForNotify) ?? waForNotify
-          console.log(
-            `[NEST76 STUDIO] WA Protocol: Notification Sent to ${logTo} | Status: Fail`
+          console.warn(
+            `[NEST76 STUDIO] WA exception to=${logTo} proofLink=${proofLink}`,
+            err
           )
-          console.warn("[NEST76 STUDIO] whatsapp threw:", err)
         }
       }
     }
