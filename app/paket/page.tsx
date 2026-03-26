@@ -6,7 +6,7 @@ import { motion } from "framer-motion"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 import { PaketHubSkeleton } from "@/components/nest/paket-skeleton"
 import { StudioFooter } from "@/components/nest/studio-footer"
-import { StudioHeader } from "@/components/nest/studio-header" // Tambahin ini
+import { StudioHeader } from "@/components/nest/studio-header"
 import { LayoutDashboard, UserCircle, Plus } from "lucide-react"
 import Link from "next/link"
 
@@ -42,7 +42,9 @@ export default function PaketHomePage() {
   useEffect(() => {
     async function gate() {
       const supabase = createBrowserSupabaseClient()
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session }
+      } = await supabase.auth.getSession()
 
       if (!session) {
         router.replace("/login?redirect=/paket")
@@ -65,15 +67,21 @@ export default function PaketHomePage() {
         const res = await fetch("/api/handover/list")
         const data = await res.json()
         if (!data.handovers) return
-        const pendingList = data.handovers.filter((h: any) => h.status !== "accepted")
+        const pendingList = data.handovers.filter(
+          (h: { status: string }) => h.status !== "accepted"
+        )
         setPending(pendingList.length)
         if (data.handovers.length) {
-          setLast(new Date(data.handovers[0].created_at).toLocaleDateString("id-ID", {
-            day: "2-digit",
-            month: "short"
-          }))
+          setLast(
+            new Date(data.handovers[0].created_at).toLocaleDateString("id-ID", {
+              day: "2-digit",
+              month: "short"
+            })
+          )
         }
-      } catch (e) { console.error(e) }
+      } catch (e) {
+        console.error(e)
+      }
     }
     gate()
   }, [router])
@@ -81,34 +89,29 @@ export default function PaketHomePage() {
   if (!authReady) return <PaketHubSkeleton />
 
   return (
-    /* h-screen + overflow-hidden biar ga ada scroll double yang aneh */
-    <div className="flex h-screen flex-col overflow-hidden bg-[#FAF9F6] text-[#3E2723]">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#FAF9F6] text-[#3E2723]">
       <StudioHeader />
 
-      <motion.main 
-        /* pt-20 biar ga nabrak header, flex-1 flex-col wajib buat mt-auto */
-        className="flex flex-1 flex-col px-6 pt-16 pb-6" 
+      <motion.main
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pb-32 pt-24"
         variants={container}
         initial="hidden"
         animate="show"
       >
-        {/* AREA TENGAH: Hapus flex-1 di sini biar dia ga 'serakah' ruang */}
-        <div className="flex flex-col items-center justify-start"> 
+        <div className="flex flex-col items-center justify-start">
           <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-8">
-            
-            {/* LOGO GAHAR */}
             <motion.div variants={item} className="flex flex-col items-center gap-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/logo-nest-paket.png"
                 alt="NEST76"
                 className="h-36 w-auto rounded-lg grayscale brightness-90 contrast-125"
               />
-              <h2 className="text-center text-sm font-black tracking-[0.4em] text-[#3E2723] uppercase opacity-80">
+              <h2 className="text-center text-sm font-black uppercase tracking-[0.4em] text-[#3E2723] opacity-80">
                 Studio Archive
               </h2>
             </motion.div>
 
-            {/* GREETING */}
             <motion.div variants={item} className="space-y-1 text-center">
               <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[#9A8F88]">
                 Selamat datang,
@@ -118,7 +121,6 @@ export default function PaketHomePage() {
               </h1>
             </motion.div>
 
-            {/* BUTTONS */}
             <motion.div variants={item} className="w-full space-y-3">
               <Link
                 href="/handover/select"
@@ -148,35 +150,35 @@ export default function PaketHomePage() {
           </div>
         </div>
 
-        {/* BOTTOM SECTION: mt-auto sekarang bakal kerja dorong ini ke paling bawah */}
-        <div className="mt-auto space-y-4 pt-10"> 
+        <div className="mx-auto mt-auto w-full max-w-sm space-y-4 pt-10">
           <motion.div
             variants={item}
-            className="mx-auto w-full max-w-sm rounded-xl border border-[#3E2723]/10 bg-[#EFEBE9]/60 px-5 py-4"
+            className="rounded-xl border border-[#3E2723]/10 bg-[#EFEBE9]/60 px-5 py-4"
           >
             <div className="flex items-center justify-between gap-4">
               <div className="flex flex-col">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#5D4037]/80">Paket aktif</span>
-                <span className="text-2xl font-black tabular-nums text-[#3E2723] leading-none mt-1">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-[#5D4037]/80">
+                  Paket aktif
+                </span>
+                <span className="mt-1 text-2xl font-black tabular-nums leading-none text-[#3E2723]">
                   {pending}
                 </span>
               </div>
-              <div className="h-10 w-px bg-[#3E2723]/20" />
+              <div className="h-10 w-px bg-[#3E2723]/20" aria-hidden />
               <div className="flex flex-col text-right">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#5D4037]/80">Terakhir update</span>
-                <span className="text-xs font-bold text-[#3E2723] mt-1 uppercase tracking-tight">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-[#5D4037]/80">
+                  Terakhir update
+                </span>
+                <span className="mt-1 text-xs font-bold uppercase tracking-tight text-[#3E2723]">
                   {last ?? "—"}
                 </span>
               </div>
             </div>
           </motion.div>
-
-          {/* FIX VISIBILITY: Kita buang opacity aneh-aneh biar teksnya kelihatan nyata */}
-          <div className="brightness-50 contrast-150">
-            <StudioFooter />
-          </div>
         </div>
       </motion.main>
+
+      <StudioFooter />
     </div>
   )
 }

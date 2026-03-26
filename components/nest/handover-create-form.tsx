@@ -470,10 +470,11 @@ export function HandoverCreateForm({
 
   return (
     <div
-      className="flex min-h-screen flex-col overflow-y-auto bg-[#FAF9F6] text-[var(--primary-color)]"
+      className="relative flex min-h-screen flex-col overflow-hidden bg-[#FAF9F6] text-[var(--primary-color)]"
       style={{ ["--primary-color" as string]: PRIMARY }}
     >
-      <main className="mx-auto min-h-0 w-full max-w-lg flex-1 space-y-10 px-6 pb-8 pt-20 sm:px-8">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <main className="mx-auto w-full max-w-lg flex-1 space-y-10 px-6 pb-40 pt-20 sm:px-8">
         <div className="space-y-2">
           {initialData?.handoverId && (
             <p className="text-[11px] font-medium text-[#5D4037]">
@@ -708,14 +709,15 @@ export function HandoverCreateForm({
           terenkripsi dalam ekosistem kami.
         </p>
       </main>
+      </div>
 
       {toast && (
-        <div className="fixed bottom-24 left-1/2 z-30 -translate-x-1/2 rounded-full bg-[var(--primary-color)] px-6 py-3 text-sm text-[#FAF9F6] shadow-lg sm:bottom-8">
+        <div className="fixed bottom-[7rem] left-1/2 z-[55] -translate-x-1/2 rounded-full bg-[var(--primary-color)] px-6 py-3 text-sm text-[#FAF9F6] shadow-lg sm:bottom-[7.5rem]">
           {toast}
         </div>
       )}
 
-      <div className="mt-auto flex shrink-0 justify-end border-t border-[#ECE7E3] bg-[#FAF9F6]/95 px-6 py-6 text-sm backdrop-blur-sm sm:px-8">
+      <div className="fixed bottom-[5.5rem] left-0 right-0 z-[45] flex shrink-0 justify-end border-t border-[#ECE7E3] bg-[#FAF9F6]/95 px-6 py-6 text-sm backdrop-blur-sm sm:px-8">
         <button
           type="button"
           onClick={submit}
@@ -725,7 +727,7 @@ export function HandoverCreateForm({
         </button>
       </div>
 
-      <StudioFooter className="shrink-0" />
+      <StudioFooter />
     </div>
   )
 }

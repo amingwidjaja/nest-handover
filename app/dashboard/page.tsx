@@ -352,10 +352,10 @@ export default function DashboardPage(){
 
   return(
 
-    <>
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#FAF9F6] text-[#3E2723]">
     <StudioHeader />
 
-    <main className="flex min-h-screen flex-col bg-[#FAF9F6] pt-20 text-[#3E2723]">
+    <main className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-32 pt-20">
 
       <div className="shrink-0 px-6 pb-4 pt-2">
         <h1 className="text-xl font-medium tracking-tight">
@@ -436,8 +436,9 @@ export default function DashboardPage(){
         </p>
       </div>
 
-      <StudioFooter />
     </main>
+
+    <StudioFooter />
 
     {selectMode && (
 
@@ -462,7 +463,7 @@ export default function DashboardPage(){
         </div>
 
       )}
-    </>
+    </div>
   )
 
 }
