@@ -79,25 +79,23 @@ function ChooseTypeInner() {
           </button>
         </div>
 
-        {/* Info Box */}
-        <div className="mt-10 p-5 bg-[#EFEBE9]/40 border-l-[3px] border-[#3E2723]">
-          <p className="text-[11px] text-[#5D4037] leading-relaxed">
-            <strong className="uppercase">Keamanan Data:</strong> Pilihan profil menentukan fitur tanda terima Anda. Akun UMKM memberikan kesan lebih profesional bagi pelanggan Anda.
-          </p>
-        </div>
-
-        {/* Navigation Footer */}
-        <div className="mt-12 flex flex-col gap-6 items-center">
-          <Link
-            href={`/login?redirect=${encodeURIComponent(redirect)}`}
-            className="text-xs font-bold text-[#3E2723] underline underline-offset-4 decoration-[#D7CCC8] hover:decoration-[#3E2723] transition-all"
-          >
-            SUDAH PUNYA AKUN? MASUK
-          </Link>
-          <Link href="/" className="text-[10px] tracking-[0.3em] uppercase opacity-40 hover:opacity-100 transition-opacity">
-            ← BERANDA
-          </Link>
-        </div>
+        {/* Info Box - Refined for Clarity */}
+<div className="mt-10 p-5 bg-[#EFEBE9]/40 border-l-[3px] border-[#3E2723] space-y-3">
+  <div className="flex items-center gap-2">
+    <span className="h-1.5 w-1.5 rounded-full bg-[#3E2723] animate-pulse" />
+    <p className="text-[10px] font-bold uppercase tracking-widest text-[#3E2723]">
+      Panduan Protokol
+    </p>
+  </div>
+  
+  <p className="text-[11px] text-[#5D4037] leading-relaxed">
+    Mode <strong className="text-[#3E2723]">Pribadi</strong> dirancang untuk kecepatan tanpa embel-embel bisnis. Mode <strong className="text-[#3E2723]">UMKM</strong> mengaktifkan fitur Branding (Nama Bisnis & Logo) serta batas paket aktif yang lebih besar.
+  </p>
+  
+  <p className="text-[11px] font-medium text-[#8D6E63] italic border-t border-[#D7CCC8]/50 pt-2">
+    Ragu? Mulai dengan Pribadi sekarang, Anda bisa upgrade ke UMKM kapan saja melalui pengaturan profil.
+  </p>
+</div>
 
         <p className="mt-16 text-[9px] text-center text-[#3E2723] font-mono tracking-[0.2em] uppercase font-bold opacity-60">
           © 2026 NEST76 STUDIO • Build with Passion and Integrity
