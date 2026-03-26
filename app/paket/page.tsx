@@ -81,18 +81,19 @@ export default function PaketHomePage() {
   if (!authReady) return <PaketHubSkeleton />
 
   return (
+    /* h-screen + overflow-hidden biar ga ada scroll double yang aneh */
     <div className="flex h-screen flex-col overflow-hidden bg-[#FAF9F6] text-[#3E2723]">
       <StudioHeader />
 
       <motion.main 
-        /* pt-16 pas setinggi header. pb-4 biar footer ga beneran 'nyium' pinggiran HP */
-        className="flex flex-1 flex-col px-6 pt-2 pb-4" 
+        /* pt-20 biar ga nabrak header, flex-1 flex-col wajib buat mt-auto */
+        className="flex flex-1 flex-col px-6 pt-20 pb-6" 
         variants={container}
         initial="hidden"
         animate="show"
       >
-        {/* AREA TENGAH: Ganti justify-center ke justify-start biar ga nendang footer */}
-        <div className="flex flex-1 flex-col items-center justify-start pt-8"> 
+        {/* AREA TENGAH: Hapus flex-1 di sini biar dia ga 'serakah' ruang */}
+        <div className="flex flex-col items-center justify-start"> 
           <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-8">
             
             {/* LOGO GAHAR */}
@@ -147,10 +148,8 @@ export default function PaketHomePage() {
           </div>
         </div>
 
-        {/* BOTTOM SECTION: mt-auto maksa nempel bawah */}
-        {/* KURANGIN JARAK: Ubah mt-auto jadi mt-12 kalau mau deket ke tombol, 
-            tapi biarin mt-auto kalau mau nempel dasar layar */}
-        <div className="mt-auto space-y-4 pt-4"> 
+        {/* BOTTOM SECTION: mt-auto sekarang bakal kerja dorong ini ke paling bawah */}
+        <div className="mt-auto space-y-4 pt-10"> 
           <motion.div
             variants={item}
             className="mx-auto w-full max-w-sm rounded-xl border border-[#3E2723]/10 bg-[#EFEBE9]/60 px-5 py-4"
@@ -172,8 +171,8 @@ export default function PaketHomePage() {
             </div>
           </motion.div>
 
-          {/* FIX BENING: Kita paksa warnanya lebih solid di sini */}
-          <div className="opacity-80 brightness-50">
+          {/* FIX VISIBILITY: Kita buang opacity aneh-aneh biar teksnya kelihatan nyata */}
+          <div className="brightness-50 contrast-150">
             <StudioFooter />
           </div>
         </div>
