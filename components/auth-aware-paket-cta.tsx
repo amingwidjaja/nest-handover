@@ -7,39 +7,60 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 type Props = {
   /** e.g. /paket */
   loggedInHref: string
-  /** e.g. /choose-type?redirect=/paket */
+  /** e.g. /login */
   guestHref: string
   className?: string
-  children: ReactNode
+  children?: ReactNode
+  /** When set with guestLabel, overrides children for the hero CTA text */
+  loggedInLabel?: string
+  guestLabel?: string
 }
 
 export function AuthAwarePaketCta({
   loggedInHref,
   guestHref,
   className,
-  children
+  children,
+  loggedInLabel,
+  guestLabel
 }: Props) {
-  const [href, setHref] = useState(guestHref)
+  const [ready, setReady] = useState(false)
+  const [session, setSession] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       const supabase = createBrowserSupabaseClient()
       const {
-        data: { session }
+        data: { session: s }
       } = await supabase.auth.getSession()
-      if (!cancelled) {
-        setHref(session ? loggedInHref : guestHref)
-      }
+      if (cancelled) return
+      setSession(!!s)
+      setReady(true)
     })()
     return () => {
       cancelled = true
     }
-  }, [guestHref, loggedInHref])
+  }, [])
+
+  const useLabels = Boolean(loggedInLabel && guestLabel)
+
+  if (!ready) {
+    return (
+      <div
+        className={`${className ?? ""} pointer-events-none select-none opacity-60`}
+        aria-busy="true"
+      >
+        {useLabels ? guestLabel : children}
+      </div>
+    )
+  }
+
+  const href = session ? loggedInHref : guestHref
 
   return (
     <Link href={href} className={className}>
-      {children}
+      {useLabels ? (session ? loggedInLabel : guestLabel) : children}
     </Link>
   )
 }

@@ -109,9 +109,14 @@ export function LoginForm() {
         return
       }
 
+      const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect)}`
+
       const { error: signErr } = await supabase.auth.signUp({
         email: em,
-        password
+        password,
+        options: {
+          emailRedirectTo
+        }
       })
       if (signErr) throw signErr
 
