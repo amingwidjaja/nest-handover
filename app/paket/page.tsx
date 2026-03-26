@@ -95,20 +95,22 @@ export default function PaketHomePage() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#FAF9F6] text-[#3E2723]">
       <motion.div
-        className="flex min-h-0 flex-1 flex-col"
+        className="flex min-h-0 flex-1 flex-col justify-center px-6 py-6"
         variants={container}
         initial="hidden"
         animate="show"
       >
-        <div className="flex min-h-0 flex-1 flex-col justify-center px-6 py-5">
-        <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-6">
-          <motion.div variants={item} className="flex flex-col items-center gap-3">
+        <div className="mx-auto flex w-full max-w-md flex-col gap-y-12">
+          <motion.div
+            variants={item}
+            className="flex flex-col items-center gap-2 text-center"
+          >
             <img
               src="/logo-nest-paket.png"
               alt="NEST76 Paket"
-              className="h-16 w-auto rounded-2xl shadow-lg shadow-[#3E2723]/10 ring-1 ring-[#3E2723]/5"
+              className="mx-auto w-40 max-w-full h-auto drop-shadow-sm"
             />
-            <h2 className="text-center text-xl font-bold tracking-tight text-[#3E2723]">
+            <h2 className="text-lg font-bold uppercase tracking-tighter text-[#3E2723]">
               NEST76 PAKET
             </h2>
           </motion.div>
@@ -148,36 +150,35 @@ export default function PaketHomePage() {
               </Link>
             </div>
           </motion.div>
-        </div>
-        </div>
 
-        <footer className="shrink-0 space-y-3 px-6 pb-6 pt-2">
-          <motion.div
-            variants={item}
-            className="mx-auto w-full max-w-sm rounded-xl border border-[#3E2723]/8 bg-[#EFEBE9]/50 px-4 py-3 text-center"
-          >
-            <div className="flex items-center justify-around gap-4 text-[10px] font-semibold uppercase tracking-widest text-[#5D4037]">
-              <div>
-                <span className="block text-lg font-bold tabular-nums text-[#3E2723]">
-                  {pending}
-                </span>
-                <span className="opacity-80">Paket aktif</span>
+          <footer className="flex flex-col gap-3">
+            <motion.div
+              variants={item}
+              className="w-full rounded-xl border border-[#3E2723]/8 bg-[#EFEBE9]/50 px-4 py-3 text-center"
+            >
+              <div className="flex items-center justify-around gap-4 text-[10px] font-semibold uppercase tracking-widest text-[#5D4037]">
+                <div>
+                  <span className="block text-lg font-bold tabular-nums text-[#3E2723]">
+                    {pending}
+                  </span>
+                  <span className="opacity-80">Paket aktif</span>
+                </div>
+                <div className="h-8 w-px bg-[#3E2723]/10" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <span className="block text-[9px] opacity-70">Terakhir update</span>
+                  <span className="font-bold text-[#3E2723]">{last ?? "—"}</span>
+                </div>
               </div>
-              <div className="h-8 w-px bg-[#3E2723]/10" aria-hidden />
-              <div className="min-w-0 flex-1">
-                <span className="block text-[9px] opacity-70">Terakhir update</span>
-                <span className="font-bold text-[#3E2723]">{last ?? "—"}</span>
-              </div>
-            </div>
-          </motion.div>
+            </motion.div>
 
-          <motion.p
-            variants={item}
-            className="text-center text-[10px] font-medium tracking-[0.28em] text-[#3E2723]/40"
-          >
-            Product of NEST76 STUDIO
-          </motion.p>
-        </footer>
+            <motion.p
+              variants={item}
+              className="text-center text-[10px] font-medium tracking-[0.28em] text-[#3E2723]/40"
+            >
+              Product of NEST76 STUDIO
+            </motion.p>
+          </footer>
+        </div>
       </motion.div>
     </div>
   )
