@@ -4,8 +4,6 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { LogOut } from "lucide-react"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
-import { StudioFooter } from "@/components/nest/studio-footer"
-import { StudioHeader } from "@/components/nest/studio-header"
 
 function clearSessionLocalStorage() {
   const explicit = [
@@ -165,7 +163,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center text-sm text-[#A1887F]">
+      <div className="flex items-center justify-center py-20 text-sm text-[#A1887F]">
         Memuat…
       </div>
     )
@@ -173,7 +171,7 @@ export default function ProfilePage() {
 
   if (!email) {
     return (
-      <div className="min-h-screen bg-[#FAF9F6] flex flex-col items-center justify-center gap-4 p-8">
+      <div className="flex flex-col items-center justify-center gap-4 py-20">
         <p className="text-sm">Anda belum masuk.</p>
         <Link href="/login?redirect=/profile" className="text-sm underline">
           Masuk
@@ -183,10 +181,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#FAF9F6] text-[#3E2723]">
-      <StudioHeader />
-      <div className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-y-auto px-8 pb-32 pt-24">
-        <div className="flex-1 space-y-10">
+    <div className="mx-auto w-full max-w-md space-y-10">
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-medium mb-1">Profil</h1>
@@ -267,16 +262,11 @@ export default function ProfilePage() {
         </section>
       )}
 
-        </div>
-      </div>
-
       {toast && (
         <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-[#3E2723] px-4 py-2 text-xs text-white sm:bottom-28">
           {toast}
         </div>
       )}
-
-      <StudioFooter />
     </div>
   )
 }

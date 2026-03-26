@@ -6,7 +6,7 @@ import { Home } from "lucide-react"
 export function StudioHeader() {
   return (
     <header
-      className="fixed top-0 inset-x-0 z-50 flex h-16 items-center justify-between border-b border-[#3E2723]/5 bg-[#FAF9F6]/85 px-6 backdrop-blur-md"
+      className="fixed top-0 inset-x-0 z-[50] flex h-16 items-center justify-between border-b border-[#3E2723]/5 bg-[#FAF9F6]/85 px-6 backdrop-blur-md"
       role="banner"
     >
       <Link

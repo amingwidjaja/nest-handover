@@ -6,11 +6,7 @@ import dynamic from "next/dynamic"
 import { ChevronRight, SignalLow } from "lucide-react"
 import type { Coords } from "./validation-map"
 
-const DEFAULT_COORDS: Coords = {
-  lat: -6.2,
-  lng: 106.8,
-  accuracy: 0
-}
+const DEFAULT_COORDS: Coords = { lat: -6.2, lng: 106.8, accuracy: 0 }
 
 const ValidationMap = dynamic(
   () => import("./validation-map"),
@@ -20,7 +16,7 @@ const ValidationMap = dynamic(
       <div className="h-full flex items-center justify-center bg-[var(--paper)] text-[10px] font-mono text-[#A1887F] tracking-[0.2em] uppercase font-bold">
         MENYIAPKAN RADAR...
       </div>
-    )
+    ),
   }
 )
 
@@ -28,25 +24,23 @@ export default function LocationPage() {
   const params = useParams()
   const router = useRouter()
   const id = params.id as string
+
   const watchId = useRef<number | null>(null)
   const timerId = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastMapPush = useRef(0)
   const mapPrimed = useRef(false)
   const realCoordsRef = useRef<Coords | null>(null)
 
-  /** Live coords (strip + submit). */
   const [coords, setCoords] = useState<Coords>(DEFAULT_COORDS)
-  /** Throttled — map camera only updates when this changes (avoids remount / ease spam). */
   const [mapCoords, setMapCoords] = useState<Coords>(DEFAULT_COORDS)
   const [realCoords, setRealCoords] = useState<Coords | null>(null)
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     startTracking()
-    return () => {
-      stopTracking()
-    }
+    return () => stopTracking()
   }, [])
 
   function stopTracking() {
@@ -99,11 +93,10 @@ export default function LocationPage() {
     watchId.current = navigator.geolocation.watchPosition(
       (pos) => {
         if (timerId.current) clearTimeout(timerId.current)
-
         const newCoords = {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy
+          accuracy: pos.coords.accuracy,
         }
         setCoords(newCoords)
         setRealCoords(newCoords)
@@ -119,47 +112,43 @@ export default function LocationPage() {
           else setErrorMsg("GAGAL MENGUNCI SINYAL")
         }
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )
   }
 
+  // Submit GPS coords — non-blocking: success or failure both go to dashboard
   async function submitLocation() {
     if (!realCoords) return
-
+    setSubmitting(true)
     try {
-      const res = await fetch("/api/handover/receive/location/confirm", {
+      await fetch("/api/handover/receive/location/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           handover_id: id,
           lat: realCoords.lat,
           lng: realCoords.lng,
-          accuracy: realCoords.accuracy ?? 0
-        })
+          accuracy: realCoords.accuracy ?? 0,
+        }),
       })
-
-      const data = await res.json()
-      if (!res.ok) {
-        alert(data.error || "Gagal.")
-        return
-      }
-      if (!data.isValid) {
-        alert(`DI LUAR RADIUS (${data.distance}m)`)
-        return
-      }
-      router.replace("/dashboard")
+      // GPS is additional data — we navigate regardless of is_valid
     } catch {
-      alert("Koneksi gagal.")
+      // ignore — non-blocking
+    } finally {
+      setSubmitting(false)
+      router.replace("/dashboard")
     }
+  }
+
+  // Skip GPS entirely — data simply won't be recorded
+  function skipLocation() {
+    stopTracking()
+    router.replace("/dashboard")
   }
 
   return (
     <div className="flex h-screen min-h-0 flex-col overflow-y-auto bg-[var(--paper)] font-sans text-[var(--ink)] antialiased max-w-md mx-auto border-x border-[var(--line)]">
-      
+
       {/* HEADER */}
       <div className="shrink-0 border-b border-[var(--line)] bg-white p-5 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
@@ -167,22 +156,29 @@ export default function LocationPage() {
             NEST76 PAKET
           </span>
           <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${
-              loading ? 'bg-orange-300 animate-pulse' :
-              realCoords ? 'bg-green-700' :
-              'bg-red-700'
-            }`} />
+            <span
+              className={`w-2 h-2 rounded-full ${
+                loading
+                  ? "bg-orange-300 animate-pulse"
+                  : realCoords
+                    ? "bg-green-700"
+                    : "bg-red-700"
+              }`}
+            />
             <span className="text-[10px] font-bold uppercase tracking-widest">
-              {loading ? 'MENCARI' : realCoords ? 'TERKUNCI' : 'OFFLINE'}
+              {loading ? "MENCARI" : realCoords ? "TERKUNCI" : "OFFLINE"}
             </span>
           </div>
         </div>
         <h1 className="text-lg font-black uppercase tracking-[0.2em] leading-tight text-[#3E2723]">
-          Validasi Lokasi
+          Lokasi Serah Terima
         </h1>
+        <p className="mt-1 text-[10px] text-[#A1887F]">
+          Opsional — data tambahan untuk bukti digital
+        </p>
       </div>
 
-      {/* MAP — h-56 + horizontal gutter (avoids map scroll-trap) */}
+      {/* MAP */}
       <div className="shrink-0 px-4 py-3 sm:px-5">
         <div className="relative h-56 w-full overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--line)]">
           <ValidationMap coords={mapCoords} />
@@ -197,7 +193,7 @@ export default function LocationPage() {
                         MENYINKRONKAN…
                       </span>
                       <span className="block max-w-[200px] text-[8px] uppercase leading-relaxed tracking-widest text-[#A1887F]">
-                        Menghubungkan ke satelit — mohon tunggu
+                        Menghubungkan ke satelit
                       </span>
                     </div>
                   </>
@@ -211,7 +207,7 @@ export default function LocationPage() {
                         {errorMsg}
                       </span>
                       <p className="max-w-[220px] text-[9px] leading-relaxed text-[#A1887F]">
-                        Coba lagi di area terbuka atau periksa izin lokasi di Chrome.
+                        Coba lagi atau lewati — GPS tidak wajib.
                       </p>
                     </div>
                     <button
@@ -229,7 +225,7 @@ export default function LocationPage() {
         </div>
       </div>
 
-      {/* DATA STRIP - HIGH CONTRAST INK */}
+      {/* DATA STRIP */}
       <div className="px-6 py-5 border-y border-[var(--line)] bg-[#3E2723] flex justify-between text-[10px] font-mono text-[var(--paper)] uppercase tracking-widest">
         <div className="flex flex-col">
           <span className="text-[#A1887F] text-[8px] mb-1 font-bold">LATITUDE</span>
@@ -237,23 +233,31 @@ export default function LocationPage() {
         </div>
         <div className="flex flex-col text-right">
           <span className="text-[#A1887F] text-[8px] mb-1 font-bold">AKURASI</span>
-          <span className={`font-bold text-xs ${coords.accuracy && coords.accuracy < 50 ? 'text-green-300' : 'text-orange-300'}`}>
+          <span className={`font-bold text-xs ${coords.accuracy && coords.accuracy < 50 ? "text-green-300" : "text-orange-300"}`}>
             ± {Math.round(coords.accuracy || 0)} M
           </span>
         </div>
       </div>
 
       {/* ACTIONS */}
-      <div className="p-6 space-y-4 bg-white">
-        <button 
+      <div className="p-6 space-y-3 bg-white">
+        <button
           onClick={submitLocation}
-          disabled={loading || !realCoords}
+          disabled={loading || !realCoords || submitting}
           className="w-full bg-[#3E2723] text-[var(--paper)] py-6 text-xs font-bold tracking-[0.3em] uppercase flex justify-between items-center px-8 active:scale-[0.96] transition-all disabled:bg-[var(--line)] disabled:text-[#A1887F]"
         >
-          {loading ? 'LOADING GPS...' : 'KONFIRMASI LOKASI'}
-          {!loading && <ChevronRight size={18} strokeWidth={2} />}
+          {submitting ? "MENYIMPAN…" : loading ? "LOADING GPS..." : "REKAM LOKASI"}
+          {!loading && !submitting && <ChevronRight size={18} strokeWidth={2} />}
         </button>
 
+        {/* Skip button — GPS is optional */}
+        <button
+          onClick={skipLocation}
+          disabled={submitting}
+          className="w-full py-3 text-[11px] text-[#A1887F] tracking-widest uppercase border border-[#E0DED7] active:scale-[0.98] transition-all"
+        >
+          Lewati — tanpa data GPS
+        </button>
       </div>
     </div>
   )

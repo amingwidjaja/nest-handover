@@ -1,11 +1,26 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 import { dataUrlToBlob } from "@/lib/image-evidence"
 import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
 import { getClientDeviceMeta } from "@/lib/receipt-trust"
+
+type UploadStage =
+  | "idle"
+  | "uploading"
+  | "saving"
+  | "done"
+  | "error"
+
+const STAGE_LABEL: Record<UploadStage, string> = {
+  idle: "",
+  uploading: "Mengunggah foto…",
+  saving: "Menyimpan bukti…",
+  done: "Tersimpan",
+  error: "Gagal",
+}
 
 export default function PreviewPage() {
   const params = useParams()
@@ -13,8 +28,10 @@ export default function PreviewPage() {
   const id = params.id as string
 
   const [displayUrl, setDisplayUrl] = useState<string | null>(null)
-  const [preparing, setPreparing] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [stage, setStage] = useState<UploadStage>("idle")
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [progress, setProgress] = useState(0)
+  const xhrRef = useRef<XMLHttpRequest | null>(null)
 
   useEffect(() => {
     const stored = sessionStorage.getItem(`handover_${id}_photo`)
@@ -22,171 +39,238 @@ export default function PreviewPage() {
       router.replace(`/handover/${id}`)
       return
     }
-
     setDisplayUrl(stored)
-    setPreparing(false)
   }, [id, router])
 
   function handleRetake() {
+    // Cancel in-flight upload if user retakes
+    xhrRef.current?.abort()
+    setStage("idle")
+    setProgress(0)
+    setErrorMsg(null)
     window.location.href = `/handover/${id}`
   }
 
   async function handleConfirm() {
-    if (preparing) return
+    if (stage === "uploading" || stage === "saving") return
 
     const stored = sessionStorage.getItem(`handover_${id}_photo`)
     if (!stored?.startsWith("data:")) {
-      alert("Foto tidak ditemukan. Ambil ulang dari halaman sebelumnya.")
+      setErrorMsg("Foto tidak ditemukan. Ambil ulang.")
       return
     }
 
-    setSaving(true)
+    setStage("uploading")
+    setProgress(0)
+    setErrorMsg(null)
 
     try {
+      // Auth check
       const supabase = createBrowserSupabaseClient()
-      const {
-        data: { session }
-      } = await supabase.auth.getSession()
+      const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
-        router.push(
-          `/login?redirect=${encodeURIComponent(`/handover/${id}/preview`)}`
-        )
-        setSaving(false)
+        router.push(`/login?redirect=${encodeURIComponent(`/handover/${id}/preview`)}`)
         return
       }
 
+      // Convert dataUrl → Blob
       let blob: Blob
       try {
         blob = dataUrlToBlob(stored)
       } catch {
-        throw new Error("Data foto tidak valid")
+        throw new Error("Data foto tidak valid, ambil ulang.")
       }
 
       const ext = blob.type.includes("webp") ? "webp" : "jpg"
       const proofFile = new File([blob], `${Date.now()}_bukti.${ext}`, {
-        type: blob.type || "image/webp"
+        type: blob.type || "image/webp",
       })
 
-      const fd = new FormData()
-      fd.set("handover_id", id)
-      fd.set("mode", "proof_only")
-      fd.set("file", proofFile)
+      // Upload via XHR (supports progress events, unlike fetch)
+      const storagePath = await uploadWithProgress(
+        proofFile,
+        id,
+        session.access_token,
+        (pct) => setProgress(pct)
+      )
 
-      const up = await fetch("/api/handover/upload-photo", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: fd
-      })
-      const upJson = (await up.json().catch(() => ({}))) as {
-        success?: boolean
-        storagePath?: string
-        publicUrl?: string
-        error?: string
-      }
-      if (!up.ok || !upJson.storagePath) {
-        console.error("UPLOAD_DEBUG:", upJson)
-        throw new Error(
-          upJson.error || `Upload gagal (bucket: ${NEST_EVIDENCE_BUCKET})`
-        )
-      }
-      const photo_url = upJson.storagePath
+      // Save receive event
+      setStage("saving")
+      setProgress(100)
 
       const meta = JSON.parse(
         sessionStorage.getItem(`handover_${id}_meta`) || "{}"
       )
-
       const receiver_type = meta.mode === "direct" ? "direct" : "proxy"
-
       const { device_id, device_model } = getClientDeviceMeta()
 
       const res = await fetch("/api/handover/receive", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           handover_id: id,
           receive_method: meta.mode === "direct" ? "direct_photo" : "proxy_photo",
           receiver_type,
           receiver_name: meta.mode === "direct" ? "" : meta.delegateName || "",
           receiver_relation: meta.mode === "direct" ? "" : meta.relation || "",
-          photo_url,
+          notes: meta.notes || "",
+          photo_url: storagePath,
           device_id,
-          device_model
-        })
+          device_model,
+        }),
       })
 
       const result = await res.json()
-
-      if (!result.success) {
-        throw new Error(result.error || "fail")
-      }
+      if (!result.success) throw new Error(result.error || "Gagal menyimpan")
 
       sessionStorage.removeItem(`handover_${id}_photo`)
+      sessionStorage.removeItem(`handover_${id}_meta`)
 
-      setSaving(false)
+      setStage("done")
+      // Brief pause so user sees "Tersimpan" before navigating
+      await new Promise((r) => setTimeout(r, 400))
       router.replace(`/handover/${id}/location`)
     } catch (err) {
-      console.error("UPLOAD_DEBUG:", err)
-      alert(
-        err instanceof Error
-          ? `Gagal menyimpan: ${err.message}`
-          : "Gagal menyimpan"
-      )
-      setSaving(false)
+      if ((err as Error).message === "aborted") return
+      console.error("[preview] error:", err)
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan"
+      setErrorMsg(msg)
+      setStage("error")
     }
   }
+
+  const isBusy = stage === "uploading" || stage === "saving"
+  const preparing = displayUrl === null
 
   return (
     <div className="min-h-full bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
       <main className="p-6 pt-6">
-        <h2 className="text-2xl font-medium mb-6 text-center">Preview Bukti</h2>
+        <h2 className="text-xl font-medium mb-4 text-center">Preview Bukti</h2>
 
-        <div className="relative w-full aspect-square border border-[#E0DED7] rounded-sm overflow-hidden shadow-md mb-6 bg-[#FAF9F6]">
+        {/* Photo */}
+        <div className="relative w-full aspect-square border border-[#E0DED7] rounded-sm overflow-hidden shadow-md mb-4 bg-[#FAF9F6]">
           {displayUrl ? (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={displayUrl}
-                alt="Preview"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              {(preparing || saving) && (
-                <div className="absolute inset-0 bg-[#FAF9F6]/65 flex flex-col items-center justify-center z-10">
-                  <span className="text-xs font-medium text-[#3E2723] animate-pulse">
-                    {preparing ? "Memproses…" : "Menyimpan…"}
-                  </span>
-                </div>
-              )}
-            </>
+            <img
+              src={displayUrl}
+              alt="Preview bukti serah terima"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-xs font-medium text-[#3E2723] animate-pulse">
-                Memproses…
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-xs text-[#A1887F] animate-pulse">Memuat…</span>
+            </div>
+          )}
+
+          {/* Busy overlay */}
+          {isBusy && (
+            <div className="absolute inset-0 bg-[#FAF9F6]/80 flex flex-col items-center justify-center gap-3 z-10">
+              <span className="text-xs font-medium text-[#3E2723]">
+                {STAGE_LABEL[stage]}
               </span>
+              {/* Progress bar */}
+              <div className="w-48 h-1 bg-[#E0DED7] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#3E2723] rounded-full transition-all duration-200"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <span className="text-[10px] tabular-nums text-[#A1887F]">
+                {progress}%
+              </span>
+            </div>
+          )}
+
+          {stage === "done" && (
+            <div className="absolute inset-0 bg-[#FAF9F6]/80 flex items-center justify-center z-10">
+              <span className="text-sm font-medium text-[#3E2723]">Tersimpan ✓</span>
             </div>
           )}
         </div>
 
-        {!preparing && !saving && (
+        {/* Error message */}
+        {stage === "error" && errorMsg && (
+          <div className="mb-4 rounded-sm border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+            {errorMsg}
+          </div>
+        )}
+
+        {/* Actions */}
+        {!preparing && stage !== "done" && (
           <div className="flex gap-3">
             <button
               onClick={handleRetake}
-              className="flex-1 border border-[#E0DED7] py-3 rounded-sm"
+              disabled={isBusy}
+              className="flex-1 border border-[#E0DED7] py-3 rounded-sm text-sm disabled:opacity-40 transition-opacity"
             >
-              Retake
+              Ambil Ulang
             </button>
-
             <button
               onClick={handleConfirm}
-              disabled={!displayUrl}
-              className="flex-1 bg-[#3E2723] text-white py-3 rounded-sm disabled:opacity-40"
+              disabled={!displayUrl || isBusy}
+              className="flex-1 bg-[#3E2723] text-white py-3 rounded-sm text-sm disabled:opacity-40 transition-opacity"
             >
-              Gunakan Foto
+              {stage === "error" ? "Coba Lagi" : "Gunakan Foto"}
             </button>
           </div>
         )}
       </main>
     </div>
   )
+}
+
+// ── XHR upload with real progress ──────────────────────────────────
+
+async function uploadWithProgress(
+  file: File,
+  handoverId: string,
+  accessToken: string,
+  onProgress: (pct: number) => void
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fd = new FormData()
+    fd.set("handover_id", handoverId)
+    fd.set("mode", "proof_only")
+    fd.set("file", file)
+
+    const xhr = new XMLHttpRequest()
+
+    xhr.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable) {
+        const pct = Math.round((e.loaded / e.total) * 90) // cap at 90% until server responds
+        onProgress(pct)
+      }
+    })
+
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const json = JSON.parse(xhr.responseText)
+          if (json.storagePath) {
+            onProgress(95)
+            resolve(json.storagePath)
+          } else {
+            reject(new Error(json.error || "Upload gagal, coba lagi."))
+          }
+        } catch {
+          reject(new Error("Respons server tidak valid."))
+        }
+      } else {
+        let msg = `Upload gagal (${xhr.status})`
+        try {
+          const json = JSON.parse(xhr.responseText)
+          if (json.error) msg = json.error
+        } catch { /* ignore */ }
+        reject(new Error(msg))
+      }
+    })
+
+    xhr.addEventListener("error", () => reject(new Error("Koneksi terputus, coba lagi.")))
+    xhr.addEventListener("abort", () => reject(new Error("aborted")))
+    xhr.addEventListener("timeout", () => reject(new Error("Upload timeout, coba lagi.")))
+
+    xhr.timeout = 30000 // 30s timeout
+    xhr.open("POST", "/api/handover/upload-photo")
+    xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`)
+    xhr.send(fd)
+  })
 }

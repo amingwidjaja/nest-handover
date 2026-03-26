@@ -227,6 +227,10 @@ function PackagePageInner() {
           : null
     }))
 
+    // Proxy sender fields (set by handover-create-form via localStorage)
+    const isSenderProxy = localStorage.getItem("draft_is_sender_proxy") === "true"
+    const senderWhatsapp = localStorage.getItem("draft_sender_whatsapp") || ""
+
     const payload: Record<string, unknown> = {
       sender_name,
       receiver_target_name,
@@ -234,6 +238,8 @@ function PackagePageInner() {
       receiver_whatsapp,
       receiver_email,
       receiver_target_email: receiver_email,
+      is_sender_proxy: isSenderProxy,
+      sender_whatsapp: isSenderProxy ? senderWhatsapp : null,
       items: itemRows
     }
 

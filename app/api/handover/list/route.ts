@@ -3,20 +3,33 @@ import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
 /**
- * Returns handovers visible to the current user:
- * — Legacy (no org): rows owned by user_id.
- * — OWNER: all handovers for org_id.
- * — STAFF: handovers created by this user within org_id.
+ * Visibility rules:
+ *
+ * Personal / no org:
+ *   → WHERE user_id = auth.uid()
+ *
+ * UMKM NEST-Lite (mode=lite) — isolated per member:
+ *   OWNER → WHERE user_id = auth.uid()   (hanya milik boss sendiri)
+ *   STAFF → WHERE user_id = auth.uid()   (hanya milik staff ini)
+ *
+ * UMKM NEST-Pro (mode=pro):
+ *   OWNER → WHERE org_id = profile.org_id  (semua transaksi org)
+ *   STAFF → WHERE user_id = auth.uid()     (hanya milik staff ini)
+ *
+ * Mode dibaca dari query param ?mode=lite|pro
+ * (dikirim oleh dashboard yang baca dari localStorage)
  */
-export async function GET() {
+export async function GET(req: Request) {
   const supabase = await createServerSupabaseClient()
-  const {
-    data: { user }
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+
+  // Read mode from query param — sent by dashboard
+  const url = new URL(req.url)
+  const mode = url.searchParams.get("mode") // "lite" | "pro" | null
 
   const admin = getSupabaseAdmin()
   const { data: profile, error: profileErr } = await admin
@@ -31,8 +44,7 @@ export async function GET() {
 
   let q = admin
     .from("handover")
-    .select(
-      `
+    .select(`
       id,
       share_token,
       status,
@@ -48,17 +60,21 @@ export async function GET() {
         description,
         photo_url
       )
-    `
-    )
+    `)
     .order("created_at", { ascending: false })
 
-  if (profile?.org_id) {
-    if (profile.role === "OWNER") {
-      q = q.eq("org_id", profile.org_id)
-    } else {
-      q = q.eq("org_id", profile.org_id).eq("staff_id", user.id)
-    }
+  const hasOrg = Boolean(profile?.org_id)
+  const isOwner = profile?.role === "OWNER"
+  const isPro = mode === "pro"
+
+  if (hasOrg && isOwner && isPro) {
+    // OWNER + Pro → semua transaksi org
+    q = q.eq("org_id", profile!.org_id)
+  } else if (hasOrg && !isOwner) {
+    // STAFF (Lite or Pro) → hanya milik staff ini dalam org
+    q = q.eq("org_id", profile!.org_id).eq("user_id", user.id)
   } else {
+    // Personal, OWNER+Lite, atau no org → hanya milik user ini
     q = q.eq("user_id", user.id)
   }
 
@@ -68,6 +84,7 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Resolve staff display names for OWNER+Pro team feed
   const staffIds = [
     ...new Set(
       (data ?? [])
@@ -95,14 +112,9 @@ export async function GET() {
   const handovers = (data ?? []).map(
     (h: { staff_id?: string | null; [key: string]: unknown }) => ({
       ...h,
-      staff_display_name: h.staff_id
-        ? staffMap.get(h.staff_id) ?? null
-        : null
+      staff_display_name: h.staff_id ? staffMap.get(h.staff_id) ?? null : null,
     })
   )
 
-  return NextResponse.json({
-    success: true,
-    handovers
-  })
+  return NextResponse.json({ success: true, handovers })
 }
