@@ -85,12 +85,13 @@ export default function PaketHomePage() {
       <StudioHeader /> {/* Biar ga belang sama halaman lain */}
 
       <motion.main 
-        className="flex flex-1 flex-col px-6 pt-24 pb-8" // pt-24 biar ga nabrak header
+        /* 1. FIX MARGIN ATAS: pt-24 -> pt-18 (Header h-16 + gap dikit) */
+        /* 2. FIX MARGIN BAWAH: pb-8 -> pb-2 */
+        className="flex flex-1 flex-col px-6 pt-18 pb-2" 
         variants={container}
         initial="hidden"
         animate="show"
       >
-        {/* BRANDING SECTION - Dibuat lebih Industrial, ga imut lagi */}
         <div className="flex flex-1 flex-col items-center justify-center">
           <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-8">
             <motion.div variants={item} className="flex flex-col items-center gap-4">
@@ -98,7 +99,8 @@ export default function PaketHomePage() {
                 <img
                   src="/logo-nest-paket.png"
                   alt="NEST76"
-                  className="h-20 w-auto rounded-lg grayscale brightness-90 contrast-125" // Grayscale biar ga "imut"
+                  /* 3. FIX LOGO: h-20 -> h-32 (Biar makin gahar & ga kekecilan) */
+                  className="h-32 w-auto rounded-lg grayscale brightness-90 contrast-125"
                 />
               </div>
               <h2 className="text-center text-sm font-black tracking-[0.4em] text-[#3E2723] uppercase opacity-80">
