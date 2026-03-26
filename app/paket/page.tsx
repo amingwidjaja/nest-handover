@@ -87,7 +87,7 @@ export default function PaketHomePage() {
 
       <motion.main 
         /* pt-20 biar ga nabrak header, flex-1 flex-col wajib buat mt-auto */
-        className="flex flex-1 flex-col px-6 pt-20 pb-6" 
+        className="flex flex-1 flex-col px-6 pt-16 pb-6" 
         variants={container}
         initial="hidden"
         animate="show"
