@@ -173,12 +173,12 @@ export default function PaketHomePage() {
           </motion.div>
 
           <motion.p
-            variants={item}
-            className="text-center text-[10px] font-medium tracking-[0.28em] text-[#3E2723]/40"
-          >
-            Product of NEST76 STUDIO
-          </motion.p>
-        </footer>
+    variants={item}
+    className="text-center text-[9px] font-medium tracking-[0.2em] text-[#3E2723]/40 uppercase"
+  >
+    © 2026 NEST76 STUDIO • PRODUCT OF THE ARCHIVE
+  </motion.p>
+</footer>
       </motion.div>
     </div>
   )
