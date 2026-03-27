@@ -4,13 +4,13 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
-import { fetchReverseAddressParts } from "@/lib/mapbox-reverse-geocode"
+import { fetchReverseAddressParts } from "@/lib/azure-reverse-geocode"
 import { sanitizeWhatsappDigits } from "@/lib/whatsapp-sanitize"
 import { parseApiErrorBody } from "@/lib/parse-api-error"
 
 const BG = "#FAF9F6"
 const INK = "#3E2723"
-const MAPBOX = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+const AZURE_MAPS_KEY = process.env.NEXT_PUBLIC_AZURE_MAPS_KEY
 const inputClass =
   "line-input w-full text-[#3E2723] placeholder:text-[#C1BFB9]"
 const lbl =
@@ -75,8 +75,8 @@ function RegisterInner() {
         setLatitude(lat)
         setLongitude(lng)
         try {
-          if (MAPBOX) {
-            const parts = await fetchReverseAddressParts(lat, lng, MAPBOX)
+          if (AZURE_MAPS_KEY) {
+            const parts = await fetchReverseAddressParts(lat, lng, AZURE_MAPS_KEY)
             if (parts) {
               setStreetAddress(parts.streetLine || parts.fullPlaceName)
               setDistrict(parts.district)
@@ -85,7 +85,7 @@ function RegisterInner() {
             }
           }
         } catch {
-          setFormError("Gagal mengambil alamat dari Mapbox — isi manual.")
+          setFormError("Gagal mengambil alamat — isi manual.")
         } finally {
           setPinning(false)
         }
