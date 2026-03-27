@@ -77,8 +77,8 @@ export default function PaketHomePage() {
             })
           )
         }
-      } catch (e) {
-        console.error(e)
+      } catch {
+        // ignore
       }
     }
     gate()

@@ -159,6 +159,31 @@ serve(async (req) => {
 
     // ── Route by status ───────────────────────────────────────
 
+    if (new_status === "rejected") {
+      const { rejection_reason } = await req.clone().json().catch(() => ({}))
+      // WA ke pengirim asli
+      const toWa = handover.is_sender_proxy
+        ? handover.sender_whatsapp
+        : handover.receiver_whatsapp // fallback: user sendiri
+
+      const rejectorName = handover.receiver_target_name?.trim() || "Penerima"
+      const reasonText   = rejection_reason?.trim() ? ` Alasan: ${rejection_reason.trim()}` : ""
+
+      if (handover.sender_whatsapp || handover.receiver_whatsapp) {
+        const notifTo = handover.sender_whatsapp || handover.receiver_whatsapp
+        await sendWA({
+          to: notifTo,
+          senderLabel: `${senderLabel} (DITOLAK oleh ${rejectorName}.${reasonText})`,
+          proofLink,
+        })
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, handover_id, new_status }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    }
+
     if (new_status === "received") {
       // WA to receiver target
       if (handover.receiver_whatsapp) {

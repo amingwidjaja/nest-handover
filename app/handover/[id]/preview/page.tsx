@@ -148,7 +148,7 @@ export default function PreviewPage() {
   return (
     <div className="min-h-full bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
       <main className="p-6 pt-6">
-        <h2 className="text-xl font-medium mb-4 text-center">Preview Bukti</h2>
+        <h2 className="text-xl font-medium mb-4 text-center">Konfirmasi Foto</h2>
 
         <div className="relative w-full aspect-square border border-[#E0DED7] rounded-sm overflow-hidden shadow-md mb-4 bg-[#FAF9F6]">
           {displayUrl ? (

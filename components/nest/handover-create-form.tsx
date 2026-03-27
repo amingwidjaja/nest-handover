@@ -5,8 +5,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   fetchForwardGeocodeSuggestions,
-  type MapboxGeocodeFeature
-} from "@/lib/mapbox-forward-geocode"
+  type GeocodeFeature as MapboxGeocodeFeature
+} from "@/lib/azure-forward-geocode"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 import { parseNominatimReverse } from "@/lib/nominatim-parse"
 import {
@@ -17,7 +17,7 @@ import {
 import { StudioFooter } from "@/components/nest/studio-footer"
 import type { HandoverCreateInitialData } from "@/lib/handover-editable-types"
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+const AZURE_MAPS_KEY = process.env.NEXT_PUBLIC_AZURE_MAPS_KEY
 
 const PRIMARY = "#3E2723"
 
@@ -108,23 +108,32 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
     async function hydrate() {
       const name = localStorage.getItem("user_name")
       const contact = localStorage.getItem("user_contact")
-      if (name) setSenderName(name)
       if (contact) setSenderContact(contact)
-      if (!name) {
-        const supabase = createBrowserSupabaseClient()
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session) {
-          const res = await fetch("/api/profile")
-          const j = await res.json()
-          const p = j.profile as { display_name?: string | null; company_name?: string | null } | null
+      const supabase = createBrowserSupabaseClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        const res = await fetch("/api/profile")
+        const j = await res.json()
+        const p = j.profile as { display_name?: string | null; company_name?: string | null; role?: string | null } | null
+        // Pro: lock sender_name ke company_name
+        if (handoverMode === "pro" && p?.company_name?.trim()) {
+          const cn = p.company_name.trim()
+          setSenderName(cn)
+          try { localStorage.setItem("user_name", cn) } catch { /* ignore */ }
+        } else {
           const dn =
             (p?.display_name && String(p.display_name).trim()) ||
-            (p?.company_name && String(p.company_name).trim()) || ""
+            (p?.company_name && String(p.company_name).trim()) ||
+            name || ""
           if (dn) {
             setSenderName(dn)
             try { localStorage.setItem("user_name", dn) } catch { /* ignore */ }
+          } else if (name) {
+            setSenderName(name)
           }
         }
+      } else if (name) {
+        setSenderName(name)
       }
       const wa = localStorage.getItem("draft_receiver_whatsapp") || localStorage.getItem("draft_receiver_contact") || ""
       if (wa) setReceiverWhatsapp(wa)
@@ -165,10 +174,10 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
   }, [])
 
   const runGeocode = useCallback(async (query: string) => {
-    if (!MAPBOX_TOKEN || query.trim().length < 2) { setSuggestions([]); return }
+    if (!AZURE_MAPS_KEY || query.trim().length < 2) { setSuggestions([]); return }
     setGeocodeLoading(true)
     try {
-      const features = await fetchForwardGeocodeSuggestions(query, MAPBOX_TOKEN, {
+      const features = await fetchForwardGeocodeSuggestions(query, AZURE_MAPS_KEY, {
         limit: 5,
         proximity: userProximity ?? undefined
       })
@@ -415,7 +424,18 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
               <div className="space-y-5 pt-2">
                 <div>
                   <label className={labelClass}>Nama pengirim</label>
-                  <input className={inputClass} placeholder="Tulis nama pengirim paket" value={senderName} onChange={(e) => setSenderName(e.target.value)} />
+                  <input
+                    className={inputClass}
+                    placeholder="Tulis nama pengirim paket"
+                    value={senderName}
+                    onChange={(e) => setSenderName(e.target.value)}
+                    readOnly={isPro}
+                  />
+                  {isPro && (
+                    <p className="mt-1.5 text-[11px] text-[#9A8F88]">
+                      Mode Pro: nama pengirim dikunci ke nama perusahaan.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className={labelClass}>Nomor WA pengirim</label>
@@ -477,8 +497,8 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
                   </button>
                   {userProximity && <span className="text-[#A1887F]">GPS siap</span>}
                 </div>
-                {geocodeLoading && MAPBOX_TOKEN && <span className="text-[10px] opacity-50">Mencari patokan…</span>}
-                {MAPBOX_TOKEN && suggestions.length > 0 && (
+                {geocodeLoading && AZURE_MAPS_KEY && <span className="text-[10px] opacity-50">Mencari patokan…</span>}
+                {AZURE_MAPS_KEY && suggestions.length > 0 && (
                   <div className="space-y-1">
                     <p className="text-[10px] font-medium uppercase tracking-wider text-[#A1887F]">Patokan / POI</p>
                     <ul className="max-h-48 overflow-auto rounded-2xl border border-[#E0DED7] bg-white text-sm shadow-sm">

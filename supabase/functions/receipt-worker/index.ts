@@ -137,6 +137,16 @@ serve(async (req) => {
 
     // Finalize
     await supabase.from("handover").update({ receipt_url: path, receipt_status: "done" }).eq("id", full.id);
+
+    // Trigger cleanup-handover (fire-and-forget)
+    const cleanupUrl = Deno.env.get("SUPABASE_URL")! + "/functions/v1/cleanup-handover"
+    fetch(cleanupUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        "Content-Type": "application/json",
+      },
+    }).catch((e) => console.warn("[receipt-worker] cleanup trigger error:", e))
     
     return new Response(JSON.stringify({ status: "success", path }), { 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 

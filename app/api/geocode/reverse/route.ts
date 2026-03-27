@@ -1,53 +1,68 @@
 import { NextResponse } from "next/server"
 
 /**
- * Server-side reverse geocode (Nominatim) — avoids browser CORS and keeps
- * User-Agent policy-compliant requests.
- *
- * @see https://nominatim.org/release-docs/latest/api/Reverse/
+ * Server-side reverse geocode via Azure Maps.
+ * Keeps token server-side — AZURE_MAPS_KEY tidak di-expose ke client.
  */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const lat = parseFloat(searchParams.get("lat") ?? "")
   const lon = parseFloat(searchParams.get("lon") ?? "")
+
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-    return NextResponse.json(
-      { error: "lat and lon query params required" },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: "lat and lon required" }, { status: 400 })
   }
 
-  const url =
-    `https://nominatim.openstreetmap.org/reverse?` +
-    new URLSearchParams({
-      lat: String(lat),
-      lon: String(lon),
-      format: "json",
-      addressdetails: "1"
-    })
+  const key = process.env.NEXT_PUBLIC_AZURE_MAPS_KEY
+  if (!key) {
+    return NextResponse.json({ error: "Azure Maps key not configured" }, { status: 500 })
+  }
+
+  const params = new URLSearchParams({
+    "api-version": "1.0",
+    "subscription-key": key,
+    query: `${lat},${lon}`,
+    language: "id-ID",
+  })
 
   try {
-    const res = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "NEST-Handover/1.0 (reverse geocode)"
-      },
-      next: { revalidate: 0 }
-    })
-
+    const res = await fetch(
+      `https://atlas.microsoft.com/search/address/reverse/json?${params}`,
+      { next: { revalidate: 0 } }
+    )
     if (!res.ok) {
-      return NextResponse.json(
-        { error: "reverse geocode upstream failed" },
-        { status: 502 }
-      )
+      return NextResponse.json({ error: "reverse geocode upstream failed" }, { status: 502 })
     }
 
-    const data = (await res.json()) as Record<string, unknown>
-    return NextResponse.json(data)
+    const data = await res.json() as {
+      addresses?: Array<{
+        address?: {
+          streetNameAndNumber?: string
+          streetName?: string
+          municipalitySubdivision?: string
+          municipality?: string
+          postalCode?: string
+          freeformAddress?: string
+        }
+      }>
+    }
+
+    const addr = data.addresses?.[0]?.address
+    if (!addr) {
+      return NextResponse.json({ error: "no results" }, { status: 404 })
+    }
+
+    // Normalize to same shape as nominatim-parse output
+    return NextResponse.json({
+      display_name: addr.freeformAddress ?? "",
+      address: {
+        road: addr.streetNameAndNumber || addr.streetName || "",
+        suburb: addr.municipalitySubdivision || "",
+        city: addr.municipality || "",
+        postcode: addr.postalCode || "",
+      }
+    })
   } catch {
-    return NextResponse.json(
-      { error: "reverse geocode request failed" },
-      { status: 502 }
-    )
+    return NextResponse.json({ error: "reverse geocode request failed" }, { status: 502 })
   }
 }

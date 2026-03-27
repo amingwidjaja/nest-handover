@@ -12,6 +12,7 @@ export default function SuccessPage() {
 
   const [serialNumber, setSerialNumber] = useState<string | null>(null)
   const [receiverName, setReceiverName] = useState<string | null>(null)
+  const [shareToken, setShareToken] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -25,6 +26,9 @@ export default function SuccessPage() {
       }
       if (typeof data.receiver_target_name === "string") {
         setReceiverName(data.receiver_target_name.trim())
+      }
+      if (typeof data.share_token === "string" && data.share_token.trim()) {
+        setShareToken(data.share_token.trim())
       }
     })()
     return () => { cancelled = true }
@@ -80,6 +84,14 @@ export default function SuccessPage() {
         >
           Lihat Daftar Paket
         </Link>
+        {shareToken && (
+          <Link
+            href={`/receipt/${shareToken}`}
+            className="w-full text-center border border-[#3E2723] py-3 text-sm text-[#3E2723] rounded-sm active:scale-[0.98] transition-transform"
+          >
+            Lihat Tanda Terima
+          </Link>
+        )}
         <Link
           href="/paket"
           className="w-full text-center border border-[#E0DED7] py-3 text-sm text-[#3E2723] rounded-sm active:scale-[0.98] transition-transform"

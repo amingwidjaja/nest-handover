@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -59,6 +59,8 @@ function formatStatus(status: string) {
       return "Diterima"
     case "accepted":
       return "Diterima & Disetujui"
+    case "rejected":
+      return "Ditolak"
     default:
       return status || "-"
   }
@@ -98,6 +100,12 @@ export default function ReceiptPage() {
   const [loading, setLoading] = useState(true)
   const [origin, setOrigin] = useState("")
 
+  // Reject state
+  const [rejectMode,   setRejectMode]   = useState(false)
+  const [rejectReason, setRejectReason] = useState("")
+  const [rejecting,    setRejecting]    = useState(false)
+  const [rejected,     setRejected]     = useState(false)
+
   async function load() {
     const res = await fetch(`/api/handover/receipt-data?token=${token}`)
     const data = await res.json()
@@ -116,21 +124,28 @@ export default function ReceiptPage() {
     }
   }, [])
 
-  useEffect(() => {
-    if (!handover?.handover_items) return
-    const raw = firstHandoverItemPhotoUrl(handover.handover_items)
-    const resolved = resolveEvidencePhotoUrl(raw)
-    console.log("[receipt] Product photo (debug)", {
-      rawPhotoPath: raw ?? null,
-      resolvedUrl: resolved,
-      itemsSnapshot: handover.handover_items.map(
-        (i: { id?: string; photo_url?: string | null }) => ({
-          id: i.id,
-          photo_url: i.photo_url
-        })
-      )
-    })
-  }, [handover])
+  async function submitReject() {
+    if (rejecting) return
+    setRejecting(true)
+    try {
+      const res = await fetch("/api/handover/reject", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, rejection_reason: rejectReason }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setRejected(true)
+        setHandover((prev: any) => ({ ...prev, status: "rejected", rejection_reason: rejectReason }))
+      } else {
+        alert(data.error || "Gagal menolak paket")
+      }
+    } catch {
+      alert("Terjadi kesalahan koneksi")
+    } finally {
+      setRejecting(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -326,10 +341,20 @@ export default function ReceiptPage() {
             </div>
             <div className="flex justify-between gap-2">
               <span className="shrink-0 text-[#9A8F88]">Status:</span>
-              <span className="text-right font-medium text-[var(--primary-color)]">
+              <span className={`text-right font-medium ${
+                handover.status === "rejected" ? "text-red-700" : "text-[var(--primary-color)]"
+              }`}>
                 {formatStatus(handover.status)}
               </span>
             </div>
+            {handover.status === "rejected" && handover.rejection_reason && (
+              <div className="flex justify-between gap-2">
+                <span className="shrink-0 text-[#9A8F88]">Alasan:</span>
+                <span className="text-right text-sm text-red-700 max-w-[65%]">
+                  {handover.rejection_reason}
+                </span>
+              </div>
+            )}
           </div>
           <div className="space-y-2 rounded-md border border-[#E5E0DB] bg-[#FAF9F6] px-3 py-2.5">
             <div className="flex justify-between gap-2">
@@ -536,6 +561,53 @@ export default function ReceiptPage() {
           encrypted and archived.
         </p>
       </main>
+
+      {/* Tombol Tolak — hanya muncul kalau status received (proxy sudah terima, target belum approve) */}
+      {handover.status === "received" && !rejected && (
+        <div className="border-t border-[#ECE7E3] px-6 py-5 space-y-3">
+          {!rejectMode ? (
+            <button
+              onClick={() => setRejectMode(true)}
+              className="w-full py-3 text-[11px] font-medium text-red-700 border border-red-100 rounded-sm active:scale-[0.98] transition-transform"
+            >
+              Tolak Paket Ini
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-red-800">Alasan penolakan</p>
+              <textarea
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                placeholder="Tulis alasan (opsional) — pengirim akan diberitahu"
+                rows={3}
+                className="w-full text-sm bg-white border border-red-100 rounded-sm px-3 py-2 outline-none resize-none placeholder:text-[#C4B8B0] text-[#3E2723]"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setRejectMode(false); setRejectReason("") }}
+                  className="flex-1 py-2.5 text-[11px] font-medium border border-[#E0DED7] text-[#A1887F] active:scale-[0.98] transition-transform"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={submitReject}
+                  disabled={rejecting}
+                  className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-wider bg-red-800 text-white disabled:opacity-50 active:scale-[0.98] transition-transform"
+                >
+                  {rejecting ? "Mengirim…" : "Konfirmasi Tolak"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {rejected && (
+        <div className="border-t border-red-100 bg-red-50/40 px-6 py-4">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-red-800 mb-1">Paket ditolak</p>
+          <p className="text-[11px] text-red-700">Pengirim sudah diberitahu via WhatsApp.</p>
+        </div>
+      )}
 
       <div className="flex justify-center px-6 pb-6 text-sm">
         <Link

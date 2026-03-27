@@ -23,7 +23,7 @@
 | Auth + DB + Cron | Supabase (PostgreSQL + Auth + Storage + Edge Functions + pg_cron) |
 | Deploy | Vercel (frontend only) |
 | Notifications | Meta WhatsApp Cloud API |
-| Maps | Mapbox GL (deps ada, GPS page masih Leaflet) |
+| Maps | Azure Maps (`azure-maps-control`) |
 | PDF | @react-pdf/renderer + Puppeteer (di Supabase) |
 | Animation | Framer Motion |
 
@@ -80,11 +80,13 @@ Body: "Halo, Anda menerima paket dari {{1}}.
 
 ```
 draft → created → received → accepted
+              ↘ rejected
 ```
 
 - `created` — bisa cancel/edit. **Tidak ada WA.**
 - `received` — serah terima terjadi. **WA dikirim.**
 - `accepted` — approve atau 3 hari auto-accept. PDF di-generate.
+- `rejected` — penerima tolak dari link WA. **WA ke pengirim dikirim** (dengan alasan jika diisi).
 
 ### DB Triggers
 - `trg_receive_event_update_handover` → `derive_handover_status()`
@@ -214,7 +216,7 @@ WA_PHONE_NUMBER_ID=1079409528584174
 WA_TEMPLATE_NAME=nest76_studio_handoff
 WA_TEMPLATE_LANG=id
 NEXT_PUBLIC_APP_URL=https://www.nest76.com
-NEXT_PUBLIC_MAPBOX_TOKEN=
+NEXT_PUBLIC_AZURE_MAPS_KEY=
 ```
 
 ### Supabase Edge Functions Secrets
@@ -239,12 +241,12 @@ Note: secret `nest-handover` tidak bisa dihapus (UI bug Supabase) — tidak berb
 ### Sprint 4 ✅ DONE (flow tested, WA fix in progress)
 
 ### Sprint 5 — Polish & Maps
-- [ ] Migrate GPS page dari Leaflet ke Mapbox
-- [ ] Address autocomplete NEST-Pro
-- [ ] UMKM Pro: lock sender_name ke company_name
-- [ ] UI/UX review pass
-- [ ] receipt/[token] page — verifikasi tampilan
-- [ ] cleanup-handover trigger (cron setelah PDF done)
+- [x] Migrate GPS page dari Leaflet ke Mapbox → Azure Maps ✅
+- [x] Address autocomplete NEST-Pro → Azure Maps Search API ✅
+- [x] UMKM Pro: lock sender_name ke company_name ✅
+- [x] UI/UX review pass ✅
+- [x] receipt/[token] page — debug log dihapus ✅
+- [x] cleanup-handover trigger (otomatis dari receipt-worker) ✅
 - [ ] Test QR flow end-to-end
 - [ ] Test proxy sender WA notification
 

@@ -15,6 +15,7 @@ export default function QRPage() {
 
   const [qr, setQr] = useState<string>("")
   const [shareToken, setShareToken] = useState<string>("")
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -22,7 +23,7 @@ export default function QRPage() {
       // Fetch share_token
       const tokenRes = await fetch(`/api/handover/by-token?id=${id}`)
       const tokenData = await tokenRes.json()
-      if (!tokenData.share_token) return
+      if (!tokenData.share_token) { setLoadError(true); return }
       setShareToken(tokenData.share_token)
 
       // Read meta set by [id]/page before navigating here
@@ -77,7 +78,11 @@ export default function QRPage() {
           Minta penerima scan untuk konfirmasi
         </p>
 
-        {qr ? (
+        {loadError ? (
+          <div className="w-64 h-64 mx-auto border border-red-100 bg-red-50/30 flex items-center justify-center rounded-sm">
+            <span className="text-xs text-red-800 text-center px-4">Dokumen tidak ditemukan atau sudah kadaluarsa.</span>
+          </div>
+        ) : qr ? (
           <img src={qr} alt="QR Code" className="mx-auto w-64 h-64" />
         ) : (
           <div className="w-64 h-64 mx-auto border border-[#E0DED7] flex items-center justify-center">
