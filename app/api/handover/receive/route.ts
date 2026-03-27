@@ -19,7 +19,6 @@ export async function POST(req: Request) {
       photo_url,
       device_id,
       device_model,
-      // GPS captured silently in background — arrives inline, no separate job
       gps_lat,
       gps_lng,
       gps_accuracy,
@@ -76,33 +75,35 @@ export async function POST(req: Request) {
       )
     }
 
-    // Fetch handover data for WA notification
+    // Fetch handover — no join, plain query to avoid FK resolution issues
     const { data: handover, error: fetchErr } = await admin
       .from("handover")
-      .select(`
-        id,
-        share_token,
-        sender_name,
-        receiver_whatsapp,
-        receiver_target_name,
-        is_sender_proxy,
-        sender_whatsapp,
-        org_id,
-        profiles:user_id (
-          company_name
-        )
-      `)
+      .select(
+        "id, user_id, share_token, sender_name, receiver_whatsapp, receiver_target_name, is_sender_proxy, sender_whatsapp, org_id"
+      )
       .eq("id", handover_id)
       .single()
 
     if (fetchErr || !handover) {
+      console.error("[receive] handover fetch error:", fetchErr?.message, "id:", handover_id)
       return NextResponse.json(
         { success: false, error: "handover not found" },
         { status: 404 }
       )
     }
 
-    // Build receive_event payload — GPS included inline (one insert, no race condition)
+    // Fetch sender label from profiles separately
+    let companyName: string | null = null
+    if (handover.user_id) {
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("company_name")
+        .eq("id", handover.user_id)
+        .maybeSingle()
+      companyName = profile?.company_name ?? null
+    }
+
+    // Build receive_event — GPS inline, one insert, no race condition
     const insertPayload: Record<string, unknown> = {
       handover_id,
       receive_method,
@@ -115,7 +116,6 @@ export async function POST(req: Request) {
 
     if (photo_url) insertPayload.photo_url = photo_url
 
-    // GPS — only include if we actually got coords
     const lat = typeof gps_lat === "number" && isFinite(gps_lat) ? gps_lat : null
     const lng = typeof gps_lng === "number" && isFinite(gps_lng) ? gps_lng : null
     const acc = typeof gps_accuracy === "number" && isFinite(gps_accuracy) ? gps_accuracy : null
@@ -138,18 +138,18 @@ export async function POST(req: Request) {
       })
     }
 
-    // === WA NOTIFICATIONS (fire-and-forget — non-blocking) ===
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL
-      || `https://${req.headers.get("host") || "nest76.com"}`
+    // === WA NOTIFICATIONS (fire-and-forget) ===
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      `https://${req.headers.get("host") || "nest76.com"}`
 
     const senderLabel =
-      (handover as any).profiles?.company_name?.trim() ||
+      companyName?.trim() ||
       handover.sender_name?.trim() ||
       "NEST76 STUDIO"
 
     const shareToken = handover.share_token
 
-    // 1. Always notify receiver target
     if (handover.receiver_whatsapp && shareToken) {
       notifyReceiver({
         to: handover.receiver_whatsapp,
@@ -161,7 +161,6 @@ export async function POST(req: Request) {
       }).catch((e) => console.warn("[WA] notifyReceiver exception:", e))
     }
 
-    // 2. Notify original sender only if user is proxy sender
     if (handover.is_sender_proxy && handover.sender_whatsapp && shareToken) {
       const receivedByName =
         receiver_type === "proxy"
