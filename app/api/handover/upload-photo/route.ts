@@ -7,14 +7,6 @@ import {
 } from "@/lib/nest-evidence-upload"
 import { getUserFromRequest } from "@/lib/supabase/auth-from-request"
 
-/**
- * Multipart upload (FormData) — server uses service role so bucket RLS on the client is not required.
- *
- * Fields:
- * - `file` (required) — image blob
- * - `handover_id` (required)
- * - `mode`: `package_first_item` | `proof_only` (default `package_first_item`)
- */
 export async function POST(req: Request) {
   try {
     const user = await getUserFromRequest(req)
@@ -28,10 +20,7 @@ export async function POST(req: Request) {
     const ct = (req.headers.get("content-type") || "").toLowerCase()
     if (!ct.includes("multipart/form-data")) {
       return NextResponse.json(
-        {
-          error: "File missing",
-          detail: "Gunakan multipart/form-data dengan field file"
-        },
+        { error: "File missing", detail: "Gunakan multipart/form-data dengan field file" },
         { status: 400 }
       )
     }
@@ -42,10 +31,7 @@ export async function POST(req: Request) {
     const file = form.get("file")
 
     if (!handover_id) {
-      return NextResponse.json(
-        { error: "handover_id wajib" },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "handover_id wajib" }, { status: 400 })
     }
 
     const hasFile =
@@ -72,32 +58,28 @@ export async function POST(req: Request) {
     if (hoErr || !ho) {
       return NextResponse.json({ error: "Handover tidak ditemukan" }, { status: 404 })
     }
-    if (ho.user_id !== user.id) {
+
+    // proof_only = uploaded by receiver (not the handover owner)
+    // package_first_item = uploaded by sender (must be owner)
+    if (mode !== "proof_only" && ho.user_id !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const buf = Buffer.from(await file.arrayBuffer())
     const objectType = mode === "proof_only" ? "proof" : "paket"
-    const mime =
-      file.type && file.type.startsWith("image/") ? file.type : "image/jpeg"
+    const mime = file.type?.startsWith("image/") ? file.type : "image/jpeg"
     const ext: "webp" | "jpg" = mime.includes("webp") ? "webp" : "jpg"
-    const storagePath = buildPaketObjectPath(
-      user.id,
-      handover_id,
-      objectType,
-      ext
-    )
-    const contentType = mime
+    const storagePath = buildPaketObjectPath(user.id, handover_id, objectType, ext)
 
     const { error: upErr } = await admin.storage
       .from(NEST_EVIDENCE_BUCKET)
       .upload(storagePath, buf, {
-        contentType,
-        upsert: false
+        contentType: mime,
+        upsert: true  // allow retake
       })
 
     if (upErr) {
-      console.error("UPLOAD_DEBUG:", upErr)
+      console.error("[upload-photo] storage error:", upErr)
       return NextResponse.json(
         { error: upErr.message || "Upload gagal" },
         { status: 500 }
@@ -107,13 +89,10 @@ export async function POST(req: Request) {
     const publicUrl = resolveNestEvidencePublicUrl(storagePath)
 
     if (mode === "proof_only") {
-      return NextResponse.json({
-        success: true,
-        storagePath,
-        publicUrl
-      })
+      return NextResponse.json({ success: true, storagePath, publicUrl })
     }
 
+    // package_first_item: update first handover_item photo
     const { data: firstRows, error: itemErr } = await admin
       .from("handover_items")
       .select("id")
@@ -122,7 +101,6 @@ export async function POST(req: Request) {
       .limit(1)
 
     if (itemErr) {
-      console.error("UPLOAD_DEBUG:", itemErr)
       return NextResponse.json({ error: itemErr.message }, { status: 500 })
     }
 
@@ -134,18 +112,13 @@ export async function POST(req: Request) {
         .eq("id", firstId)
 
       if (updErr) {
-        console.error("UPLOAD_DEBUG:", updErr)
         return NextResponse.json({ error: updErr.message }, { status: 500 })
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      storagePath,
-      publicUrl
-    })
+    return NextResponse.json({ success: true, storagePath, publicUrl })
   } catch (e: unknown) {
-    console.error("UPLOAD_DEBUG:", e)
+    console.error("[upload-photo] error:", e)
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "upload failed" },
       { status: 500 }

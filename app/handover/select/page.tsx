@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { HANDOVER_MODE_KEY, type HandoverMode } from "@/lib/handover-mode"
+import { StudioHeader } from "@/components/nest/studio-header"
 
 const PRIMARY = "#3E2723"
 const BG = "#FAF9F6"
@@ -55,9 +56,7 @@ export default function HandoverSelectModePage() {
   function choose(mode: HandoverMode) {
     try {
       localStorage.setItem(HANDOVER_MODE_KEY, mode)
-      if (mode === "lite") {
-        clearLiteOnlyDrafts()
-      }
+      if (mode === "lite") clearLiteOnlyDrafts()
     } catch {
       /* ignore */
     }
@@ -69,29 +68,22 @@ export default function HandoverSelectModePage() {
       className="flex min-h-screen flex-col"
       style={{ backgroundColor: BG, color: PRIMARY }}
     >
+      <StudioHeader />
+
       <motion.main
-        className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-6 pb-10 pt-12 sm:px-8"
+        className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-6 pb-10 pt-24 sm:px-8"
         variants={container}
         initial="hidden"
         animate="show"
       >
         <motion.header variants={item} className="space-y-2">
-          <p
-            className="text-[10px] font-medium uppercase tracking-[0.32em]"
-            style={{ color: PRIMARY }}
-          >
+          <p className="text-[10px] font-medium uppercase tracking-[0.32em]" style={{ color: PRIMARY }}>
             NEST76 STUDIO
           </p>
-          <h1
-            className="text-[1.65rem] font-light leading-tight tracking-tight sm:text-3xl"
-            style={{ color: PRIMARY }}
-          >
+          <h1 className="text-[1.65rem] font-light leading-tight tracking-tight sm:text-3xl" style={{ color: PRIMARY }}>
             Pilih cara dokumentasi
           </h1>
-          <p
-            className="text-[13px] leading-relaxed opacity-80"
-            style={{ color: PRIMARY }}
-          >
+          <p className="text-[13px] leading-relaxed opacity-80" style={{ color: PRIMARY }}>
             Satu ketukan — menu berikut mengatur alur formulir Anda.
           </p>
         </motion.header>
@@ -105,27 +97,18 @@ export default function HandoverSelectModePage() {
           {...cardMotion}
         >
           <div className="flex flex-col items-start gap-4">
-              <span
-                className="text-[10px] font-semibold uppercase tracking-[0.28em]"
-                style={{ color: PRIMARY }}
-              >
-                RINGKAS
-              </span>
-              <span
-                className="text-[1.35rem] font-light tracking-[0.06em] sm:text-2xl"
-                style={{ color: PRIMARY }}
-              >
-                NEST-LITE
-              </span>
-              <p
-                className="text-[13px] leading-[1.65] sm:text-[14px]"
-                style={{ color: PRIMARY }}
-              >
-                Mode instan untuk dokumentasi harian tanpa birokrasi alamat. Cukup
-                catat barangnya, biar sistem yang mengunci waktu serah terimanya.
-                Cocok untuk mahasiswa, karyawan kantor, atau sekadar pengingat:
-                &ldquo;Barang gue ada di siapa?&rdquo;.
-              </p>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.28em]" style={{ color: PRIMARY }}>
+              RINGKAS
+            </span>
+            <span className="text-[1.35rem] font-light tracking-[0.06em] sm:text-2xl" style={{ color: PRIMARY }}>
+              NEST-LITE
+            </span>
+            <p className="text-[13px] leading-[1.65] sm:text-[14px]" style={{ color: PRIMARY }}>
+              Mode instan untuk dokumentasi harian tanpa birokrasi alamat. Cukup
+              catat barangnya, biar sistem yang mengunci waktu serah terimanya.
+              Cocok untuk mahasiswa, karyawan kantor, atau sekadar pengingat:
+              &ldquo;Barang gue ada di siapa?&rdquo;.
+            </p>
           </div>
         </motion.button>
 
@@ -138,27 +121,18 @@ export default function HandoverSelectModePage() {
           {...cardMotion}
         >
           <div className="flex flex-col items-start gap-4">
-              <span
-                className="text-[10px] font-semibold uppercase tracking-[0.28em]"
-                style={{ color: PRIMARY }}
-              >
-                LENGKAP
-              </span>
-              <span
-                className="text-[1.35rem] font-light tracking-[0.06em] sm:text-2xl"
-                style={{ color: PRIMARY }}
-              >
-                NEST-PRO
-              </span>
-              <p
-                className="text-[13px] leading-[1.65] sm:text-[14px]"
-                style={{ color: PRIMARY }}
-              >
-                Standar profesional untuk UMKM dan kebutuhan resmi. Membangun
-                integritas pengiriman dengan validasi Alamat presisi, Geo-Tagging
-                otomatis, dan sistem notifikasi otomatis. Dokumentasi sah yang
-                siap untuk skala bisnis.
-              </p>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.28em]" style={{ color: PRIMARY }}>
+              LENGKAP
+            </span>
+            <span className="text-[1.35rem] font-light tracking-[0.06em] sm:text-2xl" style={{ color: PRIMARY }}>
+              NEST-PRO
+            </span>
+            <p className="text-[13px] leading-[1.65] sm:text-[14px]" style={{ color: PRIMARY }}>
+              Standar profesional untuk UMKM dan kebutuhan resmi. Membangun
+              integritas pengiriman dengan validasi Alamat presisi, Geo-Tagging
+              otomatis, dan sistem notifikasi otomatis. Dokumentasi sah yang
+              siap untuk skala bisnis.
+            </p>
           </div>
         </motion.button>
 
@@ -179,11 +153,7 @@ export default function HandoverSelectModePage() {
         className="mt-auto flex justify-start border-t border-[#3E2723]/18 px-6 py-6 text-sm backdrop-blur-sm sm:px-8"
         style={{ backgroundColor: `${BG}f2` }}
       >
-        <Link
-          href="/paket"
-          className="transition-colors hover:opacity-80"
-          style={{ color: PRIMARY }}
-        >
+        <Link href="/paket" className="transition-colors hover:opacity-80" style={{ color: PRIMARY }}>
           ← Kembali
         </Link>
       </motion.div>
