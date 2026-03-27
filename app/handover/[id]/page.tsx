@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { QrCode, Camera } from "lucide-react"
 import {
@@ -9,6 +9,12 @@ import {
 } from "@/lib/image-evidence"
 import { resolveEvidencePhotoUrl } from "@/lib/nest-evidence-upload"
 
+interface GpsCoords {
+  lat: number
+  lng: number
+  accuracy: number
+}
+
 export default function HandoverPage() {
   const params = useParams()
   const router = useRouter()
@@ -16,9 +22,7 @@ export default function HandoverPage() {
   const id =
     typeof params.id === "string"
       ? params.id
-      : Array.isArray(params.id)
-        ? params.id[0]
-        : ""
+      : Array.isArray(params.id) ? params.id[0] : ""
 
   const [mode, setMode] = useState("direct")
   const [delegateName, setDelegateName] = useState("")
@@ -27,8 +31,14 @@ export default function HandoverPage() {
   const [processingCapture, setProcessingCapture] = useState(false)
   const [handover, setHandover] = useState<any>(null)
 
+  // GPS silent background
+  const gpsRef = useRef<GpsCoords | null>(null)
+  const watchIdRef = useRef<number | null>(null)
+
   useEffect(() => {
     load()
+    startSilentGps()
+    return () => stopSilentGps()
   }, [])
 
   async function load() {
@@ -37,7 +47,50 @@ export default function HandoverPage() {
     setHandover(data)
   }
 
-  // Compress photo → store in sessionStorage → redirect to preview
+  function startSilentGps() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) return
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        gpsRef.current = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+        }
+        try {
+          sessionStorage.setItem(
+            `handover_${id}_gps`,
+            JSON.stringify(gpsRef.current)
+          )
+        } catch { /* ignore */ }
+      },
+      () => { /* silent */ },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    )
+  }
+
+  function stopSilentGps() {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current)
+    }
+  }
+
+  // Save meta to sessionStorage then navigate to QR page
+  function handleQR() {
+    if (mode === "delegate") {
+      if (!delegateName.trim() || !relation.trim()) {
+        alert("Nama wakil & hubungan wajib diisi sebelum menampilkan QR")
+        return
+      }
+    }
+
+    sessionStorage.setItem(
+      `handover_${id}_meta`,
+      JSON.stringify({ mode, delegateName, relation, notes })
+    )
+
+    router.push(`/handover/${id}/qr`)
+  }
+
   async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files?.length) return
     const file = e.target.files[0]
@@ -171,17 +224,17 @@ export default function HandoverPage() {
           className="w-full border-b border-[#E0DED7] py-2 outline-none mb-6 text-base"
         />
 
-        {/* QR + Photo */}
+        {/* QR + Photo — both save meta first */}
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <Link
-            href={`/handover/${id}/qr`}
-            className="w-[85%] aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm shadow-md"
+          <button
+            onClick={handleQR}
+            className="w-[85%] aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm shadow-md active:scale-[0.97] transition-transform"
           >
             <QrCode size={26} className="mb-2" />
             <span className="text-[10px]">QR</span>
-          </Link>
+          </button>
 
-          <label className="w-[85%] aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm shadow-md cursor-pointer">
+          <label className="w-[85%] aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm shadow-md cursor-pointer active:scale-[0.97] transition-transform">
             <Camera size={26} className="mb-2" />
             <span className="text-[10px]">Foto</span>
             <input

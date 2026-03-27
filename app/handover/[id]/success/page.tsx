@@ -1,15 +1,17 @@
-'use client';
+'use client'
 
-import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import Link from "next/link"
+import { useParams } from "next/navigation"
+import { useEffect, useState } from "react"
 
-export default function SuccessPage(){
-
+export default function SuccessPage() {
   const params = useParams()
-  const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : ""
+  const id = typeof params.id === "string"
+    ? params.id
+    : Array.isArray(params.id) ? params.id[0] : ""
 
   const [serialNumber, setSerialNumber] = useState<string | null>(null)
+  const [receiverName, setReceiverName] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -21,67 +23,71 @@ export default function SuccessPage(){
       if (typeof data.serial_number === "string" && data.serial_number.trim()) {
         setSerialNumber(data.serial_number.trim())
       }
+      if (typeof data.receiver_target_name === "string") {
+        setReceiverName(data.receiver_target_name.trim())
+      }
     })()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [id])
 
   return (
+    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col items-center justify-center px-8">
 
-    <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col justify-between">
+      {/* Icon */}
+      <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-full border border-[#E0DED7]">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <path
+            d="M6 16L13 23L26 9"
+            stroke="#3E2723"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
 
-      <main className="p-8 pt-24 text-center">
+      {/* Title */}
+      <h1 className="text-2xl font-light tracking-tight mb-3 text-center">
+        Tanda terima berhasil
+      </h1>
 
-        <h2 className="text-2xl font-light mb-6">
-          Tanda Terima berhasil
-        </h2>
-
-        <p className="text-sm opacity-60 leading-relaxed max-w-sm mx-auto mb-12">
-
-          Dokumen Tanda Terima kamu sudah tersimpan.
-
-          <br/><br/>
-
-          Kamu bisa cek dokumen kamu di <span className="font-medium">Log Book</span>.
-
+      {receiverName && (
+        <p className="text-sm text-[#A1887F] mb-1 text-center">
+          Paket untuk <span className="font-medium text-[#3E2723]">{receiverName}</span> telah dicatat.
         </p>
+      )}
 
-        {serialNumber && (
-          <div className="text-xs opacity-50 mb-6 max-w-sm mx-auto">
-            <span className="uppercase tracking-[0.15em]">No. Tanda Terima Digital</span>
-            <div className="mt-2 font-mono text-base font-medium text-[#3E2723] opacity-90">
-              {serialNumber}
-            </div>
+      <p className="text-xs text-[#A1887F] leading-relaxed text-center max-w-xs mb-8">
+        Bukti digital sudah tersimpan. Pengirim akan mendapat notifikasi otomatis.
+      </p>
+
+      {serialNumber && (
+        <div className="mb-8 text-center">
+          <span className="text-[10px] uppercase tracking-[0.2em] text-[#A1887F]">
+            No. Tanda Terima Digital
+          </span>
+          <div className="mt-1 font-mono text-base font-medium text-[#3E2723]">
+            {serialNumber}
           </div>
-        )}
-
-        <div className="text-xs opacity-40 mb-12">
-
-          ID Dokumen
-
-          <div className="mt-2 font-mono text-sm opacity-60">
-            {id}
-          </div>
-
         </div>
+      )}
 
-      </main>
-
-
-      <div className="flex justify-center pb-10">
-
+      {/* Actions */}
+      <div className="flex flex-col gap-3 w-full max-w-xs">
         <Link
           href="/dashboard"
-          className="text-sm font-medium border border-[#3E2723] px-8 py-3 rounded-sm active:bg-[#3E2723] active:text-white transition"
+          className="w-full text-center bg-[#3E2723] text-[#FAF9F6] py-3 text-sm font-medium tracking-wide rounded-sm active:scale-[0.98] transition-transform"
         >
-          Buka Log Book
+          Lihat Daftar Paket
         </Link>
-
+        <Link
+          href="/paket"
+          className="w-full text-center border border-[#E0DED7] py-3 text-sm text-[#3E2723] rounded-sm active:scale-[0.98] transition-transform"
+        >
+          Kembali ke Beranda
+        </Link>
       </div>
 
     </div>
-
   )
-
 }

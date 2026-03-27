@@ -7,12 +7,7 @@ import { dataUrlToBlob } from "@/lib/image-evidence"
 import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
 import { getClientDeviceMeta } from "@/lib/receipt-trust"
 
-type UploadStage =
-  | "idle"
-  | "uploading"
-  | "saving"
-  | "done"
-  | "error"
+type UploadStage = "idle" | "uploading" | "saving" | "done" | "error"
 
 const STAGE_LABEL: Record<UploadStage, string> = {
   idle: "",
@@ -43,7 +38,6 @@ export default function PreviewPage() {
   }, [id, router])
 
   function handleRetake() {
-    // Cancel in-flight upload if user retakes
     xhrRef.current?.abort()
     setStage("idle")
     setProgress(0)
@@ -65,7 +59,6 @@ export default function PreviewPage() {
     setErrorMsg(null)
 
     try {
-      // Auth check
       const supabase = createBrowserSupabaseClient()
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
@@ -73,7 +66,6 @@ export default function PreviewPage() {
         return
       }
 
-      // Convert dataUrl → Blob
       let blob: Blob
       try {
         blob = dataUrlToBlob(stored)
@@ -86,7 +78,6 @@ export default function PreviewPage() {
         type: blob.type || "image/webp",
       })
 
-      // Upload via XHR (supports progress events, unlike fetch)
       const storagePath = await uploadWithProgress(
         proofFile,
         id,
@@ -94,7 +85,6 @@ export default function PreviewPage() {
         (pct) => setProgress(pct)
       )
 
-      // Save receive event
       setStage("saving")
       setProgress(100)
 
@@ -103,6 +93,13 @@ export default function PreviewPage() {
       )
       const receiver_type = meta.mode === "direct" ? "direct" : "proxy"
       const { device_id, device_model } = getClientDeviceMeta()
+
+      // Read GPS captured silently in background on [id]/page — one payload, no race condition
+      let gps: { lat: number; lng: number; accuracy: number } | null = null
+      try {
+        const raw = sessionStorage.getItem(`handover_${id}_gps`)
+        if (raw) gps = JSON.parse(raw)
+      } catch { /* ignore */ }
 
       const res = await fetch("/api/handover/receive", {
         method: "POST",
@@ -117,24 +114,30 @@ export default function PreviewPage() {
           photo_url: storagePath,
           device_id,
           device_model,
+          // GPS inline — no separate call, no separate job
+          gps_lat: gps?.lat ?? null,
+          gps_lng: gps?.lng ?? null,
+          gps_accuracy: gps?.accuracy ?? null,
         }),
       })
 
       const result = await res.json()
       if (!result.success) throw new Error(result.error || "Gagal menyimpan")
 
+      // Cleanup sessionStorage
       sessionStorage.removeItem(`handover_${id}_photo`)
       sessionStorage.removeItem(`handover_${id}_meta`)
+      sessionStorage.removeItem(`handover_${id}_gps`)
 
       setStage("done")
-      // Brief pause so user sees "Tersimpan" before navigating
       await new Promise((r) => setTimeout(r, 400))
-      router.replace(`/handover/${id}/location`)
+
+      // Redirect to success page (not dashboard — that's for the sender)
+      router.replace(`/handover/${id}/success`)
     } catch (err) {
       if ((err as Error).message === "aborted") return
       console.error("[preview] error:", err)
-      const msg = err instanceof Error ? err.message : "Gagal menyimpan"
-      setErrorMsg(msg)
+      setErrorMsg(err instanceof Error ? err.message : "Gagal menyimpan")
       setStage("error")
     }
   }
@@ -147,7 +150,6 @@ export default function PreviewPage() {
       <main className="p-6 pt-6">
         <h2 className="text-xl font-medium mb-4 text-center">Preview Bukti</h2>
 
-        {/* Photo */}
         <div className="relative w-full aspect-square border border-[#E0DED7] rounded-sm overflow-hidden shadow-md mb-4 bg-[#FAF9F6]">
           {displayUrl ? (
             <img
@@ -161,13 +163,11 @@ export default function PreviewPage() {
             </div>
           )}
 
-          {/* Busy overlay */}
           {isBusy && (
             <div className="absolute inset-0 bg-[#FAF9F6]/80 flex flex-col items-center justify-center gap-3 z-10">
               <span className="text-xs font-medium text-[#3E2723]">
                 {STAGE_LABEL[stage]}
               </span>
-              {/* Progress bar */}
               <div className="w-48 h-1 bg-[#E0DED7] rounded-full overflow-hidden">
                 <div
                   className="h-full bg-[#3E2723] rounded-full transition-all duration-200"
@@ -187,27 +187,25 @@ export default function PreviewPage() {
           )}
         </div>
 
-        {/* Error message */}
         {stage === "error" && errorMsg && (
           <div className="mb-4 rounded-sm border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
             {errorMsg}
           </div>
         )}
 
-        {/* Actions */}
         {!preparing && stage !== "done" && (
           <div className="flex gap-3">
             <button
               onClick={handleRetake}
               disabled={isBusy}
-              className="flex-1 border border-[#E0DED7] py-3 rounded-sm text-sm disabled:opacity-40 transition-opacity"
+              className="flex-1 border border-[#E0DED7] py-3 rounded-sm text-sm disabled:opacity-40"
             >
               Ambil Ulang
             </button>
             <button
               onClick={handleConfirm}
               disabled={!displayUrl || isBusy}
-              className="flex-1 bg-[#3E2723] text-white py-3 rounded-sm text-sm disabled:opacity-40 transition-opacity"
+              className="flex-1 bg-[#3E2723] text-white py-3 rounded-sm text-sm disabled:opacity-40"
             >
               {stage === "error" ? "Coba Lagi" : "Gunakan Foto"}
             </button>
@@ -218,7 +216,7 @@ export default function PreviewPage() {
   )
 }
 
-// ── XHR upload with real progress ──────────────────────────────────
+// ── XHR upload with progress ──────────────────────────────────
 
 async function uploadWithProgress(
   file: File,
@@ -236,8 +234,7 @@ async function uploadWithProgress(
 
     xhr.upload.addEventListener("progress", (e) => {
       if (e.lengthComputable) {
-        const pct = Math.round((e.loaded / e.total) * 90) // cap at 90% until server responds
-        onProgress(pct)
+        onProgress(Math.round((e.loaded / e.total) * 90))
       }
     })
 
@@ -245,21 +242,12 @@ async function uploadWithProgress(
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           const json = JSON.parse(xhr.responseText)
-          if (json.storagePath) {
-            onProgress(95)
-            resolve(json.storagePath)
-          } else {
-            reject(new Error(json.error || "Upload gagal, coba lagi."))
-          }
-        } catch {
-          reject(new Error("Respons server tidak valid."))
-        }
+          if (json.storagePath) { onProgress(95); resolve(json.storagePath) }
+          else reject(new Error(json.error || "Upload gagal, coba lagi."))
+        } catch { reject(new Error("Respons server tidak valid.")) }
       } else {
         let msg = `Upload gagal (${xhr.status})`
-        try {
-          const json = JSON.parse(xhr.responseText)
-          if (json.error) msg = json.error
-        } catch { /* ignore */ }
+        try { const j = JSON.parse(xhr.responseText); if (j.error) msg = j.error } catch { }
         reject(new Error(msg))
       }
     })
@@ -268,7 +256,7 @@ async function uploadWithProgress(
     xhr.addEventListener("abort", () => reject(new Error("aborted")))
     xhr.addEventListener("timeout", () => reject(new Error("Upload timeout, coba lagi.")))
 
-    xhr.timeout = 30000 // 30s timeout
+    xhr.timeout = 30000
     xhr.open("POST", "/api/handover/upload-photo")
     xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`)
     xhr.send(fd)

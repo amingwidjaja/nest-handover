@@ -18,7 +18,11 @@ export async function POST(req: Request) {
       receiver_relation,
       photo_url,
       device_id,
-      device_model
+      device_model,
+      // GPS captured silently in background — arrives inline, no separate job
+      gps_lat,
+      gps_lng,
+      gps_accuracy,
     } = body
 
     if (!receive_method || !receiver_type) {
@@ -98,7 +102,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // Insert receive_event — DB trigger will update handover.status
+    // Build receive_event payload — GPS included inline (one insert, no race condition)
     const insertPayload: Record<string, unknown> = {
       handover_id,
       receive_method,
@@ -106,11 +110,20 @@ export async function POST(req: Request) {
       receiver_name: receiver_name ?? null,
       receiver_relation: receiver_relation ?? null,
       device_id: device_id ?? null,
-      device_model: device_model ?? null
+      device_model: device_model ?? null,
     }
 
-    if (photo_url) {
-      insertPayload.photo_url = photo_url
+    if (photo_url) insertPayload.photo_url = photo_url
+
+    // GPS — only include if we actually got coords
+    const lat = typeof gps_lat === "number" && isFinite(gps_lat) ? gps_lat : null
+    const lng = typeof gps_lng === "number" && isFinite(gps_lng) ? gps_lng : null
+    const acc = typeof gps_accuracy === "number" && isFinite(gps_accuracy) ? gps_accuracy : null
+
+    if (lat !== null && lng !== null) {
+      insertPayload.gps_lat = lat
+      insertPayload.gps_lng = lng
+      if (acc !== null) insertPayload.gps_accuracy = acc
     }
 
     const { error: insertErr } = await admin
@@ -126,7 +139,6 @@ export async function POST(req: Request) {
     }
 
     // === WA NOTIFICATIONS (fire-and-forget — non-blocking) ===
-    // Derive base URL from request
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL
       || `https://${req.headers.get("host") || "nest76.com"}`
 
@@ -138,10 +150,9 @@ export async function POST(req: Request) {
     const shareToken = handover.share_token
 
     // 1. Always notify receiver target
-    const receiverPhone = handover.receiver_whatsapp
-    if (receiverPhone && shareToken) {
+    if (handover.receiver_whatsapp && shareToken) {
       notifyReceiver({
-        to: receiverPhone,
+        to: handover.receiver_whatsapp,
         senderLabel,
         shareToken,
         baseUrl
