@@ -1,6 +1,6 @@
 # NEST76 STUDIO — Project Context
 > Baca file ini di awal setiap chat baru untuk menyambung konteks.
-> Last updated: 2026-03-27 (v5 — Sprint 1,2,3 done)
+> Last updated: 2026-03-27 (v6 — Sprint 1,2,3,4 done, flow tested)
 
 ---
 
@@ -29,39 +29,49 @@
 
 ---
 
+## Supabase Info
+- Project ref: `hvuvtepwwjpovzauxrjg`
+- Edge Fn URL: `https://hvuvtepwwjpovzauxrjg.supabase.co/functions/v1/`
+
+## WA Config (penting!)
+- `WA_PHONE_NUMBER_ID` = `1079409528584174` (bukan nomor telepon!)
+- `WA_TEMPLATE_NAME` = `nest76_studio_handoff`
+- `WA_TEMPLATE_LANG` = `id`
+- Harus di-set di **DUA tempat**: Vercel env vars + Supabase Edge Functions Secrets
+- Token bersifat permanent
+
+---
+
 ## 4 Aktor dalam Sistem
 
 ```
 1. User app        — yang login dan buat dokumen
-2. Pengirim asli   — pemilik paket (bisa = user, bisa orang lain)
+2. Pengirim asli   — pemilik paket (bisa = user, bisa orang lain → is_sender_proxy=true)
 3. Penerima target — yang seharusnya menerima
 4. Proxy penerima  — yang menerima secara fisik jika target tidak ada
 ```
 
-User bisa jadi **pengirim langsung** (`is_sender_proxy=false`) atau **proxy pengirim** (`is_sender_proxy=true`).
-
 ---
 
-## 4 Skenario + WA Logic
+## WA Logic
 
-**SATU trigger WA: status → `received`** (bukan `created` — masih bisa cancel)
+**SATU trigger WA: status → `received`** (bukan `created`)
 
 | Skenario | WA ke penerima target | WA ke pengirim asli |
 |---|---|---|
-| A: User=pengirim, penerima langsung | ✅ | ❌ (lihat dashboard) |
-| B: User=pengirim, proxy penerima | ✅ link approve | ❌ (lihat dashboard) |
-| C: User=proxy pengirim, penerima langsung | ✅ | ✅ "paketmu diterima" |
-| D: User=proxy pengirim, proxy penerima | ✅ link approve | ✅ "diterima proxy" |
+| A: User=pengirim, penerima langsung | ✅ | ❌ |
+| B: User=pengirim, proxy penerima | ✅ | ❌ |
+| C: User=proxy pengirim, penerima langsung | ✅ | ✅ |
+| D: User=proxy pengirim, proxy penerima | ✅ | ✅ |
 
 Auto-accept 3 hari → WA ke pengirim asli jika `is_sender_proxy=true`
 
 ### Template aktif (Meta)
 ```
-Name: nest76_studio_handoff | Lang: id | Status: Active–Quality pending
+Name: nest76_studio_handoff | Lang: id | Status: Active ✅
 Body: "Halo, Anda menerima paket dari {{1}}.
        Lihat bukti pengiriman: {{2}}
        Bukti ini dibuat menggunakan NEST76 PAKET, product of NEST76 STUDIO."
-{{1}} = senderLabel  {{2}} = proofLink
 ```
 
 ---
@@ -72,97 +82,69 @@ Body: "Halo, Anda menerima paket dari {{1}}.
 draft → created → received → accepted
 ```
 
-- **`created`** — siap kirim, bisa cancel/edit. Serial + token sudah ada. **Tidak ada WA.**
-- **`received`** — serah terima fisik terjadi. receive_event ditulis. **WA dikirim.**
-- **`accepted`** — penerima approve atau 3 hari auto-accept. PDF di-generate.
+- `created` — bisa cancel/edit. **Tidak ada WA.**
+- `received` — serah terima terjadi. **WA dikirim.**
+- `accepted` — approve atau 3 hari auto-accept. PDF di-generate.
 
 ### DB Triggers
 - `trg_receive_event_update_handover` → `derive_handover_status()`
   - `receiver_type=direct` → status=`accepted`
   - `receiver_type=proxy` → status=`received`
-- `trg_on_handover_accepted` → `fn_on_handover_accepted()` via pg_net
-  - Fire `notify-handover` Edge Fn → chain ke `receipt-worker`
+- `trg_on_handover_accepted` → pg_net → `notify-handover` Edge Fn → `receipt-worker`
 
 ### pg_cron
 - `auto-accept-stale-handovers` — setiap jam, received > 3 hari → accepted
 
 ---
 
-## Dua Mode
+## Flow Serah Terima (GPS Silent)
 
-### NEST-Lite
-- No address, GPS opsional, `sender_name` bebas
-- UMKM: transaksi isolated per member (boss tidak lihat staff)
+```
+Pengirim buka [id]/page
+  → GPS start silent background (watchPosition, simpan ke sessionStorage)
+  → Pilih mode: direct atau delegate (+ nama wakil + hubungan)
 
-### NEST-Pro
-- Full address + Mapbox geocoding, GPS non-blocking
-- UMKM: semua staff masuk dashboard boss, `sender_name` locked ke `company_name`
+Foto flow:
+  → Tap foto → compress background → /preview
+  → Upload foto + GPS inline → POST /receive (SATU insert)
+  → Redirect → /handover/[id]/success
+
+QR flow:
+  → Tap QR → meta disimpan → /qr page tampil QR
+  → QR URL encode: /receive/[token]?rt=proxy&rn=NamaWakil&rr=Hubungan
+  → Penerima scan → /receive/[token] → lihat detail dokumen → tap "Terima Paket"
+  → POST /receive (GPS penerima inline)
+  → [id]/qr polling → deteksi received → redirect /success
+```
+
+**PENTING: GPS tidak pernah trigger job terpisah — selalu inline dalam satu POST /receive**
 
 ---
 
-## UMKM Visibility (query rule di `/api/handover/list`)
+## Storage Layout (SaaS Ready)
+
+```
+nest-evidence bucket:
+  paket/
+    {user_id}/
+      {handover_id}/
+        paket_{timestamp}.webp    ← foto produk
+        proof_{timestamp}.webp    ← foto bukti serah terima
+        receipt_{handover_id}.pdf ← PDF tanda terima
+```
+
+1 folder = 1 transaksi → delete mudah via `deleteHandoverStorage(userId, handoverId)`
+
+---
+
+## UMKM Visibility (`/api/handover/list`)
 
 | Kondisi | Query |
 |---|---|
 | OWNER + Pro | `WHERE org_id = profile.org_id` |
 | Semua lainnya | `WHERE user_id = auth.uid()` |
 
-Dashboard kirim `?mode=lite\|pro` ke API untuk trigger rule ini.
-
----
-
-## Data Retention
-
-Setelah `accepted` + PDF done:
-1. Foto Storage → **dihapus** (`cleanup-handover` Edge Fn)
-2. Row DB → **archived** (`record_status = 'archived'`)
-3. PDF → permanen di Storage
-
----
-
-## Database Schema
-
-```
-auth.users
-  └── profiles              user_type, org_id, role (OWNER/STAFF), company_name, display_name
-  └── handover              status, user_id, org_id, staff_id, tenant_id,
-                            share_token, serial_number, record_status,
-                            is_sender_proxy, sender_whatsapp  ← BARU (migration done)
-        └── handover_items  description, photo_url
-        └── receive_event   photo_url, gps_lat/lng, device_id, is_valid, receiver_type
-  └── organizations         name, owner_id, invite_code
-  └── handover_serial_counter  [XX]-[YYMM]-[SEQ]
-  └── tenant                default: "public"
-```
-
----
-
-## Arsitektur Folder
-
-```
-app/
-├── (studio)/              ← SHARED LAYOUT
-│   ├── layout.tsx         ← StudioHeader z-[50] + main pt-24 pb-44 + StudioFooter z-[50]
-│   ├── paket/             ← /paket hub
-│   ├── dashboard/         ← /dashboard (fetch profile + mode → API ?mode=)
-│   ├── profile/
-│   └── handover/create/   ← server component → HandoverCreateForm
-├── handover/
-│   ├── select/            ← pilih Lite/Pro
-│   ├── [id]/              ← receiver confirmation (dead code cleaned)
-│   │   ├── preview/       ← upload foto dengan progress bar (XHR)
-│   │   ├── location/      ← GPS non-blocking, tombol "Lewati"
-│   │   └── qr/
-├── receipt/[token]/       ← public receipt + acceptance
-├── package/               ← input barang + foto
-└── api/handover/
-    ├── create/   ← baca is_sender_proxy + sender_whatsapp, WA tidak dikirim di sini
-    ├── list/     ← visibility rule by role+mode
-    ├── receive/  ← insert receive_event → WA fired here (fire-and-forget)
-    │   └── location/confirm/  ← GPS non-blocking
-    ├── upload-photo/  ← upsert: true (fix retake bug)
-    └── ...
-```
+Dashboard kirim `?mode=lite|pro` ke API.
 
 ---
 
@@ -174,101 +156,100 @@ app/
 | `receipt-worker` | ✅ Deployed | Generate PDF |
 | `cleanup-handover` | ✅ Deployed | Hapus foto + archive row setelah PDF done |
 
-### Secrets di Supabase Edge Functions
-```
-WA_TOKEN              = [Meta token]
-WA_PHONE_NUMBER_ID    = 62817781197
-WA_TEMPLATE_NAME      = nest76_studio_handoff
-WA_TEMPLATE_LANG      = id
-NEXT_PUBLIC_APP_URL   = https://www.nest76.com
-NEST_INTERNAL_SECRET  = nest76-internal-2026
-```
-Note: ada secret `nest-handover` yang tidak bisa dihapus (UI bug) — tidak berbahaya.
+### Auth notify-handover
+- Service role key (dari Next.js server)
+- `x-internal-secret: nest76-internal-2026` (dari pg_net DB trigger)
 
 ---
 
-## WhatsApp Helper Functions (`lib/whatsapp.ts`)
+## Arsitektur Folder
 
-- `sendNest76StudioHandoff()` — core send
-- `notifyReceiver()` — ke penerima target, link `/receipt/[token]`
-- `notifySenderProxy()` — ke pengirim asli jika proxy
+```
+app/
+├── (studio)/              ← StudioHeader z-[50] + main pt-24 pb-44 + StudioFooter z-[50]
+│   ├── layout.tsx
+│   ├── dashboard/
+│   ├── paket/
+│   └── profile/
+├── handover/
+│   ├── select/            ← pilih Lite/Pro (StudioHeader + StudioFooter)
+│   ├── create/            ← HandoverCreateForm (StudioHeader + StudioFooter)
+│   ├── [id]/              ← GPS silent, pilih mode, foto/QR
+│   │   ├── preview/       ← upload foto + GPS inline → /success
+│   │   ├── qr/            ← tampil QR, polling status → /success
+│   │   └── success/       ← halaman sukses
+├── receive/[token]/       ← public: detail dokumen + tombol "Terima Paket"
+├── receipt/[token]/       ← public receipt page
+├── package/               ← input barang + foto (StudioHeader + StudioFooter)
+└── api/handover/
+    ├── create/    ← is_sender_proxy + sender_whatsapp, WA tidak dikirim di sini
+    ├── list/      ← visibility rule by role+mode
+    ├── receive/   ← GPS inline, WA fire-and-forget, NO FK join (pisah query profile)
+    ├── detail/    ← getSupabaseAdmin (bukan anon client)
+    ├── by-token/  ← getSupabaseAdmin
+    ├── status/    ← getSupabaseAdmin
+    └── upload-photo/ ← proof_only bypass ownership check, upsert:true
+```
 
 ---
 
-## Design System
+## Catatan Penting (Lessons Learned)
 
-- **Primary**: `#3E2723` | **Background**: `#FAF9F6`
-- **Muted**: `#A1887F`, `#5D4037` | **Border**: `#E0DED7`
-- **Font**: Geist Sans + Geist Mono | **Ease**: `[0.22, 1, 0.36, 1]`
-
-### Z-Index
-```
-z-[60] → Action bar (dashboard), Toast
-z-[50] → StudioHeader, StudioFooter
-auto   → Main content (pt-24 pb-44)
-```
+- **Jangan pakai FK join syntax** di Supabase kalau FK tidak terdefinisi langsung antar tabel. `handover.user_id` → `auth.users`, bukan `profiles`. Query profiles terpisah.
+- **str_replace** berbahaya untuk file >200 baris → selalu pakai `write_file` lengkap
+- **WA_PHONE_NUMBER_ID** ≠ nomor telepon. Ambil dari Meta Developer → WhatsApp → API Setup → Phone Number ID
+- **Env vars Vercel** tidak otomatis terbaca oleh Supabase Edge Functions — harus set di dua tempat
 
 ---
 
 ## Environment Variables
 
+### Vercel
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 WA_TOKEN=
-WA_PHONE_NUMBER_ID=
+WA_PHONE_NUMBER_ID=1079409528584174
 WA_TEMPLATE_NAME=nest76_studio_handoff
 WA_TEMPLATE_LANG=id
 NEXT_PUBLIC_APP_URL=https://www.nest76.com
 NEXT_PUBLIC_MAPBOX_TOKEN=
 ```
 
-### Supabase Info
-- Project ref: `hvuvtepwwjpovzauxrjg`
-- Edge Fn URL: `https://hvuvtepwwjpovzauxrjg.supabase.co/functions/v1/`
+### Supabase Edge Functions Secrets
+```
+WA_TOKEN
+WA_PHONE_NUMBER_ID=1079409528584174
+WA_TEMPLATE_NAME=nest76_studio_handoff
+WA_TEMPLATE_LANG=id
+NEXT_PUBLIC_APP_URL=https://www.nest76.com
+NEST_INTERNAL_SECRET=nest76-internal-2026
+```
+
+Note: secret `nest-handover` tidak bisa dihapus (UI bug Supabase) — tidak berbahaya.
 
 ---
 
 ## Backlog
 
 ### Sprint 1 ✅ DONE
-- [x] Fix `studioRole` fetch di DashboardPage
-- [x] Hapus dead code di `/handover/[id]/page.tsx`
-- [x] GPS non-blocking + tombol "Lewati"
-- [x] `lib/whatsapp.ts` updated ke template aktual
-- [x] Folder backup dihapus
-
 ### Sprint 2 ✅ DONE
-- [x] Visibility rule di `/api/handover/list` by role+mode
-- [x] Dashboard kirim `?mode=` ke API
-- [x] `is_sender_proxy` + `sender_whatsapp` wire: form → localStorage → payload → DB
-- [x] `/api/handover/create` baca proxy fields
-- [x] `app/package/page.tsx` proxy fields di payload
-- [x] SQL migration kolom proxy done
-
 ### Sprint 3 ✅ DONE
-- [x] WA notif di `/api/handover/receive` (fire-and-forget)
-- [x] pg_cron auto-accept 3 hari (migration 035)
-- [x] pg_net trigger on accepted → notify-handover
-- [x] Edge Functions deployed + secrets set
-- [x] `notify-handover` updated dengan isAuthorized()
-- [x] `cleanup-handover` fixed (full path bug)
-- [x] Upload foto: progress bar XHR, upsert:true fix retake
-
-### Sprint 4 — Data & PDF
-- [ ] Trigger `cleanup-handover` — perlu pg_cron atau dipanggil setelah receipt-worker selesai
-- [ ] Verifikasi receipt-worker flow end-to-end (test dengan handover nyata)
-- [ ] Halaman sukses untuk penerima setelah accept (sekarang redirect ke /dashboard)
+### Sprint 4 ✅ DONE (flow tested, WA fix in progress)
 
 ### Sprint 5 — Polish & Maps
 - [ ] Migrate GPS page dari Leaflet ke Mapbox
-- [ ] Address autocomplete NEST-Pro (Mapbox)
-- [ ] UMKM Pro: lock sender_name ke company_name di form
-- [ ] UI/UX review pass setelah test
+- [ ] Address autocomplete NEST-Pro
+- [ ] UMKM Pro: lock sender_name ke company_name
+- [ ] UI/UX review pass
+- [ ] receipt/[token] page — verifikasi tampilan
+- [ ] cleanup-handover trigger (cron setelah PDF done)
+- [ ] Test QR flow end-to-end
+- [ ] Test proxy sender WA notification
 
 ---
 
 ## Cara Pakai di Chat Baru
 
-Ketik: **"Baca CONTEXT.md di `C:\GitHub\NEST\nest-handover\CONTEXT.md` lalu lanjutkan Sprint [N]"**
+Ketik: **"Baca CONTEXT.md di `C:\GitHub\NEST\nest-handover\CONTEXT.md` lalu lanjutkan Sprint 5"**

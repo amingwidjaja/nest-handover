@@ -1,260 +1,185 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import { ChevronRight, SignalLow } from "lucide-react"
 import type { Coords } from "./validation-map"
 
-const DEFAULT_COORDS: Coords = { lat: -6.2, lng: 106.8, accuracy: 0 }
+const DEFAULT: Coords = { lat: -6.2, lng: 106.8, accuracy: 0 }
 
-const ValidationMap = dynamic(
-  () => import("./validation-map"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-full flex items-center justify-center bg-[var(--paper)] text-[10px] font-mono text-[#A1887F] tracking-[0.2em] uppercase font-bold">
-        MENYIAPKAN RADAR...
-      </div>
-    ),
-  }
-)
+const ValidationMap = dynamic(() => import("./validation-map"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center bg-[var(--paper)] text-[10px] font-bold font-mono uppercase tracking-[0.2em] text-[#A1887F]">
+      MENYIAPKAN RADAR...
+    </div>
+  ),
+})
 
 export default function LocationPage() {
-  const params = useParams()
+  const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const id = params.id as string
 
-  const watchId = useRef<number | null>(null)
-  const timerId = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastMapPush = useRef(0)
-  const mapPrimed = useRef(false)
-  const realCoordsRef = useRef<Coords | null>(null)
+  const watchId  = useRef<number | null>(null)
+  const timer    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastPush = useRef(0)
+  const primed   = useRef(false)
+  const realRef  = useRef<Coords | null>(null)
 
-  const [coords, setCoords] = useState<Coords>(DEFAULT_COORDS)
-  const [mapCoords, setMapCoords] = useState<Coords>(DEFAULT_COORDS)
-  const [realCoords, setRealCoords] = useState<Coords | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+  const [display,   setDisplay]   = useState<Coords>(DEFAULT)
+  const [mapCoords, setMapCoords] = useState<Coords>(DEFAULT)
+  const [real,      setReal]      = useState<Coords | null>(null)
+  const [loading,   setLoading]   = useState(true)
+  const [error,     setError]     = useState<string | null>(null)
+  const [saving,    setSaving]    = useState(false)
 
   useEffect(() => {
-    startTracking()
-    return () => stopTracking()
+    track()
+    return stop
   }, [])
 
-  function stopTracking() {
+  function stop() {
     if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current)
-    if (timerId.current) clearTimeout(timerId.current)
+    if (timer.current) clearTimeout(timer.current)
   }
 
-  const pushMapIfNeeded = useCallback((c: Coords) => {
-    setMapCoords((prev) => {
+  const pushMap = useCallback((c: Coords) => {
+    setMapCoords(prev => {
       const now = Date.now()
-      if (!mapPrimed.current) {
-        mapPrimed.current = true
-        lastMapPush.current = now
-        return c
-      }
-      const moved =
-        Math.abs(c.lat - prev.lat) > 0.00003 ||
-        Math.abs(c.lng - prev.lng) > 0.00003
-      if (moved || now - lastMapPush.current > 2000) {
-        lastMapPush.current = now
-        return c
-      }
+      if (!primed.current) { primed.current = true; lastPush.current = now; return c }
+      const moved = Math.abs(c.lat - prev.lat) > 0.00003 || Math.abs(c.lng - prev.lng) > 0.00003
+      if (moved || now - lastPush.current > 2000) { lastPush.current = now; return c }
       return prev
     })
   }, [])
 
-  function startTracking() {
-    setLoading(true)
-    setErrorMsg(null)
-    setRealCoords(null)
-    realCoordsRef.current = null
-    mapPrimed.current = false
-    lastMapPush.current = 0
-    setMapCoords(DEFAULT_COORDS)
+  function track() {
+    setLoading(true); setError(null); setReal(null)
+    realRef.current = null; primed.current = false
+    lastPush.current = 0; setMapCoords(DEFAULT)
 
-    if (typeof window !== "undefined" && !navigator.geolocation) {
-      setErrorMsg("GPS TIDAK DIDUKUNG")
-      setLoading(false)
-      return
+    if (!navigator?.geolocation) {
+      setError("GPS TIDAK DIDUKUNG"); setLoading(false); return
     }
 
-    timerId.current = setTimeout(() => {
-      if (!realCoordsRef.current) {
-        stopTracking()
-        setLoading(false)
-        setErrorMsg("TIMEOUT: SINYAL TERLALU LEMAH")
-      }
+    timer.current = setTimeout(() => {
+      if (!realRef.current) { stop(); setLoading(false); setError("TIMEOUT: SINYAL TERLALU LEMAH") }
     }, 12000)
 
     watchId.current = navigator.geolocation.watchPosition(
       (pos) => {
-        if (timerId.current) clearTimeout(timerId.current)
-        const newCoords = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
-        }
-        setCoords(newCoords)
-        setRealCoords(newCoords)
-        realCoordsRef.current = newCoords
-        pushMapIfNeeded(newCoords)
-        setLoading(false)
+        if (timer.current) clearTimeout(timer.current)
+        const c: Coords = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }
+        setDisplay(c); setReal(c); realRef.current = c
+        pushMap(c); setLoading(false)
       },
       (err) => {
-        if (!realCoordsRef.current) {
-          if (timerId.current) clearTimeout(timerId.current)
+        if (!realRef.current) {
+          if (timer.current) clearTimeout(timer.current)
           setLoading(false)
-          if (err.code === 1) setErrorMsg("IZIN LOKASI DITOLAK")
-          else setErrorMsg("GAGAL MENGUNCI SINYAL")
+          setError(err.code === 1 ? "IZIN LOKASI DITOLAK" : "GAGAL MENGUNCI SINYAL")
         }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )
   }
 
-  // Submit GPS coords — non-blocking: success or failure both go to dashboard
-  async function submitLocation() {
-    if (!realCoords) return
-    setSubmitting(true)
+  async function submit() {
+    if (!real) return
+    setSaving(true)
     try {
       await fetch("/api/handover/receive/location/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          handover_id: id,
-          lat: realCoords.lat,
-          lng: realCoords.lng,
-          accuracy: realCoords.accuracy ?? 0,
-        }),
+        body: JSON.stringify({ handover_id: id, lat: real.lat, lng: real.lng, accuracy: real.accuracy ?? 0 }),
       })
-      // GPS is additional data — we navigate regardless of is_valid
-    } catch {
-      // ignore — non-blocking
-    } finally {
-      setSubmitting(false)
-      router.replace("/dashboard")
-    }
+    } catch { /* non-blocking */ }
+    finally { setSaving(false); router.replace("/dashboard") }
   }
 
-  // Skip GPS entirely — data simply won't be recorded
-  function skipLocation() {
-    stopTracking()
-    router.replace("/dashboard")
-  }
+  const overlayVisible = loading || (!real && !!error)
 
   return (
-    <div className="flex h-screen min-h-0 flex-col overflow-y-auto bg-[var(--paper)] font-sans text-[var(--ink)] antialiased max-w-md mx-auto border-x border-[var(--line)]">
+    <div className="flex h-screen flex-col overflow-y-auto bg-[var(--paper)] font-sans text-[var(--ink)] antialiased max-w-md mx-auto border-x border-[var(--line)]">
 
       {/* HEADER */}
       <div className="shrink-0 border-b border-[var(--line)] bg-white p-5 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-[11px] font-black uppercase tracking-[0.3em] text-[#3E2723]">
-            NEST76 PAKET
-          </span>
+          <span className="text-[11px] font-black uppercase tracking-[0.3em] text-[#3E2723]">NEST76 PAKET</span>
           <div className="flex items-center gap-2">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                loading
-                  ? "bg-orange-300 animate-pulse"
-                  : realCoords
-                    ? "bg-green-700"
-                    : "bg-red-700"
-              }`}
-            />
+            <span className={`h-2 w-2 rounded-full ${loading ? "animate-pulse bg-orange-300" : real ? "bg-green-700" : "bg-red-700"}`} />
             <span className="text-[10px] font-bold uppercase tracking-widest">
-              {loading ? "MENCARI" : realCoords ? "TERKUNCI" : "OFFLINE"}
+              {loading ? "MENCARI" : real ? "TERKUNCI" : "OFFLINE"}
             </span>
           </div>
         </div>
-        <h1 className="text-lg font-black uppercase tracking-[0.2em] leading-tight text-[#3E2723]">
-          Lokasi Serah Terima
-        </h1>
-        <p className="mt-1 text-[10px] text-[#A1887F]">
-          Opsional — data tambahan untuk bukti digital
-        </p>
+        <h1 className="text-lg font-black uppercase tracking-[0.2em] leading-tight text-[#3E2723]">Lokasi Serah Terima</h1>
+        <p className="mt-1 text-[10px] text-[#A1887F]">Opsional — data tambahan untuk bukti digital</p>
       </div>
 
       {/* MAP */}
       <div className="shrink-0 px-4 py-3 sm:px-5">
         <div className="relative h-56 w-full overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--line)]">
           <ValidationMap coords={mapCoords} />
-          {(loading || (errorMsg && !realCoords)) && (
+
+          {overlayVisible && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--paper)]/95 p-6 text-center">
-              <div className="flex flex-col items-center gap-6">
-                {loading ? (
-                  <>
-                    <div className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--line)] border-t-[#3E2723]" />
-                    <div className="space-y-2">
-                      <span className="block text-[10px] font-bold uppercase tracking-[0.35em] text-[#3E2723]">
-                        MENYINKRONKAN…
-                      </span>
-                      <span className="block max-w-[200px] text-[8px] uppercase leading-relaxed tracking-widest text-[#A1887F]">
-                        Menghubungkan ke satelit
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="rounded-full border border-red-100 bg-red-50/30 p-5">
-                      <SignalLow className="text-red-800" size={32} />
-                    </div>
-                    <div className="space-y-1">
-                      <span className="block text-[10px] font-bold uppercase tracking-widest text-red-800">
-                        {errorMsg}
-                      </span>
-                      <p className="max-w-[220px] text-[9px] leading-relaxed text-[#A1887F]">
-                        Coba lagi atau lewati — GPS tidak wajib.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={startTracking}
-                      className="bg-[#3E2723] px-8 py-3 text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--paper)] shadow-lg transition-all active:scale-[0.96]"
-                    >
-                      COBA LAGI
-                    </button>
-                  </>
-                )}
-              </div>
+              {loading ? (
+                <div className="flex flex-col items-center gap-6">
+                  <div className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--line)] border-t-[#3E2723]" />
+                  <div className="space-y-2">
+                    <span className="block text-[10px] font-bold uppercase tracking-[0.35em] text-[#3E2723]">MENYINKRONKAN…</span>
+                    <span className="block max-w-[200px] text-[8px] uppercase leading-relaxed tracking-widest text-[#A1887F]">Menghubungkan ke satelit</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-6">
+                  <div className="rounded-full border border-red-100 bg-red-50/30 p-5">
+                    <SignalLow className="text-red-800" size={32} />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="block text-[10px] font-bold uppercase tracking-widest text-red-800">{error}</span>
+                    <p className="max-w-[220px] text-[9px] leading-relaxed text-[#A1887F]">Coba lagi atau lewati — GPS tidak wajib.</p>
+                  </div>
+                  <button onClick={track} className="bg-[#3E2723] px-8 py-3 text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--paper)] shadow-lg transition-all active:scale-[0.96]">
+                    COBA LAGI
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* DATA STRIP */}
-      <div className="px-6 py-5 border-y border-[var(--line)] bg-[#3E2723] flex justify-between text-[10px] font-mono text-[var(--paper)] uppercase tracking-widest">
+      {/* COORDS STRIP */}
+      <div className="flex justify-between border-y border-[var(--line)] bg-[#3E2723] px-6 py-5 font-mono text-[10px] uppercase tracking-widest text-[var(--paper)]">
         <div className="flex flex-col">
-          <span className="text-[#A1887F] text-[8px] mb-1 font-bold">LATITUDE</span>
-          <span className="font-bold text-white text-xs">{coords.lat.toFixed(6)}</span>
+          <span className="mb-1 text-[8px] font-bold text-[#A1887F]">LATITUDE</span>
+          <span className="text-xs font-bold text-white">{display.lat.toFixed(6)}</span>
         </div>
         <div className="flex flex-col text-right">
-          <span className="text-[#A1887F] text-[8px] mb-1 font-bold">AKURASI</span>
-          <span className={`font-bold text-xs ${coords.accuracy && coords.accuracy < 50 ? "text-green-300" : "text-orange-300"}`}>
-            ± {Math.round(coords.accuracy || 0)} M
+          <span className="mb-1 text-[8px] font-bold text-[#A1887F]">AKURASI</span>
+          <span className={`text-xs font-bold ${(display.accuracy ?? 0) < 50 ? "text-green-300" : "text-orange-300"}`}>
+            ± {Math.round(display.accuracy ?? 0)} M
           </span>
         </div>
       </div>
 
       {/* ACTIONS */}
-      <div className="p-6 space-y-3 bg-white">
+      <div className="space-y-3 bg-white p-6">
         <button
-          onClick={submitLocation}
-          disabled={loading || !realCoords || submitting}
-          className="w-full bg-[#3E2723] text-[var(--paper)] py-6 text-xs font-bold tracking-[0.3em] uppercase flex justify-between items-center px-8 active:scale-[0.96] transition-all disabled:bg-[var(--line)] disabled:text-[#A1887F]"
+          onClick={submit}
+          disabled={loading || !real || saving}
+          className="flex w-full items-center justify-between bg-[#3E2723] px-8 py-6 text-xs font-bold uppercase tracking-[0.3em] text-[var(--paper)] transition-all active:scale-[0.96] disabled:bg-[var(--line)] disabled:text-[#A1887F]"
         >
-          {submitting ? "MENYIMPAN…" : loading ? "LOADING GPS..." : "REKAM LOKASI"}
-          {!loading && !submitting && <ChevronRight size={18} strokeWidth={2} />}
+          {saving ? "MENYIMPAN…" : loading ? "LOADING GPS..." : "REKAM LOKASI"}
+          {!loading && !saving && <ChevronRight size={18} strokeWidth={2} />}
         </button>
-
-        {/* Skip button — GPS is optional */}
         <button
-          onClick={skipLocation}
-          disabled={submitting}
-          className="w-full py-3 text-[11px] text-[#A1887F] tracking-widest uppercase border border-[#E0DED7] active:scale-[0.98] transition-all"
+          onClick={() => { stop(); router.replace("/dashboard") }}
+          disabled={saving}
+          className="w-full border border-[#E0DED7] py-3 text-[11px] uppercase tracking-widest text-[#A1887F] transition-all active:scale-[0.98]"
         >
           Lewati — tanpa data GPS
         </button>

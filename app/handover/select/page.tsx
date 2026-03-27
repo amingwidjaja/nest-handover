@@ -5,6 +5,7 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { HANDOVER_MODE_KEY, type HandoverMode } from "@/lib/handover-mode"
 import { StudioHeader } from "@/components/nest/studio-header"
+import { StudioFooter } from "@/components/nest/studio-footer"
 
 const PRIMARY = "#3E2723"
 const BG = "#FAF9F6"
@@ -71,7 +72,7 @@ export default function HandoverSelectModePage() {
       <StudioHeader />
 
       <motion.main
-        className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-6 pb-10 pt-24 sm:px-8"
+        className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-6 pb-32 pt-24 sm:px-8"
         variants={container}
         initial="hidden"
         animate="show"
@@ -138,7 +139,7 @@ export default function HandoverSelectModePage() {
 
         <motion.p
           variants={item}
-          className="mx-auto mt-8 max-w-md text-center text-[10px] leading-relaxed sm:text-[11px]"
+          className="mx-auto mt-4 max-w-md text-center text-[10px] leading-relaxed sm:text-[11px]"
           style={{ color: PRIMARY }}
         >
           © 2026 NEST76 STUDIO • Membangun alat yang membantu manusia, bukan
@@ -146,17 +147,7 @@ export default function HandoverSelectModePage() {
         </motion.p>
       </motion.main>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.45, duration: 0.4, ease }}
-        className="mt-auto flex justify-start border-t border-[#3E2723]/18 px-6 py-6 text-sm backdrop-blur-sm sm:px-8"
-        style={{ backgroundColor: `${BG}f2` }}
-      >
-        <Link href="/paket" className="transition-colors hover:opacity-80" style={{ color: PRIMARY }}>
-          ← Kembali
-        </Link>
-      </motion.div>
+      <StudioFooter />
     </div>
   )
 }
