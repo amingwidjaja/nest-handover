@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { Home } from "lucide-react"
 import { resolveNestEvidencePublicUrl } from "@/lib/nest-evidence-upload"
 
 type StudioRole = "OWNER" | "STAFF" | null
@@ -21,7 +22,6 @@ export default function DashboardPage() {
 
   const timerRef = useRef<any>(null)
   const handoversRef = useRef<any[]>([])
-  const swipeRef = useRef<HTMLDivElement>(null)
   const touchStartX = useRef<number | null>(null)
 
   useEffect(() => { handoversRef.current = handovers }, [handovers])
@@ -49,7 +49,6 @@ export default function DashboardPage() {
     const rows = data.handovers || []
     setHandovers(rows)
     if (rows.length) {
-      window.scrollTo({ top: 0 })
       setHighlightId(rows[0].id)
       setTimeout(() => setHighlightId(null), 3000)
     }
@@ -57,14 +56,11 @@ export default function DashboardPage() {
 
   useEffect(() => { load() }, [load])
 
-  // Poll receipt PDF for accepted handovers
   useEffect(() => {
     const needsReceipt = handovers.some(h => h.status === "accepted" && !h.receipt_url)
     if (!needsReceipt) return
     async function pollOnce() {
-      const stuck = handoversRef.current.filter(
-        (h: any) => h.status === "accepted" && !h.receipt_url
-      )
+      const stuck = handoversRef.current.filter((h: any) => h.status === "accepted" && !h.receipt_url)
       if (!stuck.length) return
       for (const h of stuck) {
         if (!h.share_token) continue
@@ -86,10 +82,7 @@ export default function DashboardPage() {
     return () => window.clearInterval(id)
   }, [handovers, load])
 
-  // Swipe gesture
-  function onTouchStart(e: React.TouchEvent) {
-    touchStartX.current = e.touches[0].clientX
-  }
+  function onTouchStart(e: React.TouchEvent) { touchStartX.current = e.touches[0].clientX }
   function onTouchEnd(e: React.TouchEvent) {
     if (touchStartX.current === null) return
     const dx = e.changedTouches[0].clientX - touchStartX.current
@@ -121,22 +114,16 @@ export default function DashboardPage() {
   const pending  = handovers.filter(h => h.status === "created")
   const received = handovers.filter(h => h.status === "received" || h.status === "accepted")
 
-  function formatDate(dateString: string) {
-    return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short" }).format(new Date(dateString))
-  }
   function getDateLabel(dateString: string) {
     const d = new Date(dateString)
     const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
-    const target = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-    if (target.getTime() === today.getTime()) return "Hari ini"
-    if (target.getTime() === yesterday.getTime()) return "Kemarin"
-    return formatDate(dateString)
+    const toDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+    if (toDay(d) === toDay(now)) return "Hari ini"
+    if (toDay(d) === toDay(now) - 86400000) return "Kemarin"
+    return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short" }).format(d)
   }
-  function isToday(dateString: string) {
-    const d = new Date(dateString)
-    const now = new Date()
+  function isToday(ds: string) {
+    const d = new Date(ds), now = new Date()
     return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
   }
 
@@ -168,13 +155,13 @@ export default function DashboardPage() {
   }
 
   function Row({ h }: { h: any }) {
-    const today  = isToday(h.created_at)
-    const date   = getDateLabel(h.created_at)
-    const name   = h.receiver_target_name || "-"
-    const pkg    = h.handover_items?.length ? h.handover_items[0].description : "-"
-    const addr   = h.destination_address || null
+    const today   = isToday(h.created_at)
+    const date    = getDateLabel(h.created_at)
+    const name    = h.receiver_target_name || "-"
+    const pkg     = h.handover_items?.length ? h.handover_items[0].description : "-"
+    const addr    = h.destination_address || null
     const checked = selected.includes(h.id)
-    const link   = receiptLink(h)
+    const link    = receiptLink(h)
 
     return (
       <div
@@ -184,11 +171,10 @@ export default function DashboardPage() {
         onTouchStart={() => { timerRef.current = setTimeout(() => { if (!selectMode) startSelect(h.id) }, 500) }}
         onTouchEnd={() => clearTimeout(timerRef.current)}
         onTouchMove={() => clearTimeout(timerRef.current)}
-        className={`px-5 py-3.5 border-b border-[#E0DED7] cursor-pointer transition-colors
+        className={`px-5 py-3.5 border-b border-[#E0DED7] cursor-pointer
           ${highlightId === h.id ? "bg-[#A1887F]/10" : ""}
           ${checked ? "bg-[#A1887F]/20" : "active:bg-[#F5F4F0]"}`}
       >
-        {/* Baris 1 — Nama + Tanggal */}
         <div className="flex items-center justify-between gap-2 mb-1">
           <div className="flex items-center gap-1.5 min-w-0">
             {today && <span className="w-1.5 h-1.5 rounded-full bg-[#A1887F] shrink-0" />}
@@ -196,8 +182,6 @@ export default function DashboardPage() {
           </div>
           <span className="text-[11px] text-[#A1887F] shrink-0 tabular-nums">{date}</span>
         </div>
-
-        {/* Baris 2 — Isi paket */}
         <div className="flex items-center justify-between gap-2">
           <span className="text-[12px] text-[#7D6E68] italic truncate flex-1">{pkg}</span>
           {selectMode && (
@@ -207,14 +191,9 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-
-        {/* Baris 3 — Alamat (jika ada) + Link tanda terima */}
         {(addr || link) && (
           <div className="flex items-center justify-between gap-2 mt-1.5">
-            {addr
-              ? <span className="text-[11px] text-[#A1887F] truncate flex-1">{addr}</span>
-              : <span />
-            }
+            {addr ? <span className="text-[11px] text-[#A1887F] truncate flex-1">{addr}</span> : <span />}
             {link}
           </div>
         )}
@@ -223,53 +202,73 @@ export default function DashboardPage() {
   }
 
   const showTeamFeed = studioRole === "OWNER" && handoverMode === "pro"
+  const tabs = [
+    { label: "Dalam Proses", count: pending.length },
+    { label: "Selesai",      count: received.length },
+  ]
 
   return (
-    <>
-      {/* ── STICKY: Judul + Tab ── */}
-      <div className="sticky top-0 z-10 bg-[#FAF9F6]">
-        <div className="pb-2 pt-2">
-          <h1 className="text-xl font-medium tracking-tight">
+    <div className="flex flex-col min-h-screen">
+
+      {/* ── FIXED HEADER: logo + judul + tabs ── */}
+      <div className="fixed top-0 inset-x-0 z-50 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#3E2723]/5">
+
+        {/* Baris 1: logo + home */}
+        <div className="flex items-center justify-between px-6 h-14 border-b border-[#E0DED7]/60">
+          <Link href="/paket" className="flex items-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-nest-paket.png" alt="" className="h-6 w-auto shrink-0" />
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#3E2723]">
+              NEST76 PAKET
+            </span>
+          </Link>
+          <Link href="/paket" aria-label="Beranda">
+            <Home className="h-5 w-5 text-[#3E2723] opacity-70" strokeWidth={1.75} />
+          </Link>
+        </div>
+
+        {/* Baris 2: judul */}
+        <div className="px-6 pt-3 pb-1">
+          <h1 className="text-lg font-medium tracking-tight">
             {studioRole === "STAFF" ? "Paket Anda" : "Daftar Paket"}
           </h1>
         </div>
 
+        {/* Staff CTA */}
         {studioRole === "STAFF" && (
-          <div className="border-b border-[#E0DED7] py-3">
+          <div className="px-6 pb-2">
             <Link href="/handover/select"
-              className="text-sm font-medium text-[#3E2723] underline decoration-[#3E2723]/30 underline-offset-4">
-              Formulir baru — buat tanda terima
+              className="text-[11px] font-medium text-[#3E2723] underline decoration-[#3E2723]/30 underline-offset-2">
+              + Formulir baru
             </Link>
           </div>
         )}
 
+        {/* Team feed */}
         {showTeamFeed && (
-          <section className="border-b border-[#E0DED7] bg-[#F7F6F3]/90 py-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#A1887F] mb-3">Aktivitas tim</p>
-            <div className="max-h-36 space-y-2 overflow-y-auto">
-              {handovers.filter(h => h.staff_display_name).slice(0, 12).map(h => (
-                <div key={`feed-${h.id}`}
-                  className="flex items-center justify-between gap-3 border-t border-[#E0DED7]/70 pt-2 first:border-t-0 first:pt-0">
-                  <span className="text-[11px] font-semibold text-[#5D4037]">{h.staff_display_name}</span>
-                  <span className="min-w-0 flex-1 truncate text-right text-[10px] text-[#A1887F]">
-                    {h.receiver_target_name || "—"}
-                  </span>
+          <div className="px-6 pb-3 border-b border-[#E0DED7]">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-[#A1887F] mb-2">Aktivitas tim</p>
+            <div className="space-y-1.5 max-h-28 overflow-y-auto">
+              {handovers.filter(h => h.staff_display_name).slice(0, 8).map(h => (
+                <div key={`feed-${h.id}`} className="flex justify-between gap-2 text-[11px]">
+                  <span className="font-medium text-[#5D4037]">{h.staff_display_name}</span>
+                  <span className="text-[#A1887F] truncate">{h.receiver_target_name || "—"}</span>
                 </div>
               ))}
               {handovers.filter(h => h.staff_display_name).length === 0 && (
-                <p className="text-[11px] italic text-[#A1887F]">Belum ada aktivitas staf tercatat.</p>
+                <p className="text-[11px] italic text-[#A1887F]">Belum ada aktivitas.</p>
               )}
             </div>
-          </section>
+          </div>
         )}
 
-        {/* Tab bar */}
-        <div className="flex border-b border-[#E0DED7]">
-          {([{ label: "Dalam Proses", count: pending.length }, { label: "Selesai", count: received.length }] as const).map(({ label, count }, i) => (
+        {/* Baris 3: tabs */}
+        <div className="flex">
+          {tabs.map(({ label, count }, i) => (
             <button
               key={i}
               onClick={() => setActiveTab(i as 0 | 1)}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 text-[12px] font-medium transition-colors border-b-2
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] font-medium border-b-2 transition-colors
                 ${activeTab === i ? "border-[#3E2723] text-[#3E2723]" : "border-transparent text-[#A1887F]"}`}
             >
               {label}
@@ -286,10 +285,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── PANELS ── */}
+      {/* ── SCROLLABLE CONTENT ── */}
       <div
-        ref={swipeRef}
-        className="overflow-hidden"
+        className="flex-1 pt-[148px] pb-16 overflow-hidden"
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
@@ -300,7 +298,7 @@ export default function DashboardPage() {
           {/* Panel 0 — Dalam Proses */}
           <div className="w-1/2">
             {pending.length === 0 ? (
-              <div className="px-5 py-8 text-center space-y-3">
+              <div className="px-5 py-10 text-center space-y-3">
                 <p className="text-[12px] text-[#A1887F]">Belum ada paket dalam proses.</p>
                 <Link href="/handover/select"
                   className="inline-block text-[12px] font-medium text-[#3E2723] underline decoration-[#3E2723]/30 underline-offset-2">
@@ -323,7 +321,7 @@ export default function DashboardPage() {
           {/* Panel 1 — Selesai */}
           <div className="w-1/2">
             {received.length === 0 ? (
-              <p className="px-5 py-8 text-center text-[12px] text-[#A1887F] italic">
+              <p className="px-5 py-10 text-center text-[12px] text-[#A1887F] italic">
                 Belum ada paket yang diterima.
               </p>
             ) : (
@@ -333,9 +331,16 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Footer */}
+      <div className="fixed bottom-0 inset-x-0 border-t border-[#3E2723]/5 bg-[#FAF9F6]/90 backdrop-blur-md px-6 py-3 text-center">
+        <p className="text-[9px] font-medium uppercase tracking-[0.3em] text-[#3E2723]/50">
+          NEST76 STUDIO • PRODUCT OF THE ARCHIVE
+        </p>
+      </div>
+
       {/* Select mode bar */}
       {selectMode && (
-        <div className="fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-between bg-[#3E2723] px-6 py-4 text-white">
+        <div className="fixed bottom-0 inset-x-0 z-[60] flex items-center justify-between bg-[#3E2723] px-6 py-4 text-white">
           <span className="text-sm">{selected.length} dipilih</span>
           <div className="flex gap-6 text-sm">
             <button onClick={cancelSelect}>Batal</button>
@@ -343,6 +348,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }
