@@ -32,6 +32,8 @@ function PackagePageInner() {
   const [editingSerial, setEditingSerial] = useState<string | null>(null)
   const [existingFirstItemPhotoPath, setExistingFirstItemPhotoPath] = useState<string | null>(null)
   const [photoStage, setPhotoStage] = useState<"idle" | "compressing" | "ready">("idle")
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [submitMode, setSubmitMode] = useState<"save" | "handover" | null>(null)
   const compressedBlobRef = useRef<Blob | null>(null)
@@ -101,15 +103,22 @@ function PackagePageInner() {
   }
 
   async function handlePhoto(file: File) {
+    // Tampilkan preview dulu sebelum compress
     const rawUrl = URL.createObjectURL(file)
-    if (previewUrlRef.current?.startsWith("blob:")) URL.revokeObjectURL(previewUrlRef.current)
-    previewUrlRef.current = rawUrl
-    setPreviewUrl(rawUrl)
-    setPhotoStage("compressing")
+    setPendingFile(file)
+    setPendingPreviewUrl(rawUrl)
+  }
 
-    // Compress di background — target <100KB / max 1200px
+  async function confirmPhoto() {
+    if (!pendingFile) return
+    setPhotoStage("compressing")
+    // Tutup preview modal
+    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl)
+    setPendingPreviewUrl(null)
+    setPendingFile(null)
+
     try {
-      const compressed = await compressPackagePhotoForUpload(file)
+      const compressed = await compressPackagePhotoForUpload(pendingFile)
       compressedBlobRef.current = compressed
       setPhotoBlob(compressed)
       const compressedUrl = URL.createObjectURL(compressed)
@@ -118,10 +127,21 @@ function PackagePageInner() {
       setPreviewUrl(compressedUrl)
       setPhotoStage("ready")
     } catch {
-      compressedBlobRef.current = file
-      setPhotoBlob(file)
+      compressedBlobRef.current = pendingFile
+      setPhotoBlob(pendingFile)
+      const fallbackUrl = URL.createObjectURL(pendingFile)
+      previewUrlRef.current = fallbackUrl
+      setPreviewUrl(fallbackUrl)
       setPhotoStage("ready")
     }
+  }
+
+  function retakePhoto() {
+    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl)
+    setPendingPreviewUrl(null)
+    setPendingFile(null)
+    // Trigger file input lagi
+    document.getElementById("cameraInput")?.click()
   }
 
   async function createHandover(mode: "save" | "handover") {
@@ -433,6 +453,33 @@ function PackagePageInner() {
 
         </div>
       </div>
+
+      {/* Preview modal — muncul setelah foto diambil, sebelum dikonfirmasi */}
+      {pendingPreviewUrl && (
+        <div className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-black/80 px-6">
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/60 mb-4">Preview Foto</p>
+          <div className="w-full max-w-sm aspect-square overflow-hidden rounded-sm">
+            <img src={pendingPreviewUrl} alt="preview" className="w-full h-full object-cover" />
+          </div>
+          <p className="text-[11px] text-white/50 mt-3 text-center">Foto akan dipotong menjadi kotak seperti di atas</p>
+          <div className="flex gap-3 mt-6 w-full max-w-sm">
+            <button
+              type="button"
+              onClick={retakePhoto}
+              className="flex-1 py-3.5 rounded-sm border border-white/20 text-[12px] font-medium text-white active:scale-[0.97] transition-transform"
+            >
+              Ambil Ulang
+            </button>
+            <button
+              type="button"
+              onClick={confirmPhoto}
+              className="flex-[2] py-3.5 rounded-sm bg-[#FAF9F6] text-[12px] font-bold uppercase tracking-wider text-[#3E2723] active:scale-[0.97] transition-transform"
+            >
+              Gunakan Foto →
+            </button>
+          </div>
+        </div>
+      )}
 
       <StudioFooter />
     </div>

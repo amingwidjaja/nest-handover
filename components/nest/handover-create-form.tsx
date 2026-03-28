@@ -430,6 +430,10 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
   const isPro = handoverMode === "pro"
 
   return (
+    <>    
+    <style jsx global>{`
+      input, textarea { font-size: 16px !important; }
+    `}</style>
     <div
       className="relative flex min-h-screen flex-col overflow-hidden bg-[#FAF9F6] text-[var(--primary-color)]"
       style={{ ["--primary-color" as string]: PRIMARY }}
@@ -605,5 +609,6 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
 
       <StudioFooter />
     </div>
+    </>
   )
 }
