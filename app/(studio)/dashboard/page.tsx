@@ -296,7 +296,7 @@ export default function DashboardPage() {
           style={{ transform: `translateX(${activeTab === 0 ? "0%" : "-50%"})`, width: "200%" }}
         >
           {/* Panel 0 — Dalam Proses */}
-          <div className="w-1/2">
+          <div className={`w-1/2 ${activeTab !== 0 ? "pointer-events-none" : ""}`}>
             {pending.length === 0 ? (
               <div className="px-5 py-10 text-center space-y-3">
                 <p className="text-[12px] text-[#A1887F]">Belum ada paket dalam proses.</p>
@@ -319,7 +319,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Panel 1 — Selesai */}
-          <div className="w-1/2">
+          <div className={`w-1/2 ${activeTab !== 1 ? "pointer-events-none" : ""}`}>
             {received.length === 0 ? (
               <p className="px-5 py-10 text-center text-[12px] text-[#A1887F] italic">
                 Belum ada paket yang diterima.

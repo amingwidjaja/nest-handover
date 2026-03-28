@@ -50,6 +50,7 @@ export async function GET(req: Request) {
       status,
       sender_name,
       receiver_target_name,
+      destination_address,
       created_at,
       received_at,
       receipt_url,
