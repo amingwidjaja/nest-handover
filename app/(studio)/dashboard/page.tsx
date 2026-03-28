@@ -287,7 +287,7 @@ export default function DashboardPage() {
 
       {/* ── SCROLLABLE CONTENT ── */}
       <div
-        className="flex-1 pt-[148px] pb-16 overflow-hidden"
+        className="flex-1 pt-16 pb-16 overflow-hidden"
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
