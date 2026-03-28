@@ -405,7 +405,7 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
             )}
             <Link
               href="/handover/select"
-              className="inline-block text-[11px] text-[#A1887F] transition hover:text-[var(--primary-color)]/75 active:scale-[0.96] underline decoration-[#C4B8B0]/60 underline-offset-2"
+              className="block w-full text-center py-3 rounded-xl border border-[#E0DED7] bg-white text-[11px] font-medium text-[#A1887F] transition-transform active:scale-[0.97] active:bg-[#F5F4F0]"
             >
               Salah pilih mode? Kembali ke awal
             </Link>
@@ -414,19 +414,21 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
           {/* Sender section */}
           <section className="space-y-6">
             <p className="text-base font-medium">Siapa yang kirim paket ini?</p>
-            <div className="flex flex-wrap gap-10">
-              <button type="button" onClick={() => setSenderType("self")} className="flex items-center gap-2.5 text-sm transition active:scale-[0.96]">
-                <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-[var(--primary-color)]">
-                  {senderType === "self" && <div className="h-2.5 w-2.5 rounded-full bg-[var(--primary-color)]" />}
-                </div>
-                <span>Saya</span>
-              </button>
-              <button type="button" onClick={() => setSenderType("other")} className="flex items-center gap-2.5 text-sm transition active:scale-[0.96]">
-                <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-[var(--primary-color)]">
-                  {senderType === "other" && <div className="h-2.5 w-2.5 rounded-full bg-[var(--primary-color)]" />}
-                </div>
-                <span>Orang lain</span>
-              </button>
+            <div className="flex gap-3">
+              {(["self", "other"] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setSenderType(type)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-transform active:scale-[0.97]
+                    ${senderType === type
+                      ? "border-[#3E2723] bg-[#3E2723] text-[#FAF9F6]"
+                      : "border-[#E0DED7] bg-white text-[#3E2723]"
+                    }`}
+                >
+                  {type === "self" ? "Saya" : "Orang lain"}
+                </button>
+              ))}
             </div>
 
             {senderType === "other" && (
@@ -482,7 +484,7 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
 
           {/* Address section (Pro only) */}
           {isPro && (
-            <section className="space-y-5">
+            <section className="space-y-4">
               <p className="text-base font-medium">Alamat tujuan</p>
               <div ref={wrapRef} className="relative space-y-4">
                 <div>
@@ -521,21 +523,19 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
                     </ul>
                   </div>
                 )}
-                <div className="space-y-4 pt-2">
-                  <div>
-                    <label className={labelClass}>Kecamatan / Kelurahan (opsional)</label>
+                <div className="grid grid-cols-3 gap-3 pt-1">
+                  <div className="col-span-3">
+                    <label className={labelClass}>Kecamatan / Kelurahan</label>
                     <input className={inputClass} placeholder="Kec. / Kel." autoComplete="off" value={destinationDistrict}
                       onChange={(e) => { setDestinationDistrict(e.target.value); localStorage.setItem("draft_destination_district", e.target.value) }} />
                   </div>
-                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                    <div>
-                      <label className={labelClass}>Kota (opsional)</label>
-                      <input className={inputClass} placeholder="Kota" autoComplete="off" value={destinationCity} onChange={(e) => onCityChange(e.target.value)} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Kode pos (opsional)</label>
-                      <input className={inputClass} placeholder="Kode pos" autoComplete="off" inputMode="numeric" value={destinationPostalCode} onChange={(e) => onPostalChange(e.target.value)} />
-                    </div>
+                  <div className="col-span-2">
+                    <label className={labelClass}>Kota</label>
+                    <input className={inputClass} placeholder="Kota" autoComplete="off" value={destinationCity} onChange={(e) => onCityChange(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Kode Pos</label>
+                    <input className={inputClass} placeholder="12345" autoComplete="off" inputMode="numeric" value={destinationPostalCode} onChange={(e) => onPostalChange(e.target.value)} />
                   </div>
                 </div>
               </div>
@@ -556,8 +556,12 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
         </div>
       )}
 
-      <div className="fixed bottom-[5.5rem] left-0 right-0 z-[45] flex shrink-0 justify-end border-t border-[#ECE7E3] bg-[#FAF9F6]/95 px-6 py-6 backdrop-blur-sm sm:px-8">
-        <button type="button" onClick={submit} className="font-semibold transition active:scale-[0.96]">
+      <div className="fixed bottom-[5.5rem] left-0 right-0 z-[45] border-t border-[#ECE7E3] bg-[#FAF9F6]/95 px-6 py-4 backdrop-blur-sm sm:px-8">
+        <button
+          type="button"
+          onClick={submit}
+          className="w-full py-4 rounded-xl bg-[#3E2723] text-sm font-bold uppercase tracking-wider text-[#FAF9F6] shadow-sm transition-transform active:scale-[0.97] disabled:opacity-50"
+        >
           Lanjut →
         </button>
       </div>

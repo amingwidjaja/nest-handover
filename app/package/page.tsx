@@ -2,20 +2,16 @@
 
 import { Suspense, useEffect, useState, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Camera, ChevronRight, ChevronLeft, Loader2, X } from "lucide-react"
+import { Camera, Loader2, X } from "lucide-react"
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 import { readHandoverMode, HANDOVER_MODE_KEY } from "@/lib/handover-mode"
 import { compressPackagePhotoForUpload } from "@/lib/compress-package-photo"
 import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
-import { NestPrimaryButton } from "@/components/nest/primary-button"
 import { StudioHeader } from "@/components/nest/studio-header"
 import { StudioFooter } from "@/components/nest/studio-footer"
 import type { HandoverCreateInitialData } from "@/lib/handover-editable-types"
 
 const PRIMARY = "#3E2723"
-
-const inputClass =
-  "line-input min-h-[2.5rem] flex-1 w-full rounded-2xl border border-[#E0DED7] bg-white px-3 py-2 text-[14px] text-[var(--primary-color)] placeholder:text-[#9A8F88] outline-none transition focus:border-[var(--primary-color)] focus:ring-2 focus:ring-[var(--primary-color)]/15"
 
 function PackagePageInner() {
   const router = useRouter()
@@ -104,14 +100,13 @@ function PackagePageInner() {
   }
 
   async function handlePhoto(file: File) {
-    // Show raw preview immediately
     const rawUrl = URL.createObjectURL(file)
     if (previewUrlRef.current?.startsWith("blob:")) URL.revokeObjectURL(previewUrlRef.current)
     previewUrlRef.current = rawUrl
     setPreviewUrl(rawUrl)
     setPhotoStage("compressing")
 
-    // Compress in background while user fills items
+    // Compress di background — target <100KB / max 1200px
     try {
       const compressed = await compressPackagePhotoForUpload(file)
       compressedBlobRef.current = compressed
@@ -129,7 +124,11 @@ function PackagePageInner() {
   }
 
   async function createHandover(mode: "save" | "handover") {
-    if (!items[0].trim()) { alert("Minimal isi 1 barang"); return }
+    if (!photoBlob && !existingFirstItemPhotoPath) {
+      alert("Foto barang wajib diambil terlebih dahulu")
+      return
+    }
+    if (!items[0].trim()) { alert("Minimal isi 1 nama barang"); return }
     if (saving) return
     if (photoStage === "compressing") { alert("Foto sedang diproses, tunggu sebentar."); return }
 
@@ -263,6 +262,8 @@ function PackagePageInner() {
     }
   }
 
+  const isBusy = saving || photoStage === "compressing"
+
   return (
     <div
       className="flex min-h-screen flex-col bg-[#FAF9F6] font-sans text-[var(--primary-color)]"
@@ -274,147 +275,163 @@ function PackagePageInner() {
 
       <StudioHeader />
 
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-24 pb-44">
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-24 pb-48">
 
-        {/* Title */}
-        <div className="mb-5">
-          <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-[#3E2723]">
+        {/* TITLE */}
+        <div className="mb-6">
+          <h2 className="text-lg font-medium tracking-tight text-[#3E2723]">
             Daftar Barang
           </h2>
-          <p className="mt-1 text-[11px] text-[#A1887F]">
-            Foto produk opsional — bisa dikumpulkan dalam 1 foto bersama.
-          </p>
+          {editingSerial && (
+            <p className="mt-0.5 text-[11px] font-mono text-[#A1887F]">{editingSerial}</p>
+          )}
         </div>
 
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          id="cameraInput"
-          className="hidden"
-          onChange={(e) => {
-            if (!e.target.files?.[0]) return
-            handlePhoto(e.target.files[0])
-            e.target.value = ""
-          }}
-        />
+        {/* FOTO + GUIDELINES */}
+        <div className="flex gap-4 mb-7">
 
-        {/* Item rows — all 4 visible immediately */}
-        <div className="space-y-2 mb-6">
-          {items.map((item, i) => (
-            <div key={i} className="flex items-start gap-2">
-
-              {/* Foto slot baris 1, spacer baris lainnya */}
-              <div className="w-16 shrink-0 pt-0.5">
-                {i === 0 ? (
-                  <div className="relative">
-                    {!previewUrl ? (
-                      <label
-                        htmlFor="cameraInput"
-                        className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#3E2723]/25 bg-white/80 transition active:scale-95 hover:border-[#3E2723]/50"
-                      >
-                        <Camera size={18} strokeWidth={1.5} className="text-[#3E2723]/50" />
-                        <span className="mt-0.5 text-[7px] font-semibold uppercase tracking-tighter text-[#9A8F88]">Foto</span>
-                      </label>
-                    ) : (
-                      <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-[#E0DED7] bg-white shadow-sm">
-                        <img src={previewUrl} alt="" className="h-full w-full object-cover" />
-
-                        {/* Compressing spinner */}
-                        {photoStage === "compressing" && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-[#FAF9F6]/70">
-                            <Loader2 size={14} className="animate-spin text-[#3E2723]/60" />
-                          </div>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={clearPhoto}
-                          disabled={saving}
-                          className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-[#E0DED7] bg-[#FAF9F6] shadow-sm active:scale-95 disabled:opacity-40"
-                        >
-                          <X size={10} strokeWidth={2.5} />
-                        </button>
-
-                        <label
-                          htmlFor="cameraInput"
-                          className="absolute bottom-0.5 right-0.5 cursor-pointer rounded bg-white/90 px-1 py-0.5 text-[6px] font-bold uppercase tracking-wide text-[#3E2723] shadow-sm"
-                        >
-                          Ganti
-                        </label>
-                      </div>
-                    )}
+          {/* Kiri 40% */}
+          <div className="w-[40%] shrink-0">
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              id="cameraInput"
+              className="hidden"
+              onChange={(e) => {
+                if (!e.target.files?.[0]) return
+                handlePhoto(e.target.files[0])
+                e.target.value = ""
+              }}
+            />
+            {!previewUrl ? (
+              <label
+                htmlFor="cameraInput"
+                className="flex aspect-square w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#3E2723]/20 bg-white transition active:scale-[0.97] active:border-[#3E2723]/40"
+              >
+                <Camera size={22} strokeWidth={1.5} className="text-[#3E2723]/40" />
+                <span className="text-[9px] font-bold uppercase tracking-widest text-[#9A8F88]">Ambil Foto</span>
+              </label>
+            ) : (
+              <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-[#E0DED7] shadow-sm">
+                <img src={previewUrl} alt="" className="h-full w-full object-cover" />
+                {photoStage === "compressing" && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-[#FAF9F6]/80">
+                    <Loader2 size={18} className="animate-spin text-[#3E2723]/60" />
+                    <span className="text-[8px] font-medium uppercase tracking-wider text-[#9A8F88]">Memproses…</span>
                   </div>
-                ) : (
-                  <div className="h-16 w-16 shrink-0" aria-hidden />
+                )}
+                {photoStage === "ready" && (
+                  <div className="absolute bottom-0 inset-x-0 flex justify-between p-1.5">
+                    <label
+                      htmlFor="cameraInput"
+                      className="cursor-pointer rounded-md bg-[#3E2723]/80 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-white active:scale-95 transition-transform"
+                    >
+                      Ganti
+                    </label>
+                    <button
+                      type="button"
+                      onClick={clearPhoto}
+                      disabled={saving}
+                      className="flex h-6 w-6 items-center justify-center rounded-md bg-white/90 shadow-sm active:scale-95 transition-transform disabled:opacity-40"
+                    >
+                      <X size={11} strokeWidth={2.5} className="text-[#3E2723]" />
+                    </button>
+                  </div>
                 )}
               </div>
+            )}
+          </div>
 
-              {/* Input */}
-              <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                <span className="w-4 shrink-0 text-right text-[12px] font-medium tabular-nums text-[#9A8F88]">
-                  {i + 1}.
-                </span>
-                <textarea
-                  value={item}
-                  onChange={(e) => handleItemChange(i, e.target.value)}
-                  className={inputClass}
-                  rows={1}
-                  placeholder={i === 0 ? "Nama barang pertama..." : `Barang ${i + 1}`}
-                  autoFocus={i === 0}
-                />
-              </div>
+          {/* Kanan — guidelines */}
+          <div className="flex-1 flex flex-col justify-center space-y-2.5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#A1887F]">Foto Barang</p>
+            <p className="text-[12px] leading-relaxed text-[#5D4037]">
+              Ambil <span className="font-semibold">1 foto</span> yang mencakup semua barang yang akan diserahterimakan.
+            </p>
+            <p className="text-[11px] leading-relaxed text-[#9A8F88]">
+              Foto ini menjadi bukti visual dalam dokumen tanda terima digital Anda.
+            </p>
+            {photoStage === "ready" && (
+              <p className="text-[10px] font-semibold text-[#3B6D11]">✓ Foto siap</p>
+            )}
+            {!previewUrl && (
+              <label
+                htmlFor="cameraInput"
+                className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] font-medium text-[#3E2723] underline underline-offset-2 active:opacity-70"
+              >
+                <Camera size={11} strokeWidth={2} />
+                Buka kamera
+              </label>
+            )}
+          </div>
+        </div>
+
+        {/* LIST BARANG */}
+        <div className="space-y-0 mb-8">
+          {items.map((item, i) => (
+            <div key={i} className="flex items-center gap-2 border-b border-[#E0DED7] py-2.5">
+              <span className="w-5 shrink-0 text-right text-[12px] tabular-nums text-[#9A8F88]">
+                {i + 1}.
+              </span>
+              <input
+                value={item}
+                onChange={(e) => handleItemChange(i, e.target.value)}
+                className="flex-1 bg-transparent text-[14px] text-[#3E2723] placeholder:text-[#C4B8B0] outline-none"
+                placeholder={i === 0 ? "Nama barang pertama…" : `Barang ${i + 1}`}
+                autoFocus={i === 0}
+              />
             </div>
           ))}
         </div>
 
-        {/* Back link */}
-        <button
-          type="button"
-          onClick={() => {
-            const id = editingHandoverId ?? handoverIdParam
-            router.push(id ? `/handover/create?id=${encodeURIComponent(id)}` : "/handover/create")
-          }}
-          disabled={saving}
-          className="mb-4 text-left text-[11px] text-[#A1887F] transition hover:text-[#3E2723] disabled:opacity-40"
-        >
-          ← Kembali ke detail pengiriman
-        </button>
+      </main>
 
-        {/* Action buttons */}
-        <div className="grid grid-cols-2 gap-2.5">
+      {/* 3 BUTTONS FIXED BOTTOM */}
+      <div className="fixed bottom-0 inset-x-0 z-[50] border-t border-[#E0DED7] bg-[#FAF9F6]/95 backdrop-blur-md">
+        <div className="mx-auto max-w-md flex gap-2 px-5 py-4">
+
+          {/* Edit */}
+          <button
+            type="button"
+            onClick={() => {
+              const id = editingHandoverId ?? handoverIdParam
+              router.push(id ? `/handover/create?id=${encodeURIComponent(id)}` : "/handover/create")
+            }}
+            disabled={isBusy}
+            className="flex-1 flex items-center justify-center py-3.5 rounded-xl border border-[#E0DED7] bg-white text-[11px] font-medium text-[#3E2723] transition-transform active:scale-[0.96] disabled:opacity-40"
+          >
+            ← Edit
+          </button>
+
+          {/* Simpan */}
           <button
             type="button"
             onClick={() => createHandover("save")}
-            disabled={saving || photoStage === "compressing"}
-            className="flex items-center justify-between rounded-2xl border-2 border-[#3E2723]/25 bg-white px-4 py-3.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#3E2723] transition active:scale-[0.96] disabled:opacity-35"
+            disabled={isBusy}
+            className="flex-1 flex items-center justify-center py-3.5 rounded-xl border border-[#3E2723]/20 bg-white text-[11px] font-medium text-[#3E2723] transition-transform active:scale-[0.96] disabled:opacity-40"
           >
-            {saving && submitMode === "save" ? (
-              <span className="flex w-full items-center justify-center gap-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Memproses…
-              </span>
-            ) : (
-              <>
-                <ChevronLeft size={14} />
-                <span>Simpan Draft</span>
-              </>
-            )}
+            {saving && submitMode === "save"
+              ? <Loader2 size={14} className="animate-spin" />
+              : "Simpan"
+            }
           </button>
 
-          <NestPrimaryButton
+          {/* Tanda Terima */}
+          <button
             type="button"
             onClick={() => createHandover("handover")}
-            disabled={photoStage === "compressing"}
-            loading={saving && submitMode === "handover"}
-            className="flex w-full items-center justify-between rounded-2xl bg-[#3E2723] px-4 py-3.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#FAF9F6] shadow-sm transition active:scale-[0.96] disabled:opacity-45"
+            disabled={isBusy}
+            className="flex-[2] flex items-center justify-center py-3.5 rounded-xl bg-[#3E2723] text-[11px] font-bold uppercase tracking-wider text-[#FAF9F6] shadow-sm transition-transform active:scale-[0.96] disabled:opacity-45"
           >
-            <span>Tanda Terima</span>
-            <ChevronRight size={14} />
-          </NestPrimaryButton>
-        </div>
+            {saving && submitMode === "handover"
+              ? <Loader2 size={14} className="animate-spin" />
+              : "Tanda Terima \u2192"
+            }
+          </button>
 
-      </main>
+        </div>
+      </div>
 
       <StudioFooter />
     </div>
@@ -425,7 +442,7 @@ export default function PackagePage() {
   return (
     <Suspense fallback={
       <div className="flex min-h-screen items-center justify-center bg-[#FAF9F6] text-sm text-[#9A8F88]">
-        Memuat…
+        Memuat\u2026
       </div>
     }>
       <PackagePageInner />
