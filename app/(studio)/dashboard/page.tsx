@@ -227,7 +227,7 @@ export default function DashboardPage() {
   return (
     <>
       {/* ── STICKY: Judul + Tab ── */}
-      <div className="shrink-0 bg-[#FAF9F6]">
+      <div className="sticky top-0 z-10 bg-[#FAF9F6]">
         <div className="pb-2 pt-2">
           <h1 className="text-xl font-medium tracking-tight">
             {studioRole === "STAFF" ? "Paket Anda" : "Daftar Paket"}
@@ -286,19 +286,19 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── SCROLLABLE PANELS ── */}
+      {/* ── PANELS ── */}
       <div
         ref={swipeRef}
-        className="flex-1 overflow-hidden"
+        className="overflow-hidden"
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
         <div
-          className="flex h-full transition-transform duration-250 ease-out"
+          className="flex transition-transform duration-250 ease-out"
           style={{ transform: `translateX(${activeTab === 0 ? "0%" : "-50%"})`, width: "200%" }}
         >
           {/* Panel 0 — Dalam Proses */}
-          <div className="w-1/2 overflow-y-auto">
+          <div className="w-1/2">
             {pending.length === 0 ? (
               <div className="px-5 py-8 text-center space-y-3">
                 <p className="text-[12px] text-[#A1887F]">Belum ada paket dalam proses.</p>
@@ -321,7 +321,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Panel 1 — Selesai */}
-          <div className="w-1/2 overflow-y-auto">
+          <div className="w-1/2">
             {received.length === 0 ? (
               <p className="px-5 py-8 text-center text-[12px] text-[#A1887F] italic">
                 Belum ada paket yang diterima.
