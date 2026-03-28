@@ -195,10 +195,13 @@ export default function HandoverPage() {
 
       <main className="mx-auto w-full max-w-lg flex-1 px-6 pt-24 pb-44 sm:px-8 space-y-8">
 
-        {/* Serial */}
-        {handover?.serial_number && (
-          <p className="text-[11px] font-mono text-[#A1887F] tracking-tight">{handover.serial_number}</p>
-        )}
+        {/* Judul */}
+        <div className="space-y-0.5">
+          <h1 className="text-2xl font-light tracking-tight">Tanda Terima</h1>
+          {handover?.serial_number && (
+            <p className="text-[11px] font-mono text-[#A1887F] tracking-tight">{handover.serial_number}</p>
+          )}
+        </div>
 
         {/* Pengirim & Penerima */}
         {handover && (
