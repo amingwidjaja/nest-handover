@@ -26,7 +26,7 @@ export function StudioHeader() {
 
       <Link
         href="/paket"
-        aria-label="Beranda Paket"
+        aria-label="Beranda NEST76 PAKET"
         className="shrink-0 text-[#3E2723] opacity-80 transition-transform active:scale-90"
       >
         <Home className="h-5 w-5" strokeWidth={1.75} aria-hidden />
