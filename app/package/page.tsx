@@ -318,20 +318,12 @@ function PackagePageInner() {
 
       if (photoBlob && effectiveId && session.access_token) {
         try {
-          // Kalau upload background sudah selesai, pakai path-nya langsung
-          if (bgUploadPathRef.current) {
-            // sudah terupload, tidak perlu upload lagi
-          } else if (bgUploadPromiseRef.current) {
-            // upload sedang berjalan, tunggu selesai
-            const path = await bgUploadPromiseRef.current
-            if (!path) throw new Error("Upload gagal, coba lagi.")
-          } else {
-            // belum upload sama sekali (flow baru), upload sekarang
-            const promise = startBgUpload(compressedBlobRef.current || photoBlob, effectiveId, session.access_token)
-            bgUploadPromiseRef.current = promise
-            const path = await promise
+          if (!bgUploadPathRef.current) {
+            // Belum terupload atau upload background gagal — upload sekarang
+            const path = await startBgUpload(compressedBlobRef.current || photoBlob, effectiveId, session.access_token)
             if (!path) throw new Error("Upload gagal, coba lagi.")
           }
+          // bgUploadPathRef.current sudah terisi — tidak perlu upload lagi
         } catch (err) {
           setSaving(false); setSubmitMode(null)
           alert(`Gagal mengunggah foto. ${err instanceof Error ? err.message : ""}`)
