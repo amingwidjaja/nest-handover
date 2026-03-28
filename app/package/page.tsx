@@ -409,8 +409,8 @@ function PackagePageInner() {
       </main>
 
       {/* 3 BUTTONS FIXED BOTTOM */}
-      <div className="fixed bottom-0 inset-x-0 z-[50] border-t border-[#E0DED7] bg-[#FAF9F6]/95 backdrop-blur-md">
-        <div className="mx-auto max-w-md flex gap-2 px-5 py-4">
+      <div className="fixed bottom-0 inset-x-0 z-[60] border-t border-[#E0DED7] bg-[#FAF9F6]/95 backdrop-blur-md">
+        <div className="mx-auto max-w-md flex gap-2 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
 
           {/* Edit */}
           <button
@@ -420,9 +420,9 @@ function PackagePageInner() {
               router.push(id ? `/handover/create?id=${encodeURIComponent(id)}` : "/handover/create")
             }}
             disabled={isBusy}
-            className="flex-1 flex items-center justify-center py-3.5 rounded-xl border border-[#E0DED7] bg-white text-[11px] font-medium text-[#3E2723] transition-transform active:scale-[0.96] disabled:opacity-40"
+            className="aspect-square w-14 flex items-center justify-center rounded-sm border border-[#E0DED7] bg-white text-[11px] font-medium text-[#3E2723] transition-transform active:scale-[0.96] disabled:opacity-40"
           >
-            ← Edit
+            ←
           </button>
 
           {/* Simpan */}
@@ -430,7 +430,7 @@ function PackagePageInner() {
             type="button"
             onClick={() => createHandover("save")}
             disabled={isBusy}
-            className="flex-1 flex items-center justify-center py-3.5 rounded-xl border border-[#3E2723]/20 bg-white text-[11px] font-medium text-[#3E2723] transition-transform active:scale-[0.96] disabled:opacity-40"
+            className="aspect-square w-14 flex items-center justify-center rounded-sm border border-[#E0DED7] bg-white text-[11px] font-medium text-[#3E2723] transition-transform active:scale-[0.96] disabled:opacity-40"
           >
             {saving && submitMode === "save"
               ? <Loader2 size={14} className="animate-spin" />
@@ -443,11 +443,11 @@ function PackagePageInner() {
             type="button"
             onClick={() => createHandover("handover")}
             disabled={isBusy}
-            className="flex-[2] flex items-center justify-center py-3.5 rounded-xl bg-[#3E2723] text-[11px] font-bold uppercase tracking-wider text-[#FAF9F6] shadow-sm transition-transform active:scale-[0.96] disabled:opacity-45"
+            className="flex-1 flex items-center justify-center py-4 rounded-sm bg-[#3E2723] text-[11px] font-bold uppercase tracking-wider text-[#FAF9F6] transition-transform active:scale-[0.96] disabled:opacity-45"
           >
             {saving && submitMode === "handover"
               ? <Loader2 size={14} className="animate-spin" />
-              : "Tanda Terima \u2192"
+              : "Tanda Terima →"
             }
           </button>
 
