@@ -48,17 +48,6 @@ function PackagePageInner() {
   }
 
   useEffect(() => {
-    // Restore foto dari sessionStorage kalau ada (back/forward navigation)
-    try {
-      const savedUrl = sessionStorage.getItem("pkg_photo_preview_url")
-      const savedPath = sessionStorage.getItem("pkg_photo_upload_path")
-      if (savedUrl) {
-        previewUrlRef.current = savedUrl
-        setPreviewUrl(savedUrl)
-        setPhotoStage(savedPath ? "ready" : "uploading")
-        if (savedPath) bgUploadPathRef.current = savedPath
-      }
-    } catch { /* ignore */ }
     return () => {
       if (previewUrlRef.current?.startsWith("blob:")) URL.revokeObjectURL(previewUrlRef.current)
     }
@@ -95,11 +84,25 @@ function PackagePageInner() {
         const firstPath = data.items?.[0]?.photo_url ?? null
         setExistingFirstItemPhotoPath(firstPath)
         if (data.firstItemPhotoPublicUrl) {
+          // Server punya foto — pakai ini, clear sessionStorage lama
           if (previewUrlRef.current?.startsWith("blob:")) URL.revokeObjectURL(previewUrlRef.current)
           previewUrlRef.current = data.firstItemPhotoPublicUrl
           setPreviewUrl(data.firstItemPhotoPublicUrl)
           setPhotoBlob(null)
           setPhotoStage("ready")
+          try { sessionStorage.removeItem("pkg_photo_preview_url"); sessionStorage.removeItem("pkg_photo_upload_path") } catch { /* ignore */ }
+        } else {
+          // Server tidak punya foto — coba restore dari sessionStorage (back navigation)
+          try {
+            const savedUrl = sessionStorage.getItem("pkg_photo_preview_url")
+            const savedPath = sessionStorage.getItem("pkg_photo_upload_path")
+            if (savedUrl) {
+              previewUrlRef.current = savedUrl
+              setPreviewUrl(savedUrl)
+              setPhotoStage(savedPath ? "ready" : "uploading")
+              if (savedPath) bgUploadPathRef.current = savedPath
+            }
+          } catch { /* ignore */ }
         }
       })
       .catch(() => {})
