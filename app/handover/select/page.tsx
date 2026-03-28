@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
@@ -53,6 +54,19 @@ function clearLiteOnlyDrafts() {
 
 export default function HandoverSelectModePage() {
   const router = useRouter()
+  const [pendingHandovers, setPendingHandovers] = React.useState<{ id: string; receiver_target_name: string; created_at: string; destination_address?: string | null }[]>([])
+
+  React.useEffect(() => {
+    async function checkPending() {
+      try {
+        const res = await fetch("/api/handover/list")
+        const data = await res.json()
+        const pending = (data.handovers ?? []).filter((h: any) => h.status === "created")
+        setPendingHandovers(pending)
+      } catch { /* ignore */ }
+    }
+    checkPending()
+  }, [])
 
   function choose(mode: HandoverMode) {
     try {
@@ -88,6 +102,43 @@ export default function HandoverSelectModePage() {
             Satu ketukan — menu berikut mengatur alur formulir Anda.
           </p>
         </motion.header>
+
+        {pendingHandovers.length > 0 && (
+          <motion.div variants={item} className="rounded-xl border border-[#E0DED7] bg-white overflow-hidden">
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#A1887F] px-4 pt-4 pb-2">
+              Paket belum selesai
+            </p>
+            {pendingHandovers.slice(0, 3).map((h) => {
+              const isPro = Boolean(h.destination_address)
+              return (
+                <button
+                  key={h.id}
+                  type="button"
+                  onClick={() => { window.location.href = `/package?handover_id=${encodeURIComponent(h.id)}` }}
+                  className="w-full flex items-center justify-between px-4 py-3 border-t border-[#E0DED7] text-left active:bg-[#F5F4F0] transition-colors"
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
+                        isPro ? "bg-[#EAF3DE] text-[#3B6D11]" : "bg-[#F0EDE8] text-[#A1887F]"
+                      }`}>
+                        {isPro ? "PRO" : "LITE"}
+                      </span>
+                      <p className="text-sm font-medium text-[#3E2723]">{h.receiver_target_name || "-"}</p>
+                    </div>
+                    <p className="text-[11px] text-[#A1887F]">
+                      {new Date(h.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                  <span className="text-[11px] text-[#3E2723] font-medium shrink-0 ml-3">Lanjut →</span>
+                </button>
+              )
+            })}
+            <div className="border-t border-[#E0DED7] px-4 py-3">
+              <p className="text-[11px] text-[#A1887F]">Atau pilih mode di bawah untuk buat paket baru.</p>
+            </div>
+          </motion.div>
+        )}
 
         <motion.button
           type="button"
