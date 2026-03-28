@@ -396,34 +396,26 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
       style={{ ["--primary-color" as string]: PRIMARY }}
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <main className="mx-auto w-full max-w-lg flex-1 space-y-10 px-6 pb-40 pt-20 sm:px-8">
-          <div className="space-y-2">
-            {initialData?.handoverId && (
-              <p className="text-[11px] font-medium text-[#5D4037]">
-                Melanjutkan paket{initialData.serialNumber ? ` · ${initialData.serialNumber}` : ""}
-              </p>
-            )}
-            <Link
-              href="/handover/select"
-              className="block w-full text-center py-3 rounded-xl border border-[#E0DED7] bg-white text-[11px] font-medium text-[#A1887F] transition-transform active:scale-[0.97] active:bg-[#F5F4F0]"
-            >
-              Salah pilih mode? Kembali ke awal
-            </Link>
-          </div>
+        <main className="mx-auto w-full max-w-lg flex-1 space-y-10 px-6 pb-12 pt-20 sm:px-8">
+          {initialData?.handoverId && (
+            <p className="text-[11px] font-medium text-[#5D4037]">
+              Melanjutkan paket{initialData.serialNumber ? ` · ${initialData.serialNumber}` : ""}
+            </p>
+          )}
 
           {/* Sender section */}
           <section className="space-y-6">
             <p className="text-base font-medium">Siapa yang kirim paket ini?</p>
-            <div className="flex gap-3">
+            <div className="flex border-b border-[#E0DED7]">
               {(["self", "other"] as const).map((type) => (
                 <button
                   key={type}
                   type="button"
                   onClick={() => setSenderType(type)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-transform active:scale-[0.97]
+                  className={`flex-1 pb-2.5 text-sm font-medium transition-colors active:scale-[0.97]
                     ${senderType === type
-                      ? "border-[#3E2723] bg-[#3E2723] text-[#FAF9F6]"
-                      : "border-[#E0DED7] bg-white text-[#3E2723]"
+                      ? "border-b-2 border-[#3E2723] text-[#3E2723] -mb-px"
+                      : "text-[#A1887F]"
                     }`}
                 >
                   {type === "self" ? "Saya" : "Orang lain"}
@@ -556,14 +548,20 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
         </div>
       )}
 
-      <div className="fixed bottom-[5.5rem] left-0 right-0 z-[45] border-t border-[#ECE7E3] bg-[#FAF9F6]/95 px-6 py-4 backdrop-blur-sm sm:px-8">
+      <div className="mx-auto w-full max-w-lg px-6 pb-6 space-y-3 sm:px-8">
         <button
           type="button"
           onClick={submit}
-          className="w-full py-4 rounded-xl bg-[#3E2723] text-sm font-bold uppercase tracking-wider text-[#FAF9F6] shadow-sm transition-transform active:scale-[0.97] disabled:opacity-50"
+          className="w-full py-4 rounded-sm bg-[#3E2723] text-sm font-bold uppercase tracking-wider text-[#FAF9F6] transition-transform active:scale-[0.97] disabled:opacity-50"
         >
           Lanjut →
         </button>
+        <Link
+          href="/handover/select"
+          className="block w-full text-center py-3 rounded-sm border border-[#E0DED7] bg-white text-[11px] font-medium text-[#A1887F] transition-transform active:scale-[0.97] active:bg-[#F5F4F0]"
+        >
+          Salah pilih mode? Kembali ke awal
+        </Link>
       </div>
 
       <StudioFooter />
