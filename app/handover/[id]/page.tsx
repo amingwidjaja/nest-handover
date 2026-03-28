@@ -3,12 +3,10 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { QrCode, Camera } from "lucide-react"
-import {
-  blobToDataUrl,
-  compressEvidenceWebpUnder100kb
-} from "@/lib/image-evidence"
+import { compressEvidenceWebpUnder100kb } from "@/lib/image-evidence"
 import { resolveEvidencePhotoUrl } from "@/lib/nest-evidence-upload"
 import { PhotoPreviewModal } from "@/components/nest/photo-preview-modal"
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 
 interface GpsCoords {
   lat: number
@@ -116,28 +114,88 @@ export default function HandoverPage() {
     if (!pendingFile) return
     if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl)
     setPendingPreviewUrl(null)
-    setPendingFile(null)
 
+    const file = pendingFile
+    setPendingFile(null)
     setProcessingCapture(true)
-    await new Promise<void>((r) => setTimeout(r, 0))
 
     try {
-      const compressed = await compressEvidenceWebpUnder100kb(pendingFile)
-      const dataUrl = await blobToDataUrl(compressed)
+      const supabase = createBrowserSupabaseClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push(`/login?redirect=${encodeURIComponent(`/handover/${id}`)}`)
+        return
+      }
 
-      sessionStorage.setItem(`handover_${id}_photo`, dataUrl)
-      sessionStorage.setItem(
-        `handover_${id}_meta`,
-        JSON.stringify({ mode, delegateName, relation, notes })
-      )
+      const compressed = await compressEvidenceWebpUnder100kb(file)
 
-      router.replace(`/handover/${id}/preview`)
+      // Upload via XHR dengan progress
+      const ext = compressed.type.includes("webp") ? "webp" : "jpg"
+      const proofFile = new File([compressed], `bukti.${ext}`, { type: compressed.type })
+      const storagePath = await uploadWithProgress(proofFile, id, session.access_token)
+
+      // POST /receive inline
+      const meta = { mode, delegateName, relation, notes }
+      const receiver_type = mode === "direct" ? "direct" : "proxy"
+      let gps: { lat: number; lng: number; accuracy: number } | null = null
+      try {
+        const raw = sessionStorage.getItem(`handover_${id}_gps`)
+        if (raw) gps = JSON.parse(raw)
+      } catch { /* ignore */ }
+
+      const res = await fetch("/api/handover/receive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          handover_id: id,
+          receive_method: mode === "direct" ? "direct_photo" : "proxy_photo",
+          receiver_type,
+          receiver_name: mode === "direct" ? "" : delegateName,
+          receiver_relation: mode === "direct" ? "" : relation,
+          notes: notes || "",
+          photo_url: storagePath,
+          gps_lat: gps?.lat ?? null,
+          gps_lng: gps?.lng ?? null,
+          gps_accuracy: gps?.accuracy ?? null,
+        }),
+      })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.error || "Gagal menyimpan")
+
+      sessionStorage.removeItem(`handover_${id}_gps`)
+      router.replace(`/handover/${id}/success`)
     } catch (err) {
-      console.error(err)
-      alert("Gagal memproses foto")
+      alert(err instanceof Error ? err.message : "Gagal memproses foto")
     } finally {
       setProcessingCapture(false)
     }
+  }
+
+  async function uploadWithProgress(file: File, handoverId: string, accessToken: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const fd = new FormData()
+      fd.set("handover_id", handoverId)
+      fd.set("mode", "proof_only")
+      fd.set("file", file)
+
+      const xhr = new XMLHttpRequest()
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const json = JSON.parse(xhr.responseText)
+            if (json.storagePath) resolve(json.storagePath)
+            else reject(new Error(json.error || "Upload gagal"))
+          } catch { reject(new Error("Respons server tidak valid")) }
+        } else {
+          reject(new Error(`Upload gagal (${xhr.status})`))
+        }
+      })
+      xhr.addEventListener("error", () => reject(new Error("Koneksi terputus")))
+      xhr.timeout = 30000
+      xhr.open("POST", "/api/handover/upload-photo")
+      xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`)
+      xhr.send(fd)
+    })
   }
 
   function retakePhoto() {

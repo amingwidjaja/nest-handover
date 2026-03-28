@@ -72,7 +72,11 @@ export function buildPaketRoomRelativePath(
   return `paket/${userId}/${handoverId}`
 }
 
-/** Logistics photos: `paket/{user_id}/{handover_id}/{type}_{timestamp}.webp` (or `.jpg` if upload is JPEG). */
+/**
+ * Logistics photos: `paket/{user_id}/{handover_id}/{type}_{handover_id}.webp`
+ * Path fixed (no timestamp) supaya upsert selalu overwrite file yang sama saat ganti foto.
+ * Proof tetap pakai timestamp karena bisa ada multiple proof events.
+ */
 export function buildPaketObjectPath(
   userId: string,
   handoverId: string,
@@ -80,7 +84,10 @@ export function buildPaketObjectPath(
   ext: "webp" | "jpg" = "webp"
 ): string {
   const suffix = ext === "jpg" ? "jpg" : "webp"
-  return `${buildPaketRoomRelativePath(userId, handoverId)}/${type}_${safeStamp()}.${suffix}`
+  if (type === "proof") {
+    return `${buildPaketRoomRelativePath(userId, handoverId)}/proof_${safeStamp()}.${suffix}`
+  }
+  return `${buildPaketRoomRelativePath(userId, handoverId)}/paket_${handoverId}.${suffix}`
 }
 
 /** Receipt PDF: `paket/{user_id}/{handover_id}/receipt_{handover_id}.pdf` */
