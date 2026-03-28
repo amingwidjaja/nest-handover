@@ -578,6 +578,22 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
               Mode Lite memakai lokasi perangkat Anda sebagai koordinat penerimaan. Pastikan izin lokasi aktif.
             </p>
           )}
+
+          <div className="space-y-3 pt-4">
+            <button
+              type="button"
+              onClick={submit}
+              className="w-full py-4 rounded-sm bg-[#3E2723] text-sm font-bold uppercase tracking-wider text-[#FAF9F6] transition-transform active:scale-[0.97] disabled:opacity-50"
+            >
+              Lanjut →
+            </button>
+            <Link
+              href="/handover/select"
+              className="block w-full text-center py-3 rounded-sm border border-[#E0DED7] bg-white text-[11px] font-medium text-[#A1887F] transition-transform active:scale-[0.97] active:bg-[#F5F4F0]"
+            >
+              Salah pilih mode? Kembali ke awal
+            </Link>
+          </div>
         </main>
       </div>
 
@@ -586,22 +602,6 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
           {toast}
         </div>
       )}
-
-      <div className="mx-auto w-full max-w-lg px-6 pb-6 space-y-3 sm:px-8">
-        <button
-          type="button"
-          onClick={submit}
-          className="w-full py-4 rounded-sm bg-[#3E2723] text-sm font-bold uppercase tracking-wider text-[#FAF9F6] transition-transform active:scale-[0.97] disabled:opacity-50"
-        >
-          Lanjut →
-        </button>
-        <Link
-          href="/handover/select"
-          className="block w-full text-center py-3 rounded-sm border border-[#E0DED7] bg-white text-[11px] font-medium text-[#A1887F] transition-transform active:scale-[0.97] active:bg-[#F5F4F0]"
-        >
-          Salah pilih mode? Kembali ke awal
-        </Link>
-      </div>
 
       <StudioFooter />
     </div>
