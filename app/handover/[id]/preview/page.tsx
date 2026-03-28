@@ -198,14 +198,14 @@ export default function PreviewPage() {
             <button
               onClick={handleRetake}
               disabled={isBusy}
-              className="flex-1 border border-[#E0DED7] py-3 rounded-sm text-sm disabled:opacity-40"
+              className="flex-1 border border-[#E0DED7] py-3 rounded-xl text-sm disabled:opacity-40"
             >
               Ambil Ulang
             </button>
             <button
               onClick={handleConfirm}
               disabled={!displayUrl || isBusy}
-              className="flex-1 bg-[#3E2723] text-white py-3 rounded-sm text-sm disabled:opacity-40"
+              className="flex-1 bg-[#3E2723] text-white py-3 rounded-xl text-sm disabled:opacity-40"
             >
               {stage === "error" ? "Coba Lagi" : "Gunakan Foto"}
             </button>

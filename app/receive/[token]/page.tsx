@@ -213,11 +213,11 @@ function ReceiveForm() {
               {handover.handover_items.map((item: any, i: number) => (
                 <div key={item.id || i} className="flex gap-3 items-center">
                   {i === 0 && itemPhoto ? (
-                    <div className="w-14 h-14 rounded-sm border border-[#E0DED7] overflow-hidden shrink-0">
+                    <div className="w-14 h-14 rounded-xl border border-[#E0DED7] overflow-hidden shrink-0">
                       <img src={itemPhoto} alt="" className="w-full h-full object-cover" />
                     </div>
                   ) : (
-                    <div className="w-14 h-14 rounded-sm border border-[#E0DED7] bg-[#F5F4F0] shrink-0 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-xl border border-[#E0DED7] bg-[#F5F4F0] shrink-0 flex items-center justify-center">
                       <span className="text-[10px] text-[#A1887F]">{i + 1}</span>
                     </div>
                   )}
@@ -237,26 +237,26 @@ function ReceiveForm() {
 
         {/* Reject form (inline, muncul saat klik Tolak) */}
         {rejectMode && (
-          <div className="mb-6 rounded-sm border border-red-100 bg-red-50/40 p-4 space-y-3">
+          <div className="mb-6 rounded-xl border border-red-100 bg-red-50/40 p-4 space-y-3">
             <p className="text-[11px] font-bold uppercase tracking-widest text-red-800">Alasan penolakan</p>
             <textarea
               value={rejectReason}
               onChange={e => setRejectReason(e.target.value)}
               placeholder="Tulis alasan (opsional) — pengirim akan menerima pesan ini"
               rows={3}
-              className="w-full text-sm bg-white border border-red-100 rounded-sm px-3 py-2 outline-none resize-none placeholder:text-[#C4B8B0] text-[#3E2723]"
+              className="w-full text-sm bg-white border border-red-100 rounded-xl px-3 py-2 outline-none resize-none placeholder:text-[#C4B8B0] text-[#3E2723]"
             />
             <div className="flex gap-2">
               <button
                 onClick={() => setRejectMode(false)}
-                className="flex-1 py-2.5 text-[11px] font-medium border border-[#E0DED7] text-[#A1887F] active:scale-[0.98] transition-transform"
+                className="flex-1 py-2.5 rounded-xl text-[11px] font-medium border border-[#E0DED7] text-[#A1887F] active:scale-[0.98] transition-transform"
               >
                 Batal
               </button>
               <button
                 onClick={submitReject}
                 disabled={rejecting}
-                className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-wider bg-red-800 text-white disabled:opacity-50 active:scale-[0.98] transition-transform"
+                className="flex-1 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-red-800 text-white disabled:opacity-50 active:scale-[0.98] transition-transform"
               >
                 {rejecting ? "Mengirim…" : "Konfirmasi Tolak"}
               </button>

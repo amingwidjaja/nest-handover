@@ -228,13 +228,13 @@ export default function HandoverPage() {
         <div className="grid grid-cols-2 gap-3 mb-6">
           <button
             onClick={handleQR}
-            className="w-[85%] aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm shadow-md active:scale-[0.97] transition-transform"
+            className="w-[85%] aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-xl shadow-md active:scale-[0.97] transition-transform"
           >
             <QrCode size={26} className="mb-2" />
             <span className="text-[10px]">QR</span>
           </button>
 
-          <label className="w-[85%] aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-sm shadow-md cursor-pointer active:scale-[0.97] transition-transform">
+          <label className="w-[85%] aspect-square border border-[#E0DED7] flex flex-col items-center justify-center rounded-xl shadow-md cursor-pointer active:scale-[0.97] transition-transform">
             <Camera size={26} className="mb-2" />
             <span className="text-[10px]">Foto</span>
             <input
@@ -252,7 +252,7 @@ export default function HandoverPage() {
       <div className="px-6 pb-6">
         <button
           onClick={() => router.back()}
-          className="w-full py-3 rounded-lg border border-[#E0DED7] shadow-md"
+          className="w-full py-3 rounded-xl border border-[#E0DED7] shadow-md"
         >
           Kembali
         </button>

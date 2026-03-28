@@ -410,40 +410,40 @@ function PackagePageInner() {
 
       {/* 3 BUTTONS FIXED BOTTOM */}
       <div className="fixed bottom-0 inset-x-0 z-[60] border-t border-[#E0DED7] bg-[#FAF9F6]/95 backdrop-blur-md">
-        <div className="mx-auto max-w-md flex gap-2 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <div className="mx-auto max-w-md px-5 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] space-y-2">
 
-          {/* Edit */}
-          <button
-            type="button"
-            onClick={() => {
-              const id = editingHandoverId ?? handoverIdParam
-              router.push(id ? `/handover/create?id=${encodeURIComponent(id)}` : "/handover/create")
-            }}
-            disabled={isBusy}
-            className="aspect-square w-14 flex items-center justify-center rounded-sm border border-[#E0DED7] bg-white text-[11px] font-medium text-[#3E2723] transition-transform active:scale-[0.96] disabled:opacity-40"
-          >
-            ←
-          </button>
+          {/* Baris 1: Edit + Simpan */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const id = editingHandoverId ?? handoverIdParam
+                router.push(id ? `/handover/create?id=${encodeURIComponent(id)}` : "/handover/create")
+              }}
+              disabled={isBusy}
+              className="flex-1 flex items-center justify-center py-3 rounded-xl border border-[#E0DED7] bg-white text-[11px] font-medium text-[#3E2723] transition-transform active:scale-[0.96] disabled:opacity-40"
+            >
+              ← Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => createHandover("save")}
+              disabled={isBusy}
+              className="flex-1 flex items-center justify-center py-3 rounded-xl border border-[#E0DED7] bg-white text-[11px] font-medium text-[#3E2723] transition-transform active:scale-[0.96] disabled:opacity-40"
+            >
+              {saving && submitMode === "save"
+                ? <Loader2 size={14} className="animate-spin" />
+                : "Simpan"
+              }
+            </button>
+          </div>
 
-          {/* Simpan */}
-          <button
-            type="button"
-            onClick={() => createHandover("save")}
-            disabled={isBusy}
-            className="aspect-square w-14 flex items-center justify-center rounded-sm border border-[#E0DED7] bg-white text-[11px] font-medium text-[#3E2723] transition-transform active:scale-[0.96] disabled:opacity-40"
-          >
-            {saving && submitMode === "save"
-              ? <Loader2 size={14} className="animate-spin" />
-              : "Simpan"
-            }
-          </button>
-
-          {/* Tanda Terima */}
+          {/* Baris 2: Tanda Terima full width */}
           <button
             type="button"
             onClick={() => createHandover("handover")}
             disabled={isBusy}
-            className="flex-1 flex items-center justify-center py-4 rounded-sm bg-[#3E2723] text-[11px] font-bold uppercase tracking-wider text-[#FAF9F6] transition-transform active:scale-[0.96] disabled:opacity-45"
+            className="w-full flex items-center justify-center py-4 rounded-xl bg-[#3E2723] text-[11px] font-bold uppercase tracking-wider text-[#FAF9F6] transition-transform active:scale-[0.96] disabled:opacity-45"
           >
             {saving && submitMode === "handover"
               ? <Loader2 size={14} className="animate-spin" />
@@ -458,7 +458,7 @@ function PackagePageInner() {
       {pendingPreviewUrl && (
         <div className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-black/80 px-6">
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/60 mb-4">Preview Foto</p>
-          <div className="w-full max-w-sm aspect-square overflow-hidden rounded-sm">
+          <div className="w-full max-w-sm aspect-square overflow-hidden rounded-xl">
             <img src={pendingPreviewUrl} alt="preview" className="w-full h-full object-cover" />
           </div>
           <p className="text-[11px] text-white/50 mt-3 text-center">Foto akan dipotong menjadi kotak seperti di atas</p>
@@ -466,14 +466,14 @@ function PackagePageInner() {
             <button
               type="button"
               onClick={retakePhoto}
-              className="flex-1 py-3.5 rounded-sm border border-white/20 text-[12px] font-medium text-white active:scale-[0.97] transition-transform"
+              className="flex-1 py-3.5 rounded-xl border border-white/20 text-[12px] font-medium text-white active:scale-[0.97] transition-transform"
             >
               Ambil Ulang
             </button>
             <button
               type="button"
               onClick={confirmPhoto}
-              className="flex-[2] py-3.5 rounded-sm bg-[#FAF9F6] text-[12px] font-bold uppercase tracking-wider text-[#3E2723] active:scale-[0.97] transition-transform"
+              className="flex-[2] py-3.5 rounded-xl bg-[#FAF9F6] text-[12px] font-bold uppercase tracking-wider text-[#3E2723] active:scale-[0.97] transition-transform"
             >
               Gunakan Foto →
             </button>
@@ -481,7 +481,7 @@ function PackagePageInner() {
         </div>
       )}
 
-      <StudioFooter />
+      <StudioFooter className="hidden" />
     </div>
   )
 }

@@ -587,13 +587,13 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
             <button
               type="button"
               onClick={submit}
-              className="w-full py-4 rounded-sm bg-[#3E2723] text-sm font-bold uppercase tracking-wider text-[#FAF9F6] transition-transform active:scale-[0.97] disabled:opacity-50"
+              className="w-full py-4 rounded-xl bg-[#3E2723] text-sm font-bold uppercase tracking-wider text-[#FAF9F6] transition-transform active:scale-[0.97] disabled:opacity-50"
             >
               Lanjut →
             </button>
             <Link
               href="/handover/select"
-              className="block w-full text-center py-3 rounded-sm border border-[#E0DED7] bg-white text-[11px] font-medium text-[#A1887F] transition-transform active:scale-[0.97] active:bg-[#F5F4F0]"
+              className="block w-full text-center py-3 rounded-xl border border-[#E0DED7] bg-white text-[11px] font-medium text-[#A1887F] transition-transform active:scale-[0.97] active:bg-[#F5F4F0]"
             >
               Salah pilih mode? Kembali ke awal
             </Link>
