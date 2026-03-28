@@ -435,7 +435,7 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
       style={{ ["--primary-color" as string]: PRIMARY }}
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <main className="mx-auto w-full max-w-lg flex-1 space-y-10 px-6 pb-12 pt-20 sm:px-8">
+        <main className="mx-auto w-full max-w-lg flex-1 space-y-10 px-6 pb-32 pt-20 sm:px-8">
           {initialData?.handoverId && (
             <p className="text-[11px] font-medium text-[#5D4037]">
               Melanjutkan paket{initialData.serialNumber ? ` · ${initialData.serialNumber}` : ""}
