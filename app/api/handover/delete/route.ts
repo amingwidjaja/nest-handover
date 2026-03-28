@@ -58,10 +58,12 @@ export async function POST(req: Request) {
     )
   }
 
+  // Hanya block status 'received' — masih dalam proses serah terima aktif
+  // 'accepted' boleh dihapus (PDF sudah ada, user mau bersihkan history)
   const blocked = mine.filter((r) => r.status === "received")
   if (blocked.length > 0) {
     return NextResponse.json(
-      { error: "Paket masih dalam proses dan belum bisa dihapus" },
+      { error: "Paket sedang dalam proses serah terima dan belum bisa dihapus" },
       { status: 403 }
     )
   }

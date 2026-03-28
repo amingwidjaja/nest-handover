@@ -62,6 +62,7 @@ export async function GET(req: Request) {
       )
     `)
     .order("created_at", { ascending: false })
+    .limit(100)
 
   const hasOrg = Boolean(profile?.org_id)
   const isOwner = profile?.role === "OWNER"

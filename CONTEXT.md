@@ -248,6 +248,8 @@ Note: secret `nest-handover` tidak bisa dihapus (UI bug Supabase) — tidak berb
 - [x] receipt/[token] page — debug log dihapus ✅
 - [x] cleanup-handover trigger (otomatis dari receipt-worker) ✅
 - [ ] Test QR flow end-to-end
+- [x] UI/UX review pass — sticky header fix, delete accepted, limit 100, PDF 406 fix ✅
+- [ ] Test QR flow end-to-end
 - [ ] Test proxy sender WA notification
 
 ---

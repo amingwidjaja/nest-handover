@@ -110,16 +110,20 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    
-    // Claim Job
-    const { data: hJob, error: rpcError } = await supabase.rpc('claim_handover_receipt_job').single();
-    if (rpcError || !hJob) return new Response(JSON.stringify({ message: "No job" }), { headers: corsHeaders, status: 200 });
 
-    // Fetch Full Data (Mapping Ganda Handover & Package)
+    // Get handover_id from request body (called by notify-handover)
+    const body = await req.json().catch(() => ({}))
+    const handoverId = body?.handover_id
+
+    if (!handoverId) {
+      return new Response(JSON.stringify({ message: "No handover_id" }), { headers: corsHeaders, status: 200 })
+    }
+
+    // Fetch Full Data
     const { data: full, error: fetchError } = await supabase
       .from("handover")
-      .select("*, handover_items(*), package_items(*), receive_event(*)")
-      .eq("id", hJob.id)
+      .select("*, handover_items(*), receive_event(*)")
+      .eq("id", handoverId)
       .single();
 
     if (fetchError || !full) throw new Error("Data fetch failed");
