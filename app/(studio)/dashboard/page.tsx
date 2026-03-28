@@ -309,7 +309,7 @@ export default function DashboardPage() {
                 <p className="text-[12px] text-[#A1887F]">Belum ada paket dalam proses.</p>
                 <Link href="/handover/select"
                   className="inline-block text-[12px] font-medium text-[#3E2723] underline decoration-[#3E2723]/30 underline-offset-2">
-                  Buat paket baru →
+                  Buat Tanda Terima baru →
                 </Link>
               </div>
             ) : (
@@ -318,7 +318,7 @@ export default function DashboardPage() {
                 <div className="px-5 py-5 text-center">
                   <Link href="/handover/select"
                     className="text-[12px] font-medium text-[#3E2723] underline decoration-[#3E2723]/30 underline-offset-2">
-                    + Buat paket baru
+                    + Buat Tanda Terima Baru
                   </Link>
                 </div>
               </>
@@ -336,14 +336,6 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-      </div>
-
-      {/* Footer note */}
-      <div className="border-t border-[#E0DED7] px-5 py-4">
-        <p className="text-center text-[10px] italic leading-relaxed text-[#A1887F]">
-          Foto dihapus otomatis setelah 30 hari. Paket yang dititipkan dianggap
-          diterima setelah 3 hari.
-        </p>
       </div>
 
       {/* Select mode bar */}

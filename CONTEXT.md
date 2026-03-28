@@ -252,6 +252,33 @@ Note: secret `nest-handover` tidak bisa dihapus (UI bug Supabase) — tidak berb
 
 ---
 
+## Future Opportunities (Backlog Jangka Panjang)
+
+Ide-ide yang dikumpulkan untuk monetisasi dan ekspansi:
+
+### Location Intelligence + AI Agent
+- Data GPS serah terima NEST → heatmap aktivitas logistik per area
+- AI Agent bisa analisis: lokasi toko terbaik, pola distribusi, area bermasalah
+- Input: profil pelanggan, demografi area, data kompetitor, traffic pattern
+- Output: rekomendasi lokasi, insight distribusi, anomali deteksi
+- Stack: Azure Maps Spatial Analytics + Azure OpenAI → NEST Analytics dashboard
+- Potensi: fitur premium untuk UMKM, pabrik, sekolah
+- Relevan setelah nest-factory + nest-school punya cukup data
+
+### NEST Analytics (Premium Feature)
+- Dashboard BI untuk OWNER Pro / Enterprise
+- Peak hour distribusi, flow barang antar zona, rejection heatmap
+- Bisa jadi upsell dari plan Pro → Enterprise
+
+### Expansion Path
+- nest-handover (TTD) → pilot ✅
+- nest-factory (sistem pabrik) → Sprint berikutnya
+- nest-school (sistem sekolah) → Sprint berikutnya  
+- NEST Analytics → setelah data cukup terkumpul
+- Location Intelligence AI Agent → jangka panjang
+
+---
+
 ## Cara Pakai di Chat Baru
 
 Ketik: **"Baca CONTEXT.md di `C:\GitHub\NEST\nest-handover\CONTEXT.md` lalu lanjutkan Sprint 5"**

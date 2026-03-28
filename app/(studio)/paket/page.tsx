@@ -101,9 +101,6 @@ export default function PaketHomePage() {
             alt="NEST76"
             className="h-36 w-auto rounded-lg grayscale brightness-90 contrast-125"
           />
-          <h2 className="text-center text-sm font-black uppercase tracking-[0.4em] text-[#3E2723] opacity-80">
-            Studio Archive
-          </h2>
         </motion.div>
 
         <motion.div variants={item} className="space-y-1 text-center">
