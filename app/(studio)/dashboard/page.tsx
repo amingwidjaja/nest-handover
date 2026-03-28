@@ -226,72 +226,67 @@ export default function DashboardPage() {
 
   return (
     <>
-      {/* Page title */}
-      <div className="shrink-0 pb-3 pt-2">
-        <h1 className="text-xl font-medium tracking-tight">
-          {studioRole === "STAFF" ? "Paket Anda" : "Daftar Paket"}
-        </h1>
-      </div>
-
-      {/* Staff CTA */}
-      {studioRole === "STAFF" && (
-        <div className="shrink-0 border-b border-[#E0DED7] bg-[#FAF9F6] py-3">
-          <Link href="/handover/select"
-            className="text-sm font-medium text-[#3E2723] underline decoration-[#3E2723]/30 underline-offset-4">
-            Formulir baru — buat tanda terima
-          </Link>
+      {/* ── STICKY: Judul + Tab ── */}
+      <div className="shrink-0 bg-[#FAF9F6]">
+        <div className="pb-2 pt-2">
+          <h1 className="text-xl font-medium tracking-tight">
+            {studioRole === "STAFF" ? "Paket Anda" : "Daftar Paket"}
+          </h1>
         </div>
-      )}
 
-      {/* Team feed (OWNER Pro) */}
-      {showTeamFeed && (
-        <section className="shrink-0 border-b border-[#E0DED7] bg-[#F7F6F3]/90 py-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#A1887F] mb-3">Aktivitas tim</p>
-          <div className="max-h-36 space-y-2 overflow-y-auto">
-            {handovers.filter(h => h.staff_display_name).slice(0, 12).map(h => (
-              <div key={`feed-${h.id}`}
-                className="flex items-center justify-between gap-3 border-t border-[#E0DED7]/70 pt-2 first:border-t-0 first:pt-0">
-                <span className="text-[11px] font-semibold text-[#5D4037]">{h.staff_display_name}</span>
-                <span className="min-w-0 flex-1 truncate text-right text-[10px] text-[#A1887F]">
-                  {h.receiver_target_name || "—"}
-                </span>
-              </div>
-            ))}
-            {handovers.filter(h => h.staff_display_name).length === 0 && (
-              <p className="text-[11px] italic text-[#A1887F]">Belum ada aktivitas staf tercatat.</p>
-            )}
+        {studioRole === "STAFF" && (
+          <div className="border-b border-[#E0DED7] py-3">
+            <Link href="/handover/select"
+              className="text-sm font-medium text-[#3E2723] underline decoration-[#3E2723]/30 underline-offset-4">
+              Formulir baru — buat tanda terima
+            </Link>
           </div>
-        </section>
-      )}
+        )}
 
-      {/* ── SWIPE TABS ── */}
-      <div className="shrink-0 flex border-b border-[#E0DED7]">
-        {[
-          { label: "Dalam Proses", count: pending.length },
-          { label: "Selesai",      count: received.length },
-        ].map(({ label, count }, i) => (
-          <button
-            key={i}
-            onClick={() => setActiveTab(i as 0 | 1)}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-[12px] font-medium transition-colors border-b-2
-              ${activeTab === i
-                ? "border-[#3E2723] text-[#3E2723]"
-                : "border-transparent text-[#A1887F]"}`}
-          >
-            {label}
-            {count > 0 && (
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold
-                ${activeTab === i
-                  ? i === 0 ? "bg-[#FAEEDA] text-[#854F0B]" : "bg-[#EAF3DE] text-[#3B6D11]"
-                  : "bg-[#F0EDE8] text-[#A1887F]"}`}>
-                {count}
-              </span>
-            )}
-          </button>
-        ))}
+        {showTeamFeed && (
+          <section className="border-b border-[#E0DED7] bg-[#F7F6F3]/90 py-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#A1887F] mb-3">Aktivitas tim</p>
+            <div className="max-h-36 space-y-2 overflow-y-auto">
+              {handovers.filter(h => h.staff_display_name).slice(0, 12).map(h => (
+                <div key={`feed-${h.id}`}
+                  className="flex items-center justify-between gap-3 border-t border-[#E0DED7]/70 pt-2 first:border-t-0 first:pt-0">
+                  <span className="text-[11px] font-semibold text-[#5D4037]">{h.staff_display_name}</span>
+                  <span className="min-w-0 flex-1 truncate text-right text-[10px] text-[#A1887F]">
+                    {h.receiver_target_name || "—"}
+                  </span>
+                </div>
+              ))}
+              {handovers.filter(h => h.staff_display_name).length === 0 && (
+                <p className="text-[11px] italic text-[#A1887F]">Belum ada aktivitas staf tercatat.</p>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Tab bar */}
+        <div className="flex border-b border-[#E0DED7]">
+          {([{ label: "Dalam Proses", count: pending.length }, { label: "Selesai", count: received.length }] as const).map(({ label, count }, i) => (
+            <button
+              key={i}
+              onClick={() => setActiveTab(i as 0 | 1)}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 text-[12px] font-medium transition-colors border-b-2
+                ${activeTab === i ? "border-[#3E2723] text-[#3E2723]" : "border-transparent text-[#A1887F]"}`}
+            >
+              {label}
+              {count > 0 && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold
+                  ${activeTab === i
+                    ? i === 0 ? "bg-[#FAEEDA] text-[#854F0B]" : "bg-[#EAF3DE] text-[#3B6D11]"
+                    : "bg-[#F0EDE8] text-[#A1887F]"}`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* ── SWIPE PANELS ── */}
+      {/* ── SCROLLABLE PANELS ── */}
       <div
         ref={swipeRef}
         className="flex-1 overflow-hidden"
