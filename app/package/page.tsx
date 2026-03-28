@@ -267,9 +267,10 @@ function PackagePageInner() {
     const draftPostcode = localStorage.getItem("draft_destination_postcode") || ""
 
     const descriptions = items.map((i) => i.trim()).filter(Boolean)
+    const uploadedPath = bgUploadPathRef.current || existingFirstItemPhotoPath || null
     const itemRows = descriptions.map((description, index) => ({
       description,
-      photo_url: index === 0 ? (photoBlob ? null : existingFirstItemPhotoPath) : null
+      photo_url: index === 0 ? uploadedPath : null
     }))
 
     const isSenderProxy = localStorage.getItem("draft_is_sender_proxy") === "true"
