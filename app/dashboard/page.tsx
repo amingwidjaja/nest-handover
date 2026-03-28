@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Home } from "lucide-react"
-import { resolveNestEvidencePublicUrl } from "@/lib/nest-evidence-upload"
 
 type StudioRole = "OWNER" | "STAFF" | null
 type HandoverMode = "lite" | "pro" | null
@@ -146,8 +145,7 @@ export default function DashboardPage() {
       router.push(`/package?handover_id=${encodeURIComponent(h.id)}`); return
     }
     if (h.status === "accepted") {
-      const pdf = h.receipt_url ? resolveNestEvidencePublicUrl(h.receipt_url) : null
-      if (pdf) { window.open(pdf, "_blank") }
+      if (h.share_token) { router.push(`/receipt/${h.share_token}`); return }
       return
     }
     if (h.status === "received" && h.share_token) {
@@ -159,14 +157,13 @@ export default function DashboardPage() {
   function receiptLink(h: any) {
     if (selectMode) return null
     if (h.status === "accepted") {
-      const pdf = h.receipt_url ? resolveNestEvidencePublicUrl(h.receipt_url) : null
-      if (pdf) return (
-        <a href={pdf} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+      if (h.share_token) return (
+        <Link href={`/receipt/${h.share_token}`} onClick={e => e.stopPropagation()}
           className="text-[11px] font-medium text-[#5D4037] underline decoration-[#5D4037]/40 underline-offset-2">
-          Lihat PDF
-        </a>
+          {h.receipt_url ? "Lihat Tanda Terima" : "Menyiapkan PDF…"}
+        </Link>
       )
-      return <span className="text-[10px] text-[#A1887F] italic">Menyiapkan PDF…</span>
+      return <span className="text-[10px] text-[#A1887F] italic">Menyiapkan…</span>
     }
     if (h.status === "received" && h.share_token) return (
       <Link href={`/receipt/${h.share_token}`} onClick={e => e.stopPropagation()}

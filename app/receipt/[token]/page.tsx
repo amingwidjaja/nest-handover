@@ -6,6 +6,9 @@ import Link from "next/link"
 import Image from "next/image"
 import { resolveEvidencePhotoUrl } from "@/lib/nest-evidence-upload"
 import { formatGpsCoords, formatTrustTimestampId } from "@/lib/receipt-trust"
+import { StudioHeader } from "@/components/nest/studio-header"
+import { StudioFooter } from "@/components/nest/studio-footer"
+import { resolveNestEvidencePublicUrl } from "@/lib/nest-evidence-upload"
 
 const PRIMARY_QR_HEX = "3E2723"
 const QR_PX = 128
@@ -78,11 +81,6 @@ export default function ReceiptPage() {
   const [loading,  setLoading]  = useState(true)
   const [origin,   setOrigin]   = useState("")
 
-  const [rejectMode,   setRejectMode]   = useState(false)
-  const [rejectReason, setRejectReason] = useState("")
-  const [rejecting,    setRejecting]    = useState(false)
-  const [rejected,     setRejected]     = useState(false)
-
   useEffect(() => {
     fetch(`/api/handover/receipt-data?token=${token}`)
       .then(r => r.json())
@@ -92,24 +90,6 @@ export default function ReceiptPage() {
   useEffect(() => {
     if (typeof window !== "undefined") setOrigin(window.location.origin)
   }, [])
-
-  async function submitReject() {
-    if (rejecting) return
-    setRejecting(true)
-    try {
-      const res  = await fetch("/api/handover/reject", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, rejection_reason: rejectReason }),
-      })
-      const data = await res.json()
-      if (data.success) {
-        setRejected(true)
-        setHandover((p: any) => ({ ...p, status: "rejected", rejection_reason: rejectReason }))
-      } else alert(data.error || "Gagal menolak paket")
-    } catch { alert("Terjadi kesalahan koneksi") }
-    finally { setRejecting(false) }
-  }
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
@@ -181,8 +161,9 @@ export default function ReceiptPage() {
   const qrLinkClass = "flex flex-col items-center justify-center rounded-sm transition-transform active:scale-95"
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] flex flex-col justify-between" style={{ ["--primary-color" as string]: "#3E2723" }}>
-      <main className="mx-auto w-full max-w-md space-y-6 p-6 pt-10 text-[#3E2723]">
+    <div className="min-h-screen bg-[#FAF9F6] flex flex-col" style={{ ["--primary-color" as string]: "#3E2723" }}>
+      <StudioHeader />
+      <main className="mx-auto w-full max-w-md space-y-6 p-6 pt-24 pb-44 text-[#3E2723]">
 
         {/* ── HEADER ── */}
         <section className="flex items-start justify-between gap-3">
@@ -302,38 +283,27 @@ export default function ReceiptPage() {
 
         <div className="border-t border-[#ECE7E3]" />
 
-        {/* ── QR CENTER — 3 kolom: Receipt, Maps, Evidence ── */}
+        {/* ── QR CENTER — 2 kolom: Maps + Evidence ── */}
         <section className="space-y-3">
           <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[#9A8F88]">QR Dokumen</h2>
-          <div className="grid grid-cols-3 gap-3">
-
-            {/* QR — halaman ini */}
-            <div className="flex flex-col items-center gap-1.5">
-              <p className="text-[9px] font-medium uppercase tracking-wide text-center">Tanda Terima</p>
-              {receiptQrSrc ? (
-                <Image src={receiptQrSrc} alt="" width={QR_PX} height={QR_PX}
-                  className="h-[90px] w-[90px] rounded-sm border border-[#3E2723] bg-white p-0.5" />
-              ) : <span className="text-[10px] text-[#9A8F88]">—</span>}
-            </div>
+          <div className="grid grid-cols-2 gap-4">
 
             {/* QR — Google Maps */}
-            <div className="flex flex-col items-center gap-1.5">
-              <p className="text-[9px] font-medium uppercase tracking-wide text-center">Lokasi GPS</p>
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-center">Lokasi GPS</p>
               {mapsUrl && mapsQrSrc ? (
                 <a href={mapsUrl} className={qrLinkClass} aria-label="Buka lokasi">
-                  <Image src={mapsQrSrc} alt="" width={QR_PX} height={QR_PX}
-                    className="h-[90px] w-[90px] rounded-sm border border-[#3E2723] bg-white p-0.5" />
+                  <Image src={mapsQrSrc} alt="" width={QR_PX} height={QR_PX} className={qrImgClass} />
                 </a>
               ) : <span className="text-[10px] text-[#9A8F88]">—</span>}
             </div>
 
             {/* QR — Evidence foto */}
-            <div className="flex flex-col items-center gap-1.5">
-              <p className="text-[9px] font-medium uppercase tracking-wide text-center">Foto Bukti</p>
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-center">Foto Bukti</p>
               {evidenceQrSrc ? (
                 <a href={evidencePath} className={qrLinkClass} aria-label="Buka bukti foto">
-                  <Image src={evidenceQrSrc} alt="" width={QR_PX} height={QR_PX}
-                    className="h-[90px] w-[90px] rounded-sm border border-[#3E2723] bg-white p-0.5" />
+                  <Image src={evidenceQrSrc} alt="" width={QR_PX} height={QR_PX} className={qrImgClass} />
                 </a>
               ) : <span className="text-[10px] text-[#9A8F88]">Memuat…</span>}
             </div>
@@ -374,6 +344,37 @@ export default function ReceiptPage() {
 
         <div className="border-t border-[#ECE7E3]" />
 
+        {/* ── ACTION BUTTONS ── */}
+        <div className="flex gap-3 pt-2">
+          {handover.receipt_url && (
+            <a
+              href={resolveNestEvidencePublicUrl(handover.receipt_url) ?? "#"}
+              download={`TTD-${handover.serial_number || handover.id}.pdf`}
+              className="flex-1 flex items-center justify-center gap-2 py-3 border border-[#E0DED7] rounded-sm text-[12px] font-medium text-[#3E2723] active:scale-[0.97] transition-transform"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Unduh PDF
+            </a>
+          )}
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(`Tanda Terima Digital NEST76\nNo: ${handover.serial_number || ""}\nLihat bukti: ${origin}/receipt/${token}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#25D366] rounded-sm text-[12px] font-medium text-white active:scale-[0.97] transition-transform"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+            </svg>
+            Share WA
+          </a>
+        </div>
+
+        <div className="border-t border-[#ECE7E3]" />
+
         <p className="text-center text-[9px] leading-relaxed text-[#9A8F88]">
           Dokumen ini merupakan Tanda Terima Sah yang diterbitkan secara otomatis
           oleh NEST-System. Keaslian data dijamin melalui verifikasi Device ID,
@@ -384,47 +385,7 @@ export default function ReceiptPage() {
         </p>
       </main>
 
-      {/* ── TOLAK PAKET ── */}
-      {handover.status === "received" && !rejected && (
-        <div className="border-t border-[#ECE7E3] px-6 py-5 space-y-3">
-          {!rejectMode ? (
-            <button onClick={() => setRejectMode(true)}
-              className="w-full py-3 text-[11px] font-medium text-red-700 border border-red-100 rounded-sm active:scale-[0.98] transition-transform">
-              Tolak Paket Ini
-            </button>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-red-800">Alasan penolakan</p>
-              <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)}
-                placeholder="Tulis alasan (opsional) — pengirim akan diberitahu" rows={3}
-                className="w-full text-sm bg-white border border-red-100 rounded-sm px-3 py-2 outline-none resize-none placeholder:text-[#C4B8B0] text-[#3E2723]" />
-              <div className="flex gap-2">
-                <button onClick={() => { setRejectMode(false); setRejectReason("") }}
-                  className="flex-1 py-2.5 text-[11px] font-medium border border-[#E0DED7] text-[#A1887F] active:scale-[0.98] transition-transform">
-                  Batal
-                </button>
-                <button onClick={submitReject} disabled={rejecting}
-                  className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-wider bg-red-800 text-white disabled:opacity-50 active:scale-[0.98] transition-transform">
-                  {rejecting ? "Mengirim…" : "Konfirmasi Tolak"}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {rejected && (
-        <div className="border-t border-red-100 bg-red-50/40 px-6 py-4">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-red-800 mb-1">Paket ditolak</p>
-          <p className="text-[11px] text-red-700">Pengirim sudah diberitahu via WhatsApp.</p>
-        </div>
-      )}
-
-      <div className="flex justify-center px-6 pb-6 text-sm">
-        <Link href="/dashboard" className="font-medium text-[#3E2723] underline-offset-2 hover:underline">
-          Kembali ke Dashboard
-        </Link>
-      </div>
+      <StudioFooter />
     </div>
   )
 }

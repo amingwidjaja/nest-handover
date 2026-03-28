@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { ChevronLeft } from "lucide-react"
 import { resolveEvidencePhotoUrl } from "@/lib/nest-evidence-upload"
+import { StudioHeader } from "@/components/nest/studio-header"
+import { StudioFooter } from "@/components/nest/studio-footer"
 
 export default function ReceiptEvidencePage() {
   const params  = useParams()
@@ -43,41 +44,14 @@ export default function ReceiptEvidencePage() {
   if (Array.isArray(ev)) ev = ev[0] ?? null
   const proofUrl = ev?.photo_url ? resolveEvidencePhotoUrl(String(ev.photo_url)) : null
   const serial   = typeof handover.serial_number === "string" ? handover.serial_number : ""
-
-  // Filter items yang punya foto
   const itemsWithPhoto = items.filter(i => i.photo_url && String(i.photo_url).trim())
-  const itemsNoPhoto   = items.filter(i => !i.photo_url || !String(i.photo_url).trim())
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col">
 
-      {/* ── HEADER ── */}
-      <header className="border-b border-[#E0DED7] bg-[#FAF9F6]/95 backdrop-blur-md px-6 py-4">
-        <div className="mx-auto max-w-md flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-nest-paket.png" alt="" className="h-6 w-auto shrink-0" />
-            <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-[#3E2723]">
-                NEST76 PAKET
-              </p>
-              {serial && (
-                <p className="text-[10px] font-mono text-[#A1887F] truncate">{serial}</p>
-              )}
-            </div>
-          </div>
-          <Link
-            href={`/receipt/${encodeURIComponent(token)}`}
-            className="flex items-center gap-1 text-[11px] font-medium text-[#A1887F] shrink-0 active:scale-[0.97] transition-transform"
-          >
-            <ChevronLeft size={14} strokeWidth={2} />
-            Tanda Terima
-          </Link>
-        </div>
-      </header>
+      <StudioHeader />
 
-      {/* ── CONTENT ── */}
-      <main className="flex-1 mx-auto w-full max-w-md px-6 py-8 space-y-8">
+      <main className="flex-1 mx-auto w-full max-w-md px-6 pt-24 pb-44 space-y-8">
 
         {/* Title */}
         <div>
@@ -107,11 +81,11 @@ export default function ReceiptEvidencePage() {
                       </div>
                     )}
                     {item.description && (
-                      <div className="border-t border-[#E0DED7] px-4 py-2.5">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#A1887F] mr-2">
+                      <div className="border-t border-[#E0DED7] px-4 py-2.5 flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#A1887F]">
                           Barang {idx + 1}
                         </span>
-                        <span className="text-sm">{item.description}</span>
+                        <span className="text-sm text-[#3E2723]">{item.description}</span>
                       </div>
                     )}
                   </div>
@@ -143,18 +117,16 @@ export default function ReceiptEvidencePage() {
           </div>
         )}
 
+        <Link
+          href={`/receipt/${encodeURIComponent(token)}`}
+          className="block w-full text-center py-3 border border-[#E0DED7] rounded-sm text-sm font-medium text-[#3E2723] active:scale-[0.98] transition-transform"
+        >
+          ← Kembali ke Tanda Terima
+        </Link>
+
       </main>
 
-      {/* ── FOOTER ── */}
-      <footer className="border-t border-[#E0DED7] px-6 py-6 text-center">
-        <p className="text-[9px] font-medium uppercase tracking-[0.3em] text-[#3E2723]/70">
-          NEST76 STUDIO • PRODUCT OF THE ARCHIVE
-        </p>
-        <p className="mt-1 text-[8px] font-medium uppercase tracking-[0.3em] text-[#3E2723]/40">
-          © 2026 ALL RIGHTS RESERVED
-        </p>
-      </footer>
-
+      <StudioFooter />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from "next/navigation"
 import { useState, useEffect, useRef, Suspense } from "react"
 import { getClientDeviceMeta } from "@/lib/receipt-trust"
 import { resolveEvidencePhotoUrl } from "@/lib/nest-evidence-upload"
+import { PublicReceiptHeader, ReceiptFooter } from "@/components/nest/receipt-header-footer"
 
 interface GpsCoords { lat: number; lng: number; accuracy: number }
 
@@ -172,15 +173,12 @@ function ReceiveForm() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col">
-      <main className="flex-1 px-6 pt-10 pb-44 max-w-md mx-auto w-full">
+      <PublicReceiptHeader serialNumber={handover.serial_number} />
+      <main className="flex-1 px-6 pt-24 pb-44 max-w-md mx-auto w-full">
 
         {/* Header */}
         <div className="mb-8">
-          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#A1887F] mb-1">NEST76 STUDIO</p>
           <h1 className="text-2xl font-light tracking-tight">Konfirmasi Terima</h1>
-          {handover.serial_number && (
-            <p className="text-xs font-mono text-[#A1887F] mt-1">{handover.serial_number}</p>
-          )}
         </div>
 
         {/* Pengirim & Penerima */}
@@ -272,8 +270,10 @@ function ReceiveForm() {
         </p>
       </main>
 
+      <ReceiptFooter />
+
       {/* Fixed bottom buttons */}
-      <div className="fixed bottom-0 inset-x-0 px-6 py-4 bg-[#FAF9F6]/95 backdrop-blur-sm border-t border-[#E0DED7] space-y-2 max-w-md mx-auto">
+      <div className="fixed bottom-0 inset-x-0 px-6 py-4 bg-[#FAF9F6]/95 backdrop-blur-sm border-t border-[#E0DED7] space-y-2 max-w-md mx-auto z-[60]">
         <button
           onClick={confirm}
           disabled={confirming || rejectMode}
