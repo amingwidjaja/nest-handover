@@ -158,18 +158,16 @@ export default function DashboardPage() {
     if (selectMode) return null
     if (h.status === "accepted") {
       if (h.share_token) return (
-        <Link href={`/receipt/${h.share_token}`} onClick={e => e.stopPropagation()}
-          className="text-[11px] font-medium text-[#5D4037] underline decoration-[#5D4037]/40 underline-offset-2">
-          {h.receipt_url ? "Lihat Tanda Terima" : "Menyiapkan PDF…"}
-        </Link>
+        <span className={`text-[11px] font-medium ${h.receipt_url ? "text-[#3B6D11]" : "text-[#A1887F] italic"}`}>
+          {h.receipt_url ? "Siap Unduh PDF" : "Menyiapkan PDF…"}
+        </span>
       )
-      return <span className="text-[10px] text-[#A1887F] italic">Menyiapkan…</span>
+      return null
     }
     if (h.status === "received" && h.share_token) return (
-      <Link href={`/receipt/${h.share_token}`} onClick={e => e.stopPropagation()}
-        className="text-[11px] font-medium text-[#5D4037] underline decoration-[#5D4037]/40 underline-offset-2">
+      <span className="text-[11px] font-medium text-[#5D4037]">
         Lihat Tanda Terima
-      </Link>
+      </span>
     )
     return null
   }

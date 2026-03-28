@@ -303,6 +303,14 @@ Ide-ide yang dikumpulkan untuk monetisasi dan ekspansi:
 - Potensi: fitur premium untuk UMKM, pabrik, sekolah
 - Relevan setelah nest-factory + nest-school punya cukup data
 
+### Security Model — Storage & Public Access
+- `nest-evidence` bucket: public tapi tidak ada directory listing
+- URL format: `paket/{user_id UUID}/{handover_id UUID}/foto.webp` — practically impossible ditebak
+- Public page `/verify/[token]` bisa lihat foto via URL yang sudah diketahui dari DB
+- Token share: 16 karakter random — cukup sebagai access control untuk MVP
+- RLS naik nanti: tambah signed URL yang expire — tidak urgent sekarang
+- Kesimpulan: aman untuk MVP, tidak perlu password di public page
+
 ### KTP Scan + HR Integration (nest-factory & nest-school)
 - Fitur onboarding karyawan/guru dengan scan KTP via OCR (Azure AI Vision)
 - Extract: nama, alamat, kelurahan, kecamatan, kota, kode pos → auto-populate `profiles`

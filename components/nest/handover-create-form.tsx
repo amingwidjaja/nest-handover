@@ -467,7 +467,7 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
                 <label className={labelClass}>WhatsApp penerima</label>
                 <input className={inputClass} placeholder="0812..." inputMode="tel" autoComplete="tel" value={receiverWhatsapp} onChange={(e) => setReceiverWhatsapp(e.target.value)} />
                 <p className="mt-2 text-[11px] leading-relaxed text-[#9A8F88]">
-                  Nomor ini akan digunakan untuk mengirimkan notifikasi status pengiriman.
+                  Pastikan nomor ini benar — digunakan untuk notifikasi dan membuka tanda terima digital.
                 </p>
               </div>
               {isPro && (
