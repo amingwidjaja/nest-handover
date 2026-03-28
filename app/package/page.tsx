@@ -122,18 +122,19 @@ function PackagePageInner() {
     } catch { /* ignore */ }
   }
 
+  const compressPromiseRef = useRef<Promise<Blob> | null>(null)
+
   async function handlePhoto(file: File) {
     // Tampilkan preview — compress jalan di background selama user lihat preview
     const rawUrl = URL.createObjectURL(file)
     setPendingFile(file)
     setPendingPreviewUrl(rawUrl)
 
-    // Mulai compress di background
-    compressPackagePhotoForUpload(file).then((compressed) => {
-      compressedBlobRef.current = compressed
-    }).catch(() => {
-      compressedBlobRef.current = file  // fallback: pakai file asli
-    })
+    // Mulai compress di background, simpan promise-nya
+    const promise = compressPackagePhotoForUpload(file)
+      .then((compressed) => { compressedBlobRef.current = compressed; return compressed })
+      .catch(() => { compressedBlobRef.current = file; return file })
+    compressPromiseRef.current = promise
   }
 
   async function startBgUpload(blob: Blob, handoverId: string, accessToken: string): Promise<string | null> {
@@ -165,12 +166,18 @@ function PackagePageInner() {
   async function confirmPhoto() {
     if (!pendingFile) return
 
+    // Tunggu compress selesai kalau belum (biasanya sudah selesai saat user lihat preview)
+    if (compressPromiseRef.current) {
+      await compressPromiseRef.current
+      compressPromiseRef.current = null
+    }
+
     // Tutup modal — user kembali ke page
     if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl)
     setPendingPreviewUrl(null)
     setPendingFile(null)
 
-    // Pakai compressed blob (sudah siap kalau compress selesai), fallback ke file asli
+    // Pakai compressed blob (sudah pasti siap sekarang), fallback ke file asli
     const blob = compressedBlobRef.current ?? pendingFile
     compressedBlobRef.current = blob
     setPhotoBlob(blob)
@@ -207,6 +214,7 @@ function PackagePageInner() {
     setPendingPreviewUrl(null)
     setPendingFile(null)
     compressedBlobRef.current = null
+    compressPromiseRef.current = null
     document.getElementById("cameraInput")?.click()
   }
 
