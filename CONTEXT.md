@@ -254,6 +254,42 @@ Note: secret `nest-handover` tidak bisa dihapus (UI bug Supabase) — tidak berb
 
 ---
 
+## Design Language (UI Patokan)
+
+Semua page baru harus mengikuti pattern ini:
+
+```
+Warna:
+  bg-[#FAF9F6]          — page background
+  text-[#3E2723]         — ink utama
+  text-[#A1887F]         — muted / label
+  text-[#7D6E68]         — italic/secondary
+  border-[#E0DED7]       — border default
+
+Typography:
+  Judul utama     : text-2xl font-light tracking-tight
+  Sub-label kecil : text-[10px] font-bold uppercase tracking-[0.28em] text-[#A1887F]
+  Body            : text-sm leading-relaxed
+  Mono/serial     : font-mono text-sm
+
+Komponen:
+  Button primer   : bg-[#3E2723] text-[#FAF9F6] py-3/4 text-sm font-medium tracking-wide rounded-sm
+  Button sekunder : border border-[#E0DED7] rounded-sm text-sm
+  Input           : border-b border-[#E0DED7] py-2 outline-none
+  Card/box        : border border-[#E0DED7] rounded-sm bg-white
+
+Micro-interaction:
+  active:scale-[0.97] transition-transform  — semua tombol
+
+Referensi page yang sudah bagus:
+  /paket         — home page
+  /handover/[id] — serah terima page
+  /handover/select — mode selection
+  /receive/[token] — QR confirmation
+```
+
+---
+
 ## Future Opportunities (Backlog Jangka Panjang)
 
 Ide-ide yang dikumpulkan untuk monetisasi dan ekspansi:

@@ -129,7 +129,19 @@ export default function DashboardPage() {
 
   function handleClick(h: any) {
     if (selectMode) { toggleSelect(h.id); return }
-    if (h.status === "created") { router.push(`/package?handover_id=${encodeURIComponent(h.id)}`); return }
+    if (h.status === "created") {
+      router.push(`/package?handover_id=${encodeURIComponent(h.id)}`)
+      return
+    }
+    if (h.status === "accepted") {
+      const pdf = h.receipt_url ? resolveNestEvidencePublicUrl(h.receipt_url) : null
+      if (pdf) { window.open(pdf, "_blank"); return }
+      return // PDF belum siap, tidak kemana-mana
+    }
+    if (h.status === "received" && h.share_token) {
+      router.push(`/receipt/${h.share_token}`)
+      return
+    }
     router.push(`/handover/${h.id}`)
   }
 
