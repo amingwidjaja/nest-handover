@@ -237,13 +237,11 @@ function PackagePageInner() {
     const updateId = (editingHandoverId ?? handoverIdParam ?? "").trim() || null
 
     if (!updateId) {
-      const lim = await fetch("/api/handover/limits")
-      const limJson = await lim.json()
-      if (limJson.authenticated && limJson.at_limit) {
-        setSaving(false); setSubmitMode(null)
-        alert(limJson.error || "Batas paket aktif tercapai.")
-        return
-      }
+      // Seharusnya tidak terjadi lagi — handover_id selalu ada dari create page
+      setSaving(false); setSubmitMode(null)
+      alert("Data tidak lengkap. Mulai dari awal.")
+      router.push("/handover/create")
+      return
     }
 
     const sender_name = localStorage.getItem("draft_sender_name") || ""

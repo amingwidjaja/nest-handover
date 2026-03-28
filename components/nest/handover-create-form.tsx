@@ -71,8 +71,8 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
 
   const [toast, setToast] = useState("")
   const wrapRef = useRef<HTMLDivElement>(null)
-
   const [userProximity, setUserProximity] = useState<{ lng: number; lat: number } | null>(null)
+  const [pendingHandovers, setPendingHandovers] = useState<{ id: string; serial_number: string | null; receiver_target_name: string; created_at: string }[]>([])
 
   useEffect(() => {
     if (initialData) {
@@ -157,6 +157,19 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
     }
     void hydrate()
   }, [handoverMode, initialData])
+
+  useEffect(() => {
+    if (initialData) return // kalau edit, tidak perlu cek
+    async function checkPending() {
+      try {
+        const res = await fetch("/api/handover/list")
+        const data = await res.json()
+        const pending = (data.handovers ?? []).filter((h: any) => h.status === "created")
+        setPendingHandovers(pending)
+      } catch { /* ignore */ }
+    }
+    checkPending()
+  }, [initialData])
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) return
@@ -362,58 +375,81 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
       return
     }
 
-    if (!initialData?.handoverId) {
-      const limRes = await fetch("/api/handover/limits")
-      const lim = await limRes.json()
-      if (lim.authenticated && lim.at_limit) {
-        showToast("Batas paket aktif tercapai untuk akun Anda.")
-        return
-      }
-    }
-
     const isSenderProxy = senderType === "other"
     const finalSender = isSenderProxy
       ? senderName.trim()
       : localStorage.getItem("user_name") || "Sender"
-
     const senderWa = isSenderProxy ? senderContact.trim() : null
     const wa = receiverWhatsapp.trim()
     const em = handoverMode === "pro" ? receiverEmail.trim() : ""
 
-    localStorage.setItem("draft_sender_name", finalSender)
-    localStorage.setItem("draft_sender_contact", senderContact)
-    localStorage.setItem("draft_receiver_name", receiverName)
-    localStorage.setItem("draft_receiver_whatsapp", wa)
-    localStorage.setItem("draft_receiver_email", em)
-    localStorage.setItem("draft_receiver_contact", wa)
-    localStorage.setItem("draft_is_sender_proxy", isSenderProxy ? "true" : "false")
-    localStorage.setItem("draft_sender_whatsapp", senderWa || "")
-
-    if (handoverMode === "pro") {
-      localStorage.setItem("draft_destination_address", addr)
-      localStorage.setItem("draft_destination_lat", String(destLat))
-      localStorage.setItem("draft_destination_lng", String(destLng))
-      localStorage.setItem("draft_destination_district", destinationDistrict.trim())
-      localStorage.setItem("draft_destination_city", destinationCity.trim())
-      localStorage.setItem("draft_destination_postcode", destinationPostalCode.trim())
-    } else {
-      try {
-        localStorage.removeItem("draft_destination_address")
-        localStorage.removeItem("draft_destination_district")
-        localStorage.removeItem("draft_destination_city")
-        localStorage.removeItem("draft_destination_postcode")
-      } catch { /* ignore */ }
-      localStorage.setItem("draft_destination_lat", String(destLat))
-      localStorage.setItem("draft_destination_lng", String(destLng))
-    }
-
+    // Kalau edit, langsung navigate ke package dengan id yang ada
     if (initialData?.handoverId) {
-      try { localStorage.setItem("draft_handover_id", initialData.handoverId) } catch { /* ignore */ }
+      // Update handover yang ada via PATCH
+      const payload: Record<string, unknown> = {
+        handover_id: initialData.handoverId,
+        sender_name: finalSender,
+        receiver_target_name: receiverName.trim(),
+        receiver_whatsapp: wa,
+        receiver_email: em,
+        is_sender_proxy: isSenderProxy,
+        sender_whatsapp: senderWa,
+        destination_lat: destLat || null,
+        destination_lng: destLng || null,
+      }
+      if (handoverMode === "pro") {
+        payload.destination_address = addr
+        payload.destination_district = destinationDistrict.trim()
+        payload.destination_city = destinationCity.trim()
+        payload.destination_postal_code = destinationPostalCode.trim()
+      }
+      await fetch("/api/handover/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
       window.location.href = `/package?handover_id=${encodeURIComponent(initialData.handoverId)}`
       return
     }
 
-    window.location.href = "/package"
+    // Flow baru — cek limit lalu create handover sekarang
+    const limRes = await fetch("/api/handover/limits")
+    const lim = await limRes.json()
+    if (lim.authenticated && lim.at_limit) {
+      showToast("Batas paket aktif tercapai untuk akun Anda.")
+      return
+    }
+
+    const payload: Record<string, unknown> = {
+      sender_name: finalSender,
+      receiver_target_name: receiverName.trim(),
+      receiver_target_phone: wa,
+      receiver_whatsapp: wa,
+      receiver_email: em,
+      receiver_target_email: em,
+      is_sender_proxy: isSenderProxy,
+      sender_whatsapp: senderWa,
+      destination_lat: destLat || null,
+      destination_lng: destLng || null,
+    }
+    if (handoverMode === "pro") {
+      payload.destination_address = addr
+      payload.destination_district = destinationDistrict.trim()
+      payload.destination_city = destinationCity.trim()
+      payload.destination_postal_code = destinationPostalCode.trim()
+    }
+
+    const res = await fetch("/api/handover/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    const data = await res.json()
+
+    if (res.status === 429) { showToast(data.error || "Batas paket aktif tercapai."); return }
+    if (!data.success) { showToast(data.error || "Gagal membuat dokumen"); return }
+
+    window.location.href = `/package?handover_id=${encodeURIComponent(data.handover_id)}`
   }
 
   if (!handoverMode) {
@@ -444,6 +480,43 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
             <p className="text-[11px] font-medium text-[#5D4037]">
               Melanjutkan paket{initialData.serialNumber ? ` · ${initialData.serialNumber}` : ""}
             </p>
+          )}
+
+          {!initialData && pendingHandovers.length > 0 && (
+            <div className="rounded-xl border border-[#E0DED7] bg-white overflow-hidden">
+              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#A1887F] px-4 pt-4 pb-2">
+                Paket belum selesai
+              </p>
+              {pendingHandovers.slice(0, 3).map((h) => {
+                const isPro = Boolean((h as any).destination_address)
+                return (
+                  <button
+                    key={h.id}
+                    type="button"
+                    onClick={() => { window.location.href = `/package?handover_id=${encodeURIComponent(h.id)}` }}
+                    className="w-full flex items-center justify-between px-4 py-3 border-t border-[#E0DED7] text-left active:bg-[#F5F4F0] transition-colors"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
+                          isPro ? "bg-[#EAF3DE] text-[#3B6D11]" : "bg-[#F0EDE8] text-[#A1887F]"
+                        }`}>
+                          {isPro ? "PRO" : "LITE"}
+                        </span>
+                        <p className="text-sm font-medium text-[#3E2723]">{h.receiver_target_name || "-"}</p>
+                      </div>
+                      <p className="text-[11px] text-[#A1887F]">
+                        {new Date(h.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                    <span className="text-[11px] text-[#3E2723] font-medium shrink-0 ml-3">Lanjut →</span>
+                  </button>
+                )
+              })}
+              <div className="border-t border-[#E0DED7] px-4 py-3">
+                <p className="text-[11px] text-[#A1887F]">Atau isi form di bawah untuk buat paket baru.</p>
+              </div>
+            </div>
           )}
 
           {/* Sender section */}
