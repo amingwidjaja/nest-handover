@@ -134,12 +134,7 @@ serve(async (req) => {
 
     const { data: handover, error: fetchErr } = await supabase
       .from("handover")
-      .select(`
-        id, share_token, sender_name,
-        receiver_whatsapp, receiver_target_name,
-        is_sender_proxy, sender_whatsapp, receipt_status,
-        profiles:user_id ( company_name )
-      `)
+      .select("id, share_token, sender_name, user_id, receiver_whatsapp, receiver_target_name, is_sender_proxy, sender_whatsapp, receipt_status")
       .eq("id", handover_id)
       .single()
 
@@ -150,8 +145,19 @@ serve(async (req) => {
       })
     }
 
+    // Fetch company_name separately — handover.user_id → auth.users, not profiles directly
+    let companyName: string | null = null
+    if (handover.user_id) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_name")
+        .eq("id", handover.user_id)
+        .maybeSingle()
+      companyName = profile?.company_name?.trim() || null
+    }
+
     const senderLabel =
-      (handover as any).profiles?.company_name?.trim() ||
+      companyName ||
       handover.sender_name?.trim() ||
       "NEST76 STUDIO"
 

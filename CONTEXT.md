@@ -303,6 +303,17 @@ Ide-ide yang dikumpulkan untuk monetisasi dan ekspansi:
 - Potensi: fitur premium untuk UMKM, pabrik, sekolah
 - Relevan setelah nest-factory + nest-school punya cukup data
 
+### KTP Scan + HR Integration (nest-factory & nest-school)
+- Fitur onboarding karyawan/guru dengan scan KTP via OCR (Azure AI Vision)
+- Extract: nama, alamat, kelurahan, kecamatan, kota, kode pos → auto-populate `profiles`
+- Use cases HR:
+  - Absensi berbasis GPS (koordinat rumah KTP vs GPS masuk kerja)
+  - Radius check — deteksi kecurangan absensi
+  - Data darurat (alamat lengkap untuk keperluan BPJS, kontrak, dll)
+  - Verifikasi domisili karyawan
+- DB `profiles` sudah KTP-ready — tidak perlu migrasi kolom lagi
+- NIK bisa jadi ID unik karyawan (tambah kolom `nik` saat nest-factory/school)
+
 ### NEST Analytics (Premium Feature)
 - Dashboard BI untuk OWNER Pro / Enterprise
 - Peak hour distribusi, flow barang antar zona, rejection heatmap
