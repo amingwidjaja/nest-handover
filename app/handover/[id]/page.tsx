@@ -8,6 +8,7 @@ import {
   compressEvidenceWebpUnder100kb
 } from "@/lib/image-evidence"
 import { resolveEvidencePhotoUrl } from "@/lib/nest-evidence-upload"
+import { PhotoPreviewModal } from "@/components/nest/photo-preview-modal"
 
 interface GpsCoords {
   lat: number
@@ -30,6 +31,8 @@ export default function HandoverPage() {
   const [notes, setNotes] = useState("")
   const [processingCapture, setProcessingCapture] = useState(false)
   const [handover, setHandover] = useState<any>(null)
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null)
 
   // GPS silent background
   const gpsRef = useRef<GpsCoords | null>(null)
@@ -103,11 +106,23 @@ export default function HandoverPage() {
       }
     }
 
+    // Tampilkan preview dulu
+    const rawUrl = URL.createObjectURL(file)
+    setPendingFile(file)
+    setPendingPreviewUrl(rawUrl)
+  }
+
+  async function confirmPhoto() {
+    if (!pendingFile) return
+    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl)
+    setPendingPreviewUrl(null)
+    setPendingFile(null)
+
     setProcessingCapture(true)
     await new Promise<void>((r) => setTimeout(r, 0))
 
     try {
-      const compressed = await compressEvidenceWebpUnder100kb(file)
+      const compressed = await compressEvidenceWebpUnder100kb(pendingFile)
       const dataUrl = await blobToDataUrl(compressed)
 
       sessionStorage.setItem(`handover_${id}_photo`, dataUrl)
@@ -123,6 +138,13 @@ export default function HandoverPage() {
     } finally {
       setProcessingCapture(false)
     }
+  }
+
+  function retakePhoto() {
+    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl)
+    setPendingPreviewUrl(null)
+    setPendingFile(null)
+    document.getElementById("handoverCameraInput")?.click()
   }
 
   return (
@@ -238,6 +260,7 @@ export default function HandoverPage() {
             <Camera size={26} className="mb-2" />
             <span className="text-[10px]">Foto</span>
             <input
+              id="handoverCameraInput"
               type="file"
               accept="image/*"
               capture="environment"
@@ -257,6 +280,14 @@ export default function HandoverPage() {
           Kembali
         </button>
       </div>
+
+      {pendingPreviewUrl && (
+        <PhotoPreviewModal
+          previewUrl={pendingPreviewUrl}
+          onConfirm={confirmPhoto}
+          onRetake={retakePhoto}
+        />
+      )}
     </div>
   )
 }

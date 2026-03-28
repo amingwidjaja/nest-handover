@@ -9,6 +9,7 @@ import { compressPackagePhotoForUpload } from "@/lib/compress-package-photo"
 import { NEST_EVIDENCE_BUCKET } from "@/lib/nest-evidence-upload"
 import { StudioHeader } from "@/components/nest/studio-header"
 import { StudioFooter } from "@/components/nest/studio-footer"
+import { PhotoPreviewModal } from "@/components/nest/photo-preview-modal"
 import type { HandoverCreateInitialData } from "@/lib/handover-editable-types"
 
 const PRIMARY = "#3E2723"
@@ -31,12 +32,14 @@ function PackagePageInner() {
   const [editingHandoverId, setEditingHandoverId] = useState<string | null>(null)
   const [editingSerial, setEditingSerial] = useState<string | null>(null)
   const [existingFirstItemPhotoPath, setExistingFirstItemPhotoPath] = useState<string | null>(null)
-  const [photoStage, setPhotoStage] = useState<"idle" | "compressing" | "ready">("idle")
+  const [photoStage, setPhotoStage] = useState<"idle" | "compressing" | "uploading" | "ready">("idle")
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [submitMode, setSubmitMode] = useState<"save" | "handover" | null>(null)
   const compressedBlobRef = useRef<Blob | null>(null)
+  const bgUploadPathRef = useRef<string | null>(null)  // path hasil upload background
+  const bgUploadPromiseRef = useRef<Promise<string | null> | null>(null)  // promise upload berjalan
 
   function handleItemChange(index: number, value: string) {
     const copy = [...items]
@@ -45,6 +48,17 @@ function PackagePageInner() {
   }
 
   useEffect(() => {
+    // Restore foto dari sessionStorage kalau ada (back/forward navigation)
+    try {
+      const savedUrl = sessionStorage.getItem("pkg_photo_preview_url")
+      const savedPath = sessionStorage.getItem("pkg_photo_upload_path")
+      if (savedUrl) {
+        previewUrlRef.current = savedUrl
+        setPreviewUrl(savedUrl)
+        setPhotoStage(savedPath ? "ready" : "uploading")
+        if (savedPath) bgUploadPathRef.current = savedPath
+      }
+    } catch { /* ignore */ }
     return () => {
       if (previewUrlRef.current?.startsWith("blob:")) URL.revokeObjectURL(previewUrlRef.current)
     }
@@ -98,40 +112,92 @@ function PackagePageInner() {
     setPreviewUrl(null)
     setPhotoBlob(null)
     compressedBlobRef.current = null
+    bgUploadPathRef.current = null
+    bgUploadPromiseRef.current = null
     setExistingFirstItemPhotoPath(null)
     setPhotoStage("idle")
+    try {
+      sessionStorage.removeItem("pkg_photo_preview_url")
+      sessionStorage.removeItem("pkg_photo_upload_path")
+    } catch { /* ignore */ }
   }
 
   async function handlePhoto(file: File) {
-    // Tampilkan preview dulu sebelum compress
+    // Tampilkan preview — compress jalan di background selama user lihat preview
     const rawUrl = URL.createObjectURL(file)
     setPendingFile(file)
     setPendingPreviewUrl(rawUrl)
+
+    // Mulai compress di background
+    compressPackagePhotoForUpload(file).then((compressed) => {
+      compressedBlobRef.current = compressed
+    }).catch(() => {
+      compressedBlobRef.current = file  // fallback: pakai file asli
+    })
+  }
+
+  async function startBgUpload(blob: Blob, handoverId: string, accessToken: string): Promise<string | null> {
+    try {
+      const ext = blob.type.includes("webp") ? "webp" : "jpg"
+      const fd = new FormData()
+      fd.set("handover_id", handoverId)
+      fd.set("mode", "package_first_item")
+      fd.set("file", blob, `package.${ext}`)
+      const up = await fetch("/api/handover/upload-photo", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: fd
+      })
+      const upJson = await up.json().catch(() => ({}))
+      if (!up.ok) return null
+      const path = upJson.storagePath as string | null
+      if (path) {
+        bgUploadPathRef.current = path
+        try { sessionStorage.setItem("pkg_photo_upload_path", path) } catch { /* ignore */ }
+        setPhotoStage("ready")
+      }
+      return path ?? null
+    } catch {
+      return null
+    }
   }
 
   async function confirmPhoto() {
     if (!pendingFile) return
-    setPhotoStage("compressing")
-    // Tutup preview modal
+
+    // Tutup modal — user kembali ke page
     if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl)
     setPendingPreviewUrl(null)
     setPendingFile(null)
 
-    try {
-      const compressed = await compressPackagePhotoForUpload(pendingFile)
-      compressedBlobRef.current = compressed
-      setPhotoBlob(compressed)
-      const compressedUrl = URL.createObjectURL(compressed)
-      if (previewUrlRef.current?.startsWith("blob:")) URL.revokeObjectURL(previewUrlRef.current)
-      previewUrlRef.current = compressedUrl
-      setPreviewUrl(compressedUrl)
-      setPhotoStage("ready")
-    } catch {
-      compressedBlobRef.current = pendingFile
-      setPhotoBlob(pendingFile)
-      const fallbackUrl = URL.createObjectURL(pendingFile)
-      previewUrlRef.current = fallbackUrl
-      setPreviewUrl(fallbackUrl)
+    // Pakai compressed blob (sudah siap kalau compress selesai), fallback ke file asli
+    const blob = compressedBlobRef.current ?? pendingFile
+    compressedBlobRef.current = blob
+    setPhotoBlob(blob)
+
+    // Set preview dari blob yang sudah di-crop
+    const croppedUrl = URL.createObjectURL(blob)
+    if (previewUrlRef.current?.startsWith("blob:")) URL.revokeObjectURL(previewUrlRef.current)
+    previewUrlRef.current = croppedUrl
+    setPreviewUrl(croppedUrl)
+
+    // Simpan preview url ke sessionStorage (persist across back navigation)
+    try { sessionStorage.setItem("pkg_photo_preview_url", croppedUrl) } catch { /* ignore */ }
+
+    // Kalau ada handover_id (edit mode), langsung upload di background
+    const hId = (editingHandoverId ?? handoverIdParam ?? "").trim()
+    if (hId) {
+      setPhotoStage("uploading")
+      const supabase = createBrowserSupabaseClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        const promise = startBgUpload(blob, hId, session.access_token)
+        bgUploadPromiseRef.current = promise
+      } else {
+        setPhotoStage("ready")
+      }
+    } else {
+      // Flow baru — belum ada handover_id, upload nanti saat submit
       setPhotoStage("ready")
     }
   }
@@ -140,7 +206,7 @@ function PackagePageInner() {
     if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl)
     setPendingPreviewUrl(null)
     setPendingFile(null)
-    // Trigger file input lagi
+    compressedBlobRef.current = null
     document.getElementById("cameraInput")?.click()
   }
 
@@ -244,19 +310,20 @@ function PackagePageInner() {
 
       if (photoBlob && effectiveId && session.access_token) {
         try {
-          const blob = compressedBlobRef.current || photoBlob
-          const ext = blob.type.includes("webp") ? "webp" : blob.type.includes("png") ? "png" : "jpg"
-          const fd = new FormData()
-          fd.set("handover_id", effectiveId)
-          fd.set("mode", "package_first_item")
-          fd.set("file", blob, `package.${ext}`)
-          const up = await fetch("/api/handover/upload-photo", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${session.access_token}` },
-            body: fd
-          })
-          const upJson = (await up.json().catch(() => ({}))) as { error?: string }
-          if (!up.ok) throw new Error(upJson.error || `Upload HTTP ${up.status}`)
+          // Kalau upload background sudah selesai, pakai path-nya langsung
+          if (bgUploadPathRef.current) {
+            // sudah terupload, tidak perlu upload lagi
+          } else if (bgUploadPromiseRef.current) {
+            // upload sedang berjalan, tunggu selesai
+            const path = await bgUploadPromiseRef.current
+            if (!path) throw new Error("Upload gagal, coba lagi.")
+          } else {
+            // belum upload sama sekali (flow baru), upload sekarang
+            const promise = startBgUpload(compressedBlobRef.current || photoBlob, effectiveId, session.access_token)
+            bgUploadPromiseRef.current = promise
+            const path = await promise
+            if (!path) throw new Error("Upload gagal, coba lagi.")
+          }
         } catch (err) {
           setSaving(false); setSubmitMode(null)
           alert(`Gagal mengunggah foto. ${err instanceof Error ? err.message : ""}`)
@@ -270,6 +337,10 @@ function PackagePageInner() {
         "draft_destination_city","draft_destination_postcode",HANDOVER_MODE_KEY,"draft_handover_id",
         "draft_is_sender_proxy","draft_sender_whatsapp"
       ].forEach((k) => { try { localStorage.removeItem(k) } catch { /* ignore */ } })
+      try {
+        sessionStorage.removeItem("pkg_photo_preview_url")
+        sessionStorage.removeItem("pkg_photo_upload_path")
+      } catch { /* ignore */ }
 
       const sn = typeof data.serial_number === "string" ? data.serial_number : editingSerial ?? ""
       router.push(
@@ -336,10 +407,12 @@ function PackagePageInner() {
             ) : (
               <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-[#E0DED7] shadow-sm">
                 <img src={previewUrl} alt="" className="h-full w-full object-cover" />
-                {photoStage === "compressing" && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-[#FAF9F6]/80">
+                {(photoStage === "compressing" || photoStage === "uploading") && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-[#FAF9F6]/60">
                     <Loader2 size={18} className="animate-spin text-[#3E2723]/60" />
-                    <span className="text-[8px] font-medium uppercase tracking-wider text-[#9A8F88]">Memproses…</span>
+                    <span className="text-[8px] font-medium uppercase tracking-wider text-[#9A8F88]">
+                      {photoStage === "uploading" ? "Mengunggah…" : "Memproses…"}
+                    </span>
                   </div>
                 )}
                 {photoStage === "ready" && (
@@ -454,31 +527,12 @@ function PackagePageInner() {
         </div>
       </div>
 
-      {/* Preview modal — muncul setelah foto diambil, sebelum dikonfirmasi */}
       {pendingPreviewUrl && (
-        <div className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-black/80 px-6">
-          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/60 mb-4">Preview Foto</p>
-          <div className="w-full max-w-sm aspect-square overflow-hidden rounded-xl">
-            <img src={pendingPreviewUrl} alt="preview" className="w-full h-full object-cover" />
-          </div>
-          <p className="text-[11px] text-white/50 mt-3 text-center">Foto akan dipotong menjadi kotak seperti di atas</p>
-          <div className="flex gap-3 mt-6 w-full max-w-sm">
-            <button
-              type="button"
-              onClick={retakePhoto}
-              className="flex-1 py-3.5 rounded-xl border border-white/20 text-[12px] font-medium text-white active:scale-[0.97] transition-transform"
-            >
-              Ambil Ulang
-            </button>
-            <button
-              type="button"
-              onClick={confirmPhoto}
-              className="flex-[2] py-3.5 rounded-xl bg-[#FAF9F6] text-[12px] font-bold uppercase tracking-wider text-[#3E2723] active:scale-[0.97] transition-transform"
-            >
-              Gunakan Foto →
-            </button>
-          </div>
-        </div>
+        <PhotoPreviewModal
+          previewUrl={pendingPreviewUrl}
+          onConfirm={confirmPhoto}
+          onRetake={retakePhoto}
+        />
       )}
 
       <StudioFooter className="hidden" />
