@@ -182,6 +182,7 @@ export default function DashboardPage() {
     const addr    = h.destination_address || null
     const checked = selected.includes(h.id)
     const link    = receiptLink(h)
+    const isAccepted = h.status === "accepted"
 
     return (
       <div
@@ -200,7 +201,14 @@ export default function DashboardPage() {
             {today && <span className="w-1.5 h-1.5 rounded-full bg-[#A1887F] shrink-0" />}
             <span className="font-medium text-[13px] text-[#3E2723] truncate">{name}</span>
           </div>
-          <span className="text-[11px] text-[#A1887F] shrink-0 tabular-nums">{date}</span>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Badge status — accepted vs received */}
+            {isAccepted
+              ? <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#EAF3DE] text-[#3B6D11]">✓ Disetujui</span>
+              : <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#FFF8E7] text-[#854F0B]">Menunggu</span>
+            }
+            <span className="text-[11px] text-[#A1887F] tabular-nums">{date}</span>
+          </div>
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="text-[12px] text-[#7D6E68] italic truncate flex-1">{pkg}</span>

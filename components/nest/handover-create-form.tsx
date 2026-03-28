@@ -447,9 +447,9 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
                   )}
                 </div>
                 <div>
-                  <label className={labelClass}>Nomor WA pengirim</label>
-                  <input className={inputClass} placeholder="62812..." inputMode="tel" value={senderContact} onChange={(e) => setSenderContact(e.target.value)} />
-                  <p className="mt-2 text-[11px] text-[#9A8F88]">Pengirim akan mendapat notifikasi saat paket diterima.</p>
+                <label className={labelClass}>Nomor WA pengirim</label>
+                <input className={inputClass} placeholder="08123..." inputMode="tel" value={senderContact} onChange={(e) => setSenderContact(e.target.value)} />
+                <p className="mt-2 text-[11px] text-[#9A8F88]">Pengirim akan mendapat notifikasi saat paket diterima.</p>
                 </div>
               </div>
             )}
@@ -465,7 +465,7 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
               </div>
               <div>
                 <label className={labelClass}>WhatsApp penerima</label>
-                <input className={inputClass} placeholder="62812..." inputMode="tel" autoComplete="tel" value={receiverWhatsapp} onChange={(e) => setReceiverWhatsapp(e.target.value)} />
+                <input className={inputClass} placeholder="0812..." inputMode="tel" autoComplete="tel" value={receiverWhatsapp} onChange={(e) => setReceiverWhatsapp(e.target.value)} />
                 <p className="mt-2 text-[11px] leading-relaxed text-[#9A8F88]">
                   Nomor ini akan digunakan untuk mengirimkan notifikasi status pengiriman.
                 </p>

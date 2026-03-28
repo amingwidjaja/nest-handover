@@ -145,11 +145,24 @@ export default function ReceiptPage() {
     (handover.profiles?.company_logo_url ? resolveEvidencePhotoUrl(handover.profiles.company_logo_url) : null)
 
   // Contact
-  const receiverWa    = String(handover.receiver_whatsapp ?? "").trim() ||
+  const receiverWaRaw = String(handover.receiver_whatsapp ?? "").trim() ||
     (String(handover.receiver_contact ?? "").includes("@") ? "" : String(handover.receiver_contact ?? "").trim())
+  // Format 628xx → 08xx
+  const receiverWa = receiverWaRaw.startsWith("62")
+    ? "0" + receiverWaRaw.slice(2)
+    : receiverWaRaw
   const receiverEmail = String(handover.receiver_email ?? "").trim() || null
-  const address       = String(handover.destination_address ?? "").trim()
-  const notes         = String(handover.notes ?? "").trim()
+
+  // Alamat lengkap
+  const addrParts = [
+    handover.destination_address,
+    handover.destination_district,
+    handover.destination_city,
+    handover.destination_postal_code,
+  ].map(s => String(s ?? "").trim()).filter(Boolean)
+  const address = addrParts.join(", ")
+
+  const notes = String(handover.notes ?? "").trim()
 
   const gpsCoords   = ev ? formatGpsCoords(ev.gps_lat, ev.gps_lng) : "—"
   const handoverTs  = formatTrustTimestampId(receiveWhen)
@@ -185,7 +198,7 @@ export default function ReceiptPage() {
 
         {/* ── KONTAK ── */}
         <section className="space-y-3 text-sm">
-          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[#9A8F88]">Kontak</h2>
+          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[#9A8F88]">Pihak yang Bertransaksi</h2>
           <div className="space-y-1.5">
             {[
               ["Pengirim", handover.sender_name || "-"],
@@ -285,7 +298,6 @@ export default function ReceiptPage() {
 
         {/* ── QR CENTER — 2 kolom: Maps + Evidence ── */}
         <section className="space-y-3">
-          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[#9A8F88]">QR Dokumen</h2>
           <div className="grid grid-cols-2 gap-4">
 
             {/* QR — Google Maps */}
@@ -326,7 +338,7 @@ export default function ReceiptPage() {
               <span className="text-right">{deviceName}</span>
             </div>
             <div className="flex justify-between gap-2">
-              <span className="text-[#9A8F88]">Timestamp:</span>
+              <span className="text-[#9A8F88]">Waktu Penerimaan:</span>
               <span className="text-right">{handoverTs}</span>
             </div>
             <div className="flex justify-between gap-2">
@@ -375,13 +387,10 @@ export default function ReceiptPage() {
 
         <div className="border-t border-[#ECE7E3]" />
 
-        <p className="text-center text-[9px] leading-relaxed text-[#9A8F88]">
+        <p className="text-center text-[11px] leading-relaxed text-[#9A8F88]">
           Dokumen ini merupakan Tanda Terima Sah yang diterbitkan secara otomatis
           oleh NEST-System. Keaslian data dijamin melalui verifikasi Device ID,
           Timestamp, dan Geo-tagging sebagai pengganti tanda tangan basah.
-        </p>
-        <p className="text-center text-[8px] text-[#9A8F88]">
-          © 2026 NEST76 Studio. Tanda Terima — generated securely.
         </p>
       </main>
 
