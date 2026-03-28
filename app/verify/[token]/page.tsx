@@ -214,13 +214,13 @@ export default function VerifyPage() {
                   <span className="text-[#A1887F]">Waktu</span>
                   <span className="text-right">{fmt(receiveWhen)}</span>
                 </div>
-                {evR.receiver_name && (
+                {!!evR.receiver_name && (
                   <div className="flex justify-between gap-2">
                     <span className="text-[#A1887F]">Diterima oleh</span>
                     <span className="text-right">{String(evR.receiver_name)}</span>
                   </div>
                 )}
-                {evR.receiver_relation && (
+                {!!evR.receiver_relation && (
                   <div className="flex justify-between gap-2">
                     <span className="text-[#A1887F]">Hubungan</span>
                     <span className="text-right">{String(evR.receiver_relation)}</span>
