@@ -67,6 +67,7 @@ function PackagePageInner() {
           localStorage.setItem("draft_destination_address", data.destinationAddress)
           localStorage.setItem("draft_destination_lat", data.destinationLat != null ? String(data.destinationLat) : "")
           localStorage.setItem("draft_destination_lng", data.destinationLng != null ? String(data.destinationLng) : "")
+          localStorage.setItem("draft_destination_district", data.destinationDistrict)
           localStorage.setItem("draft_destination_city", data.destinationCity)
           localStorage.setItem("draft_destination_postcode", data.destinationPostalCode)
         } catch { /* ignore */ }

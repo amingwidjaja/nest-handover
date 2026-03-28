@@ -9,6 +9,7 @@ export type GeocodeFeature = {
   place_name: string
   center: [number, number] // [lng, lat]
   city?: string
+  district?: string  // kecamatan / municipalitySubdivision
   postcode?: string
 }
 
@@ -51,6 +52,8 @@ export async function fetchForwardGeocodeSuggestions(
         address?: {
           freeformAddress?: string
           municipality?: string
+          municipalitySubdivision?: string
+          localName?: string
           postalCode?: string
         }
         position?: { lat: number; lon: number }
@@ -59,13 +62,20 @@ export async function fetchForwardGeocodeSuggestions(
 
     return (data.results ?? [])
       .filter(r => r.position && r.address?.freeformAddress)
-      .map(r => ({
-        id: r.id,
-        place_name: r.address!.freeformAddress!,
-        center: [r.position!.lon, r.position!.lat] as [number, number],
-        city: r.address!.municipality,
-        postcode: r.address!.postalCode,
-      }))
+      .map(r => {
+        const addr = r.address!
+        // Azure Maps Indonesia: municipality bisa kosong, coba localName sebagai fallback
+        const city = addr.municipality?.trim() || addr.localName?.trim() || ""
+        const district = addr.municipalitySubdivision?.trim() || ""
+        return {
+          id: r.id,
+          place_name: addr.freeformAddress!,
+          center: [r.position!.lon, r.position!.lat] as [number, number],
+          city: city || undefined,
+          district: district || undefined,
+          postcode: addr.postalCode?.trim() || undefined,
+        }
+      })
   } catch {
     return []
   }

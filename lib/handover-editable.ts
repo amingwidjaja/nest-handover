@@ -73,6 +73,7 @@ export async function loadHandoverEditableForPage(
       receiver_target_email,
       destination_address,
       destination_city,
+      destination_district,
       destination_postal_code,
       destination_lat,
       destination_lng
@@ -144,6 +145,7 @@ export async function loadHandoverEditableForPage(
     receiverWhatsapp: wa,
     receiverEmail: em,
     destinationAddress: addr,
+    destinationDistrict: String(row.destination_district ?? "").trim(),
     destinationCity: String(row.destination_city ?? "").trim(),
     destinationPostalCode: String(row.destination_postal_code ?? "").trim(),
     destinationLat: destLat,

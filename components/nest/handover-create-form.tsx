@@ -94,6 +94,7 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
     setReceiverWhatsapp(initialData.receiverWhatsapp)
     setReceiverEmail(initialData.receiverEmail)
     setDestinationAddress(initialData.destinationAddress)
+    setDestinationDistrict(initialData.destinationDistrict)
     setDestinationCity(initialData.destinationCity)
     setDestinationPostalCode(initialData.destinationPostalCode)
     if (initialData.destinationLat != null && initialData.destinationLng != null) {
@@ -198,16 +199,54 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
     debouncedGeocode(value)
   }
 
+  function parsePlaceName(placeName: string) {
+    // Format Azure Maps ID: "Jalan X, Kelurahan Y, Kecamatan Z, Provinsi 12345"
+    const parts = placeName.split(",").map(s => s.trim())
+
+    let district = ""
+    let city = ""
+    let postcode = ""
+    let addressParts: string[] = []
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i]
+      const lower = part.toLowerCase()
+
+      if (lower.startsWith("kelurahan ") || lower.startsWith("desa ")) {
+        district = part
+      } else if (lower.startsWith("kecamatan ")) {
+        // skip — kecamatan tidak dipakai sebagai district field
+      } else {
+        // cek apakah bagian terakhir mengandung kode pos (5 digit di akhir)
+        const pcMatch = part.match(/(\d{5})$/)
+        if (pcMatch) {
+          postcode = pcMatch[1]
+          // sisanya adalah nama kota/provinsi
+          city = part.replace(pcMatch[1], "").trim()
+        } else if (i > 0 && !district) {
+          addressParts.push(part)
+        } else if (i === 0) {
+          addressParts.push(part)
+        }
+      }
+    }
+
+    return { district, city, postcode }
+  }
+
   function selectSuggestion(f: MapboxGeocodeFeature) {
     const [lng, lat] = f.center
     setDestinationAddress(f.place_name)
     setMapboxPick({ lat, lng })
-    const city = f.city ?? ""
-    const pc = f.postcode ?? ""
+
+    const { district, city, postcode } = parsePlaceName(f.place_name)
+
+    setDestinationDistrict(district)
     setDestinationCity(city)
-    setDestinationPostalCode(pc)
+    setDestinationPostalCode(postcode)
+    localStorage.setItem("draft_destination_district", district)
     localStorage.setItem("draft_destination_city", city)
-    localStorage.setItem("draft_destination_postcode", pc)
+    localStorage.setItem("draft_destination_postcode", postcode)
     setSuggestions([])
   }
 

@@ -9,6 +9,7 @@ export type HandoverCreateInitialData = {
   receiverWhatsapp: string
   receiverEmail: string
   destinationAddress: string
+  destinationDistrict: string
   destinationCity: string
   destinationPostalCode: string
   destinationLat: number | null
