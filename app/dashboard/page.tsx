@@ -19,10 +19,23 @@ export default function DashboardPage() {
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
   const [highlightId, setHighlightId] = useState<string | null>(null)
+  const [headerH, setHeaderH] = useState(142)
 
   const timerRef = useRef<any>(null)
   const handoversRef = useRef<any[]>([])
   const touchStartX = useRef<number | null>(null)
+  const headerRef = useRef<HTMLDivElement>(null)
+
+  // Measure actual header height after render
+  useEffect(() => {
+    if (!headerRef.current) return
+    const obs = new ResizeObserver(entries => {
+      const h = entries[0]?.contentRect.height
+      if (h) setHeaderH(Math.ceil(h))
+    })
+    obs.observe(headerRef.current)
+    return () => obs.disconnect()
+  }, [studioRole, handoverMode])
 
   useEffect(() => { handoversRef.current = handovers }, [handovers])
 
@@ -130,17 +143,15 @@ export default function DashboardPage() {
   function handleClick(h: any) {
     if (selectMode) { toggleSelect(h.id); return }
     if (h.status === "created") {
-      router.push(`/package?handover_id=${encodeURIComponent(h.id)}`)
-      return
+      router.push(`/package?handover_id=${encodeURIComponent(h.id)}`); return
     }
     if (h.status === "accepted") {
       const pdf = h.receipt_url ? resolveNestEvidencePublicUrl(h.receipt_url) : null
-      if (pdf) { window.open(pdf, "_blank"); return }
-      return // PDF belum siap, tidak kemana-mana
+      if (pdf) { window.open(pdf, "_blank") }
+      return
     }
     if (h.status === "received" && h.share_token) {
-      router.push(`/receipt/${h.share_token}`)
-      return
+      router.push(`/receipt/${h.share_token}`); return
     }
     router.push(`/handover/${h.id}`)
   }
@@ -152,7 +163,7 @@ export default function DashboardPage() {
       if (pdf) return (
         <a href={pdf} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
           className="text-[11px] font-medium text-[#5D4037] underline decoration-[#5D4037]/40 underline-offset-2">
-          Lihat Tanda Terima
+          Lihat PDF
         </a>
       )
       return <span className="text-[10px] text-[#A1887F] italic">Menyiapkan PDF…</span>
@@ -220,43 +231,38 @@ export default function DashboardPage() {
   ]
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-[#FAF9F6] text-[#3E2723]">
 
-      {/* ── FIXED HEADER: logo + judul + tabs ── */}
-      <div className="fixed top-0 inset-x-0 z-50 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#3E2723]/5">
+      {/* ── FIXED HEADER ── */}
+      <div ref={headerRef} className="fixed top-0 inset-x-0 z-50 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#3E2723]/5">
 
-        {/* Baris 1: logo + home */}
+        {/* Logo row */}
         <div className="flex items-center justify-between px-6 h-14 border-b border-[#E0DED7]/60">
           <Link href="/paket" className="flex items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo-nest-paket.png" alt="" className="h-6 w-auto shrink-0" />
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#3E2723]">
-              NEST76 PAKET
-            </span>
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#3E2723]">NEST76 PAKET</span>
           </Link>
           <Link href="/paket" aria-label="Beranda">
             <Home className="h-5 w-5 text-[#3E2723] opacity-70" strokeWidth={1.75} />
           </Link>
         </div>
 
-        {/* Baris 2: judul */}
-        <div className="px-6 pt-3 pb-1">
+        {/* Judul row */}
+        <div className="px-6 pt-2.5 pb-1">
           <h1 className="text-lg font-medium tracking-tight">
             {studioRole === "STAFF" ? "Paket Anda" : "Daftar Paket"}
           </h1>
         </div>
 
-        {/* Staff CTA */}
         {studioRole === "STAFF" && (
           <div className="px-6 pb-2">
-            <Link href="/handover/select"
-              className="text-[11px] font-medium text-[#3E2723] underline decoration-[#3E2723]/30 underline-offset-2">
+            <Link href="/handover/select" className="text-[11px] font-medium text-[#3E2723] underline decoration-[#3E2723]/30 underline-offset-2">
               + Formulir baru
             </Link>
           </div>
         )}
 
-        {/* Team feed */}
         {showTeamFeed && (
           <div className="px-6 pb-3 border-b border-[#E0DED7]">
             <p className="text-[9px] font-bold uppercase tracking-widest text-[#A1887F] mb-2">Aktivitas tim</p>
@@ -267,19 +273,14 @@ export default function DashboardPage() {
                   <span className="text-[#A1887F] truncate">{h.receiver_target_name || "—"}</span>
                 </div>
               ))}
-              {handovers.filter(h => h.staff_display_name).length === 0 && (
-                <p className="text-[11px] italic text-[#A1887F]">Belum ada aktivitas.</p>
-              )}
             </div>
           </div>
         )}
 
-        {/* Baris 3: tabs */}
+        {/* Tab row */}
         <div className="flex">
           {tabs.map(({ label, count }, i) => (
-            <button
-              key={i}
-              onClick={() => setActiveTab(i as 0 | 1)}
+            <button key={i} onClick={() => setActiveTab(i as 0 | 1)}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] font-medium border-b-2 transition-colors
                 ${activeTab === i ? "border-[#3E2723] text-[#3E2723]" : "border-transparent text-[#A1887F]"}`}
             >
@@ -297,9 +298,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── SCROLLABLE CONTENT ── */}
+      {/* ── SCROLLABLE CONTENT — pt otomatis dari headerH ── */}
       <div
-        className="flex-1 pt-16 pb-16 overflow-hidden"
+        className="flex-1 pb-16 overflow-hidden"
+        style={{ paddingTop: headerH }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
@@ -307,7 +309,6 @@ export default function DashboardPage() {
           className="flex transition-transform duration-250 ease-out"
           style={{ transform: `translateX(${activeTab === 0 ? "0%" : "-50%"})`, width: "200%" }}
         >
-          {/* Panel 0 — Dalam Proses */}
           <div className={`w-1/2 ${activeTab !== 0 ? "pointer-events-none" : ""}`}>
             {pending.length === 0 ? (
               <div className="px-5 py-10 text-center space-y-3">
@@ -330,7 +331,6 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Panel 1 — Selesai */}
           <div className={`w-1/2 ${activeTab !== 1 ? "pointer-events-none" : ""}`}>
             {received.length === 0 ? (
               <p className="px-5 py-10 text-center text-[12px] text-[#A1887F] italic">
@@ -350,7 +350,6 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Select mode bar */}
       {selectMode && (
         <div className="fixed bottom-0 inset-x-0 z-[60] flex items-center justify-between bg-[#3E2723] px-6 py-4 text-white">
           <span className="text-sm">{selected.length} dipilih</span>
