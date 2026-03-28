@@ -60,6 +60,7 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
   const [receiverEmail, setReceiverEmail] = useState("")
 
   const [destinationAddress, setDestinationAddress] = useState("")
+  const [destinationDistrict, setDestinationDistrict] = useState("")
   const [destinationCity, setDestinationCity] = useState("")
   const [destinationPostalCode, setDestinationPostalCode] = useState("")
   const [mapboxPick, setMapboxPick] = useState<{ lat: number; lng: number } | null>(null)
@@ -249,6 +250,12 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
             setDestinationAddress(parsed.addressLine)
             localStorage.setItem("draft_destination_address", parsed.addressLine)
           }
+          // Azure Maps returns suburb as district/kecamatan
+          const suburb = (raw?.address as any)?.suburb || ""
+          if (suburb) {
+            setDestinationDistrict(suburb)
+            localStorage.setItem("draft_destination_district", suburb)
+          }
           if (parsed?.city) {
             setDestinationCity(parsed.city)
             localStorage.setItem("draft_destination_city", parsed.city)
@@ -347,11 +354,13 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
       localStorage.setItem("draft_destination_address", addr)
       localStorage.setItem("draft_destination_lat", String(destLat))
       localStorage.setItem("draft_destination_lng", String(destLng))
+      localStorage.setItem("draft_destination_district", destinationDistrict.trim())
       localStorage.setItem("draft_destination_city", destinationCity.trim())
       localStorage.setItem("draft_destination_postcode", destinationPostalCode.trim())
     } else {
       try {
         localStorage.removeItem("draft_destination_address")
+        localStorage.removeItem("draft_destination_district")
         localStorage.removeItem("draft_destination_city")
         localStorage.removeItem("draft_destination_postcode")
       } catch { /* ignore */ }
@@ -512,14 +521,21 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
                     </ul>
                   </div>
                 )}
-                <div className="grid grid-cols-1 gap-5 pt-2 sm:grid-cols-2">
+                <div className="space-y-4 pt-2">
                   <div>
-                    <label className={labelClass}>Kota (opsional)</label>
-                    <input className={inputClass} placeholder="Kota" autoComplete="off" value={destinationCity} onChange={(e) => onCityChange(e.target.value)} />
+                    <label className={labelClass}>Kecamatan / Kelurahan (opsional)</label>
+                    <input className={inputClass} placeholder="Kec. / Kel." autoComplete="off" value={destinationDistrict}
+                      onChange={(e) => { setDestinationDistrict(e.target.value); localStorage.setItem("draft_destination_district", e.target.value) }} />
                   </div>
-                  <div>
-                    <label className={labelClass}>Kode pos (opsional)</label>
-                    <input className={inputClass} placeholder="Kode pos" autoComplete="off" inputMode="numeric" value={destinationPostalCode} onChange={(e) => onPostalChange(e.target.value)} />
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div>
+                      <label className={labelClass}>Kota (opsional)</label>
+                      <input className={inputClass} placeholder="Kota" autoComplete="off" value={destinationCity} onChange={(e) => onCityChange(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Kode pos (opsional)</label>
+                      <input className={inputClass} placeholder="Kode pos" autoComplete="off" inputMode="numeric" value={destinationPostalCode} onChange={(e) => onPostalChange(e.target.value)} />
+                    </div>
                   </div>
                 </div>
               </div>

@@ -37,6 +37,7 @@ export async function POST(req: Request) {
       destination_lat,
       destination_lng,
       destination_address,
+      destination_district,
       destination_city,
       destination_postal_code,
       sender_address_info,
@@ -132,6 +133,10 @@ export async function POST(req: Request) {
     if (destination_address != null) row.destination_address = String(destination_address)
     if (destination_lat != null && destination_lat !== "") row.destination_lat = destination_lat
     if (destination_lng != null && destination_lng !== "") row.destination_lng = destination_lng
+    if (destination_district != null) {
+      const t = String(destination_district).trim()
+      if (t) row.destination_district = t
+    }
     if (destination_city != null) {
       const t = String(destination_city).trim()
       if (t) row.destination_city = t

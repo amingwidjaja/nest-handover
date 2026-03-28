@@ -77,6 +77,7 @@ export async function PATCH(req: Request) {
     destination_lat,
     destination_lng,
     destination_address,
+    destination_district,
     destination_city,
     destination_postal_code,
     items
@@ -103,6 +104,10 @@ export async function PATCH(req: Request) {
   }
   if (destination_lng !== undefined && destination_lng !== null && destination_lng !== "") {
     updateRow.destination_lng = destination_lng
+  }
+  if (destination_district !== undefined && destination_district !== null) {
+    const t = String(destination_district).trim()
+    updateRow.destination_district = t || null
   }
   if (destination_city !== undefined && destination_city !== null) {
     const t = String(destination_city).trim()

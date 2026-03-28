@@ -167,6 +167,7 @@ function PackagePageInner() {
     const destination_address = localStorage.getItem("draft_destination_address") || ""
     const destLatRaw = localStorage.getItem("draft_destination_lat")
     const destLngRaw = localStorage.getItem("draft_destination_lng")
+    const draftDistrict = localStorage.getItem("draft_destination_district") || ""
     const draftCity = localStorage.getItem("draft_destination_city") || ""
     const draftPostcode = localStorage.getItem("draft_destination_postcode") || ""
 
@@ -199,6 +200,7 @@ function PackagePageInner() {
         payload.destination_lng = dlng
       }
     }
+    if (draftDistrict.trim()) payload.destination_district = draftDistrict.trim()
     if (draftCity.trim()) payload.destination_city = draftCity.trim()
     if (draftPostcode.trim()) payload.destination_postal_code = draftPostcode.trim()
 
@@ -244,8 +246,8 @@ function PackagePageInner() {
 
       ;["draft_sender_name","draft_sender_contact","draft_receiver_name","draft_receiver_contact",
         "draft_receiver_whatsapp","draft_receiver_email","draft_destination_address",
-        "draft_destination_lat","draft_destination_lng","draft_destination_city",
-        "draft_destination_postcode",HANDOVER_MODE_KEY,"draft_handover_id",
+        "draft_destination_district","draft_destination_lat","draft_destination_lng",
+        "draft_destination_city","draft_destination_postcode",HANDOVER_MODE_KEY,"draft_handover_id",
         "draft_is_sender_proxy","draft_sender_whatsapp"
       ].forEach((k) => { try { localStorage.removeItem(k) } catch { /* ignore */ } })
 
