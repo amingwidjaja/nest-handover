@@ -181,46 +181,61 @@ function ReceiveForm() {
           <h1 className="text-2xl font-light tracking-tight">Konfirmasi Terima</h1>
         </div>
 
-        {/* Pengirim & Penerima */}
-        <div className="space-y-3 mb-8 text-sm">
-          <div className="flex justify-between">
-            <span className="text-[#A1887F]">Dari</span>
-            <span className="font-medium">{handover.sender_name || "-"}</span>
+        {/* Pengirim */}
+        <div className="space-y-3 mb-6">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#A1887F]">Dari</p>
+            <p className="text-base font-medium">{handover.sender_name || "-"}</p>
+            {handover.sender_whatsapp && (
+              <p className="text-sm text-[#7D6E68]">{handover.sender_whatsapp}</p>
+            )}
           </div>
-          <div className="flex justify-between">
-            <span className="text-[#A1887F]">Untuk</span>
-            <span className="font-medium">{handover.receiver_target_name || "-"}</span>
+
+          <div className="border-t border-[#E0DED7]" />
+
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#A1887F]">Untuk</p>
+            <p className="text-base font-medium">{handover.receiver_target_name || "-"}</p>
+            {handover.receiver_whatsapp && (
+              <p className="text-sm text-[#7D6E68]">{handover.receiver_whatsapp}</p>
+            )}
+            {(() => {
+              const parts = [handover.destination_address, handover.destination_district, handover.destination_city, handover.destination_postal_code]
+                .map((s: any) => String(s ?? "").trim()).filter(Boolean)
+              return parts.length > 0 ? (
+                <p className="text-sm text-[#7D6E68] leading-relaxed">{parts.join(", ")}</p>
+              ) : null
+            })()}
           </div>
+
           {receiverType === "proxy" && receiverName && (
-            <div className="flex justify-between">
-              <span className="text-[#A1887F]">Diterima oleh</span>
-              <span className="font-medium">{receiverName}{receiverRelation ? ` (${receiverRelation})` : ""}</span>
-            </div>
-          )}
-          {handover.destination_address && (
-            <div className="flex justify-between gap-4">
-              <span className="text-[#A1887F] shrink-0">Alamat</span>
-              <span className="text-right text-xs leading-relaxed">{handover.destination_address}</span>
-            </div>
+            <>
+              <div className="border-t border-[#E0DED7]" />
+              <div className="space-y-0.5">
+                <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#A1887F]">Diterima oleh</p>
+                <p className="text-base font-medium">{receiverName}{receiverRelation ? ` — ${receiverRelation}` : ""}</p>
+              </div>
+            </>
           )}
         </div>
 
-        {/* Items */}
+        {/* Foto barang — center, besar */}
+        {itemPhoto && (
+          <div className="mb-6 flex justify-center">
+            <div className="w-3/4 aspect-square rounded-2xl overflow-hidden border border-[#E0DED7]">
+              <img src={itemPhoto} alt="" className="w-full h-full object-cover" />
+            </div>
+          </div>
+        )}
+
+        {/* Daftar barang */}
         {handover.handover_items?.length > 0 && (
           <div className="mb-8">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#A1887F] mb-3">Isi Paket</p>
-            <div className="space-y-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#A1887F] mb-2">Daftar Barang</p>
+            <div>
               {handover.handover_items.map((item: any, i: number) => (
-                <div key={item.id || i} className="flex gap-3 items-center">
-                  {i === 0 && itemPhoto ? (
-                    <div className="w-14 h-14 rounded-xl border border-[#E0DED7] overflow-hidden shrink-0">
-                      <img src={itemPhoto} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  ) : (
-                    <div className="w-14 h-14 rounded-xl border border-[#E0DED7] bg-[#F5F4F0] shrink-0 flex items-center justify-center">
-                      <span className="text-[10px] text-[#A1887F]">{i + 1}</span>
-                    </div>
-                  )}
+                <div key={item.id || i} className="flex items-center gap-3 py-2.5 border-b border-[#E0DED7]">
+                  <span className="text-[12px] tabular-nums text-[#A1887F] w-5 text-right shrink-0">{i + 1}.</span>
                   <span className="text-sm">{item.description || "-"}</span>
                 </div>
               ))}
