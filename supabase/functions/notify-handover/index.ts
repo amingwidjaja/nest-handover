@@ -7,6 +7,11 @@
  *   3. pg_cron auto-accept — status: accepted (PDF chain + WA proxy sender)
  *
  * Security: verify x-internal-secret header untuk calls dari DB trigger
+ *
+ * URL strategy:
+ *   - Target receiver → /accept/TOKEN  ("kunci" untuk approve)
+ *   - Proxy sender info → /receipt/TOKEN (bukti saja, read-only)
+ *   - After accepted → /receipt/TOKEN (PDF download)
  */
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
@@ -24,12 +29,10 @@ const corsHeaders = {
 // ── Auth check ───────────────────────────────────────────────
 
 function isAuthorized(req: Request): boolean {
-  // Accept service role key (from Next.js server calls)
   const auth = req.headers.get("authorization") || ""
   const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
   if (svcKey && auth === `Bearer ${svcKey}`) return true
 
-  // Accept internal secret (from DB trigger via pg_net with anon key)
   const internalSecret = req.headers.get("x-internal-secret") || ""
   if (internalSecret === INTERNAL_SECRET) return true
 
@@ -145,7 +148,6 @@ serve(async (req) => {
       })
     }
 
-    // Fetch company_name separately — handover.user_id → auth.users, not profiles directly
     let companyName: string | null = null
     if (handover.user_id) {
       const { data: profile } = await supabase
@@ -161,22 +163,21 @@ serve(async (req) => {
       handover.sender_name?.trim() ||
       "NEST76 STUDIO"
 
-    const proofLink = `${appUrl}/receipt/${handover.share_token}`
+    // URL yang dipakai tergantung konteks:
+    // - acceptLink → untuk target, bisa action (approve)
+    // - proofLink  → untuk pengirim/info, read-only
+    const acceptLink = `${appUrl}/accept/${handover.share_token}`
+    const proofLink  = `${appUrl}/receipt/${handover.share_token}`
 
     // ── Route by status ───────────────────────────────────────
 
     if (new_status === "rejected") {
       const { rejection_reason } = await req.clone().json().catch(() => ({}))
-      // WA ke pengirim asli
-      const toWa = handover.is_sender_proxy
-        ? handover.sender_whatsapp
-        : handover.receiver_whatsapp // fallback: user sendiri
-
       const rejectorName = handover.receiver_target_name?.trim() || "Penerima"
       const reasonText   = rejection_reason?.trim() ? ` Alasan: ${rejection_reason.trim()}` : ""
 
-      if (handover.sender_whatsapp || handover.receiver_whatsapp) {
-        const notifTo = handover.sender_whatsapp || handover.receiver_whatsapp
+      const notifTo = handover.sender_whatsapp || handover.receiver_whatsapp
+      if (notifTo) {
         await sendWA({
           to: notifTo,
           senderLabel: `${senderLabel} (DITOLAK oleh ${rejectorName}.${reasonText})`,
@@ -191,12 +192,16 @@ serve(async (req) => {
     }
 
     if (new_status === "received") {
-      // WA to receiver target
+      // Target dapat "kunci" → /accept/TOKEN (bisa action)
       if (handover.receiver_whatsapp) {
-        await sendWA({ to: handover.receiver_whatsapp, senderLabel, proofLink })
+        await sendWA({
+          to: handover.receiver_whatsapp,
+          senderLabel,
+          proofLink: acceptLink,
+        })
       }
 
-      // WA to original sender if proxy
+      // Proxy sender (kalau is_sender_proxy) dapat info saja → /receipt/TOKEN
       if (handover.is_sender_proxy && handover.sender_whatsapp) {
         const { data: evt } = await supabase
           .from("receive_event")
@@ -220,7 +225,7 @@ serve(async (req) => {
     }
 
     if (new_status === "accepted") {
-      // Trigger receipt-worker for PDF
+      // Trigger receipt-worker untuk generate PDF
       if (!handover.receipt_status || handover.receipt_status === "pending") {
         const workerUrl =
           Deno.env.get("SUPABASE_URL")!.replace("/rest/v1", "") +
@@ -236,7 +241,7 @@ serve(async (req) => {
         }).catch((e) => console.warn("[notify-handover] receipt-worker error:", e))
       }
 
-      // WA auto-accept notification to original sender if proxy
+      // WA ke proxy sender (kalau auto-accept atau manual accept)
       if (handover.is_sender_proxy && handover.sender_whatsapp) {
         await sendWA({
           to: handover.sender_whatsapp,

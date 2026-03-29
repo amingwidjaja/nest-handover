@@ -7,14 +7,16 @@ import { Home } from "lucide-react"
 
 type StudioRole = "OWNER" | "STAFF" | null
 type HandoverMode = "lite" | "pro" | null
+type ActiveTab = 0 | 1 | 2  // 0: Dalam Proses, 1: Terkirim Selesai, 2: Diterima
 
 export default function DashboardPage() {
   const router = useRouter()
 
   const [handovers, setHandovers] = useState<any[]>([])
+  const [received, setReceived] = useState<any[]>([])
   const [studioRole, setStudioRole] = useState<StudioRole>(null)
   const [handoverMode, setHandoverMode] = useState<HandoverMode>(null)
-  const [activeTab, setActiveTab] = useState<0 | 1>(0)
+  const [activeTab, setActiveTab] = useState<ActiveTab>(0)
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
   const [highlightId, setHighlightId] = useState<string | null>(null)
@@ -25,7 +27,6 @@ export default function DashboardPage() {
   const touchStartX = useRef<number | null>(null)
   const headerRef = useRef<HTMLDivElement>(null)
 
-  // Measure actual header height after render
   useEffect(() => {
     if (!headerRef.current) return
     const obs = new ResizeObserver(entries => {
@@ -54,7 +55,7 @@ export default function DashboardPage() {
     loadProfile()
   }, [])
 
-  const load = useCallback(async function () {
+  const loadSent = useCallback(async function () {
     const modeParam = handoverMode ? `?mode=${handoverMode}` : ""
     const res = await fetch(`/api/handover/list${modeParam}`, { cache: "no-store" })
     const data = await res.json()
@@ -66,8 +67,20 @@ export default function DashboardPage() {
     }
   }, [handoverMode])
 
-  useEffect(() => { load() }, [load])
+  const loadReceived = useCallback(async function () {
+    try {
+      const res = await fetch("/api/handover/received", { cache: "no-store" })
+      const data = await res.json()
+      setReceived(data.received || [])
+    } catch { /* ignore */ }
+  }, [])
 
+  useEffect(() => {
+    loadSent()
+    loadReceived()
+  }, [loadSent, loadReceived])
+
+  // Poll for receipt generation on accepted handovers
   useEffect(() => {
     const needsReceipt = handovers.some(h => h.status === "accepted" && !h.receipt_url)
     if (!needsReceipt) return
@@ -87,12 +100,12 @@ export default function DashboardPage() {
           }
         } catch { /* ignore */ }
       }
-      if (stuck.some((h: any) => !h.share_token)) await load()
+      if (stuck.some((h: any) => !h.share_token)) await loadSent()
     }
     pollOnce()
     const id = window.setInterval(pollOnce, 5000)
     return () => window.clearInterval(id)
-  }, [handovers, load])
+  }, [handovers, loadSent])
 
   function onTouchStart(e: React.TouchEvent) { touchStartX.current = e.touches[0].clientX }
   function onTouchEnd(e: React.TouchEvent) {
@@ -100,8 +113,8 @@ export default function DashboardPage() {
     const dx = e.changedTouches[0].clientX - touchStartX.current
     touchStartX.current = null
     if (Math.abs(dx) < 40) return
-    if (dx < 0 && activeTab === 0) setActiveTab(1)
-    if (dx > 0 && activeTab === 1) setActiveTab(0)
+    if (dx < 0 && activeTab < 2) setActiveTab((activeTab + 1) as ActiveTab)
+    if (dx > 0 && activeTab > 0) setActiveTab((activeTab - 1) as ActiveTab)
   }
 
   function toggleSelect(id: string) {
@@ -120,11 +133,11 @@ export default function DashboardPage() {
     })
     const data = await res.json()
     if (!res.ok) { alert(data?.error || "Paket tidak bisa dihapus"); return }
-    cancelSelect(); load()
+    cancelSelect(); loadSent()
   }
 
   const pending  = handovers.filter(h => h.status === "created")
-  const received = handovers.filter(h => h.status === "received" || h.status === "accepted")
+  const done     = handovers.filter(h => h.status === "received" || h.status === "accepted")
 
   function getDateLabel(dateString: string) {
     const d = new Date(dateString)
@@ -176,7 +189,8 @@ export default function DashboardPage() {
     return Math.floor((Date.now() - new Date(dateString).getTime()) / 86400000)
   }
 
-  function Row({ h }: { h: any }) {
+  // Row untuk tab Terkirim (sent)
+  function SentRow({ h }: { h: any }) {
     const today   = isToday(h.created_at)
     const date    = getDateLabel(h.created_at)
     const name    = h.receiver_target_name || "-"
@@ -186,7 +200,7 @@ export default function DashboardPage() {
     const link    = receiptLink(h)
     const isAccepted = h.status === "accepted"
     const age     = h.status === "created" ? daysOld(h.created_at) : 0
-    const expiring = age >= 5  // warning 2 hari sebelum dihapus (hari ke-7)
+    const expiring = age >= 5
 
     return (
       <div
@@ -206,7 +220,6 @@ export default function DashboardPage() {
             <span className="font-medium text-[13px] text-[#3E2723] truncate">{name}</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {/* Badge status — accepted vs received */}
             {isAccepted
               ? <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#EAF3DE] text-[#3B6D11]">✓ Disetujui</span>
               : <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#FFF8E7] text-[#854F0B]">Menunggu</span>
@@ -241,10 +254,50 @@ export default function DashboardPage() {
     )
   }
 
+  // Row untuk tab Diterima
+  function ReceivedRow({ r }: { r: any }) {
+    const h = r.handover
+    if (!h) return null
+    const date = getDateLabel(r.received_at || h.created_at)
+    const today = isToday(r.received_at || h.created_at)
+    const sender = h.sender_name || "-"
+    const pkg = h.handover_items?.length ? h.handover_items[0].description : "-"
+    const addr = h.destination_address || h.destination_city || null
+
+    return (
+      <div
+        onClick={() => h.share_token && router.push(`/receipt/${h.share_token}`)}
+        className="px-5 py-3.5 border-b border-[#E0DED7] cursor-pointer active:bg-[#F5F4F0]"
+      >
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {today && <span className="w-1.5 h-1.5 rounded-full bg-[#5D9E75] shrink-0" />}
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#A1887F]">Dari</span>
+            <span className="font-medium text-[13px] text-[#3E2723] truncate ml-1">{sender}</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#EAF3DE] text-[#3B6D11]">✓ Diterima</span>
+            <span className="text-[11px] text-[#A1887F] tabular-nums">{date}</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[12px] text-[#7D6E68] italic truncate flex-1">{pkg}</span>
+          {h.share_token && (
+            <span className="text-[11px] font-medium text-[#5D4037] shrink-0">Lihat Tanda Terima</span>
+          )}
+        </div>
+        {addr && (
+          <span className="text-[11px] text-[#A1887F] truncate block mt-1">{addr}</span>
+        )}
+      </div>
+    )
+  }
+
   const showTeamFeed = studioRole === "OWNER" && handoverMode === "pro"
   const tabs = [
     { label: "Dalam Proses", count: pending.length },
-    { label: "Selesai",      count: received.length },
+    { label: "Terkirim",     count: done.length },
+    { label: "Diterima",     count: received.length },
   ]
 
   return (
@@ -294,18 +347,20 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Tab row */}
+        {/* Tab row — 3 tabs */}
         <div className="flex">
           {tabs.map(({ label, count }, i) => (
-            <button key={i} onClick={() => setActiveTab(i as 0 | 1)}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] font-medium border-b-2 transition-colors
+            <button key={i} onClick={() => { setActiveTab(i as ActiveTab); if (i === 2 && selectMode) cancelSelect() }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-medium border-b-2 transition-colors
                 ${activeTab === i ? "border-[#3E2723] text-[#3E2723]" : "border-transparent text-[#A1887F]"}`}
             >
               {label}
               {count > 0 && (
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold
                   ${activeTab === i
-                    ? i === 0 ? "bg-[#FAEEDA] text-[#854F0B]" : "bg-[#EAF3DE] text-[#3B6D11]"
+                    ? i === 0 ? "bg-[#FAEEDA] text-[#854F0B]"
+                      : i === 2 ? "bg-[#EAF3DE] text-[#3B6D11]"
+                      : "bg-[#F0EDE8] text-[#5D4037]"
                     : "bg-[#F0EDE8] text-[#A1887F]"}`}>
                   {count}
                 </span>
@@ -315,7 +370,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── SCROLLABLE CONTENT — pt otomatis dari headerH ── */}
+      {/* ── SCROLLABLE CONTENT ── */}
       <div
         className="flex-1 pb-16 overflow-hidden"
         style={{ paddingTop: headerH }}
@@ -324,9 +379,10 @@ export default function DashboardPage() {
       >
         <div
           className="flex transition-transform duration-250 ease-out"
-          style={{ transform: `translateX(${activeTab === 0 ? "0%" : "-50%"})`, width: "200%" }}
+          style={{ transform: `translateX(${activeTab === 0 ? "0%" : activeTab === 1 ? "-33.333%" : "-66.666%"})`, width: "300%" }}
         >
-          <div className={`w-1/2 ${activeTab !== 0 ? "pointer-events-none" : ""}`}>
+          {/* Tab 0: Dalam Proses */}
+          <div className={`w-1/3 ${activeTab !== 0 ? "pointer-events-none" : ""}`}>
             {pending.length === 0 ? (
               <div className="px-5 py-10 text-center space-y-3">
                 <p className="text-[12px] text-[#A1887F]">Belum ada paket dalam proses.</p>
@@ -337,7 +393,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <>
-                {pending.map(h => <Row key={h.id} h={h} />)}
+                {pending.map(h => <SentRow key={h.id} h={h} />)}
                 <div className="px-5 py-5 text-center">
                   <Link href="/handover/select"
                     className="text-[12px] font-medium text-[#3E2723] underline decoration-[#3E2723]/30 underline-offset-2">
@@ -348,13 +404,30 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <div className={`w-1/2 ${activeTab !== 1 ? "pointer-events-none" : ""}`}>
-            {received.length === 0 ? (
+          {/* Tab 1: Terkirim Selesai */}
+          <div className={`w-1/3 ${activeTab !== 1 ? "pointer-events-none" : ""}`}>
+            {done.length === 0 ? (
               <p className="px-5 py-10 text-center text-[12px] text-[#A1887F] italic">
-                Belum ada paket yang diterima.
+                Belum ada paket yang selesai.
               </p>
             ) : (
-              received.map(h => <Row key={h.id} h={h} />)
+              done.map(h => <SentRow key={h.id} h={h} />)
+            )}
+          </div>
+
+          {/* Tab 2: Diterima */}
+          <div className={`w-1/3 ${activeTab !== 2 ? "pointer-events-none" : ""}`}>
+            {received.length === 0 ? (
+              <div className="px-5 py-10 text-center space-y-2">
+                <p className="text-[12px] text-[#A1887F]">
+                  Belum ada paket yang tercatat diterima oleh akun ini.
+                </p>
+                <p className="text-[11px] text-[#C4B8B0]">
+                  Paket akan muncul di sini saat kamu konfirmasi terima dalam keadaan login.
+                </p>
+              </div>
+            ) : (
+              received.map(r => <ReceivedRow key={r.id} r={r} />)
             )}
           </div>
         </div>
@@ -370,7 +443,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {selectMode && (
+      {selectMode && activeTab !== 2 && (
         <div className="fixed bottom-0 inset-x-0 z-[60] flex items-center justify-between bg-[#3E2723] px-6 py-4 text-white">
           <span className="text-sm">{selected.length} dipilih</span>
           <div className="flex gap-6 text-sm">

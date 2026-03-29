@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
+import { createServerSupabaseClient } from "@/lib/supabase/server"
 import {
   notifyReceiver,
   notifySenderProxy
@@ -49,6 +50,18 @@ export async function POST(req: Request) {
 
     const admin = getSupabaseAdmin()
 
+    // Cek apakah penerima punya session NEST Paket
+    // Kalau iya → link receive_event ke user mereka (enable dashboard "Diterima")
+    // Kalau tidak → tetap jalan normal, receiver_user_id NULL
+    let receiverUserId: string | null = null
+    try {
+      const supabase = await createServerSupabaseClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user?.id) receiverUserId = user.id
+    } catch {
+      // No session — biarkan null, bukan error
+    }
+
     // Resolve handover_id from token if needed
     let handover_id: string | undefined = handoverIdFromBody
 
@@ -75,7 +88,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // Fetch handover — no join, plain query to avoid FK resolution issues
+    // Fetch handover
     const { data: handover, error: fetchErr } = await admin
       .from("handover")
       .select(
@@ -92,7 +105,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // Fetch sender label from profiles separately
+    // Fetch sender label from profiles
     let companyName: string | null = null
     if (handover.user_id) {
       const { data: profile } = await admin
@@ -103,7 +116,7 @@ export async function POST(req: Request) {
       companyName = profile?.company_name ?? null
     }
 
-    // Build receive_event — GPS inline, one insert, no race condition
+    // Build receive_event
     const insertPayload: Record<string, unknown> = {
       handover_id,
       receive_method,
@@ -112,6 +125,8 @@ export async function POST(req: Request) {
       receiver_relation: receiver_relation ?? null,
       device_id: device_id ?? null,
       device_model: device_model ?? null,
+      // Linked ke user jika ada session — enables "Diterima" dashboard tab
+      receiver_user_id: receiverUserId,
     }
 
     if (photo_url) insertPayload.photo_url = photo_url
