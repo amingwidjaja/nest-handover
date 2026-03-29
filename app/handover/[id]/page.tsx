@@ -187,6 +187,10 @@ export default function HandoverPage() {
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col">
       <StudioHeader />
 
+      <style jsx global>{`
+        input, textarea { font-size: 16px !important; }
+      `}</style>
+
       {processingCapture && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#FAF9F6]/80 backdrop-blur-[1px]">
           <span className="text-sm font-medium text-[#3E2723] animate-pulse">Memproses foto…</span>

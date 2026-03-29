@@ -70,6 +70,7 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
   const [locationPhase, setLocationPhase] = useState<"idle" | "gps" | "reverse">("idle")
 
   const [toast, setToast] = useState("")
+  const [submitting, setSubmitting] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
   const [userProximity, setUserProximity] = useState<{ lng: number; lat: number } | null>(null)
 
@@ -354,9 +355,12 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
       destLng = userProximity.lng
     }
 
+    setSubmitting(true)
+
     const supabase = createBrowserSupabaseClient()
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
+      setSubmitting(false)
       window.location.href = "/choose-type?redirect=" + encodeURIComponent("/handover/create")
       return
     }
@@ -609,9 +613,18 @@ export function HandoverCreateForm({ initialData = null }: HandoverCreateFormPro
             <button
               type="button"
               onClick={submit}
-              className="w-full py-4 rounded-xl bg-[#3E2723] text-sm font-bold uppercase tracking-wider text-[#FAF9F6] transition-transform active:scale-[0.97] disabled:opacity-50"
+              disabled={submitting}
+              className="w-full py-4 rounded-xl bg-[#3E2723] text-sm font-bold uppercase tracking-wider text-[#FAF9F6] transition-transform active:scale-[0.97] disabled:opacity-70 flex items-center justify-center gap-2"
             >
-              Lanjut →
+              {submitting ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"/>
+                  </svg>
+                  Menyiapkan…
+                </>
+              ) : "Lanjut →"}
             </button>
             <Link
               href="/handover/select"

@@ -83,53 +83,54 @@ async function generatePDF(h: any, supabase: ReturnType<typeof createClient>): P
 
   let y = A4_H - M
 
-  // ── HEADER BAR ───────────────────────────────────────────────────────────
-  page.drawRectangle({ x: 0, y: y - 2, width: A4_W, height: 34, color: BLACK })
+  // ── HEADER ───────────────────────────────────────────────────────────────
   page.drawText("TANDA TERIMA DIGITAL", {
-    x: M, y: y + 6, size: 14, font: fontB, color: rgb(1, 1, 1)
+    x: M, y: y, size: 22, font: fontB, color: BLACK
   })
   page.drawText("NEST76 PAKET  |  nest76.com", {
-    x: M, y: y - 6, size: 7.5, font: fontR, color: rgb(0.75, 0.75, 0.75)
+    x: M, y: y - 16, size: 12, font: fontR, color: MUTED
   })
   if (h.serial_number) {
     const snText = safe(h.serial_number)
-    const snW = fontB.widthOfTextAtSize(snText, 9)
+    const snW = fontB.widthOfTextAtSize(snText, 14)
     page.drawText(snText, {
-      x: A4_W - M - snW, y: y + 2, size: 9, font: fontB, color: rgb(1, 1, 1)
+      x: A4_W - M - snW, y: y, size: 14, font: fontB, color: INK
     })
   }
-  y -= 44
+  y -= 28
+  page.drawLine({ start: { x: M, y }, end: { x: M + FULL, y }, thickness: 1, color: BLACK })
+  y -= 20
 
   // ── PENGIRIM & PENERIMA (2 kolom) ────────────────────────────────────────
-  const boxH = 72
+  const boxH = 100
   // Pengirim box
   page.drawRectangle({ x: M, y: y - boxH, width: COL, height: boxH, borderColor: LIGHT, borderWidth: 0.5 })
-  page.drawText("PENGIRIM", { x: M + 8, y: y - 12, size: 6.5, font: fontB, color: MUTED })
-  page.drawText(safeShort(h.sender_name, 36), { x: M + 8, y: y - 24, size: 10, font: fontB, color: INK })
+  page.drawText("PENGIRIM", { x: M + 10, y: y - 16, size: 10, font: fontB, color: MUTED })
+  page.drawText(safeShort(h.sender_name, 30), { x: M + 10, y: y - 34, size: 16, font: fontB, color: INK })
   if (h.sender_whatsapp) {
-    page.drawText(safe(h.sender_whatsapp), { x: M + 8, y: y - 36, size: 8, font: fontR, color: MUTED })
+    page.drawText(safe(h.sender_whatsapp), { x: M + 10, y: y - 52, size: 12, font: fontR, color: MUTED })
   }
 
   // Penerima box
   const rx = M + COL + 12
   page.drawRectangle({ x: rx, y: y - boxH, width: COL, height: boxH, borderColor: LIGHT, borderWidth: 0.5 })
-  page.drawText("PENERIMA", { x: rx + 8, y: y - 12, size: 6.5, font: fontB, color: MUTED })
-  page.drawText(safeShort(h.receiver_target_name, 36), { x: rx + 8, y: y - 24, size: 10, font: fontB, color: INK })
+  page.drawText("PENERIMA", { x: rx + 10, y: y - 16, size: 10, font: fontB, color: MUTED })
+  page.drawText(safeShort(h.receiver_target_name, 30), { x: rx + 10, y: y - 34, size: 16, font: fontB, color: INK })
   if (h.receiver_whatsapp) {
-    page.drawText(safe(h.receiver_whatsapp), { x: rx + 8, y: y - 36, size: 8, font: fontR, color: MUTED })
+    page.drawText(safe(h.receiver_whatsapp), { x: rx + 10, y: y - 52, size: 12, font: fontR, color: MUTED })
   }
 
   // Alamat (kalau ada) — di bawah nama penerima
   const addrParts = [h.destination_address, h.destination_district, h.destination_city, h.destination_postal_code]
     .map((s: any) => String(s ?? "").trim()).filter(Boolean)
   if (addrParts.length > 0) {
-    const addr1 = safeShort(addrParts[0], 36)
-    const addr2 = addrParts.slice(1).join(", ").substring(0, 36)
-    page.drawText(addr1, { x: rx + 8, y: y - 48, size: 7.5, font: fontR, color: MUTED })
-    if (addr2) page.drawText(addr2, { x: rx + 8, y: y - 58, size: 7.5, font: fontR, color: MUTED })
+    const addr1 = safeShort(addrParts[0], 32)
+    const addr2 = addrParts.slice(1).join(", ").substring(0, 32)
+    page.drawText(addr1, { x: rx + 10, y: y - 68, size: 11, font: fontR, color: MUTED })
+    if (addr2) page.drawText(addr2, { x: rx + 10, y: y - 82, size: 11, font: fontR, color: MUTED })
   }
 
-  y -= boxH + 16
+  y -= boxH + 20
 
   // ── FOTO BERDAMPINGAN ────────────────────────────────────────────────────
   const PHOTO_H = 200
@@ -140,9 +141,9 @@ async function generatePDF(h: any, supabase: ReturnType<typeof createClient>): P
   const photoBukti  = await embedPhoto(pdfDoc, supabase, ev?.photo_url)
 
   // Label
-  page.drawText("FOTO BARANG", { x: M, y: y, size: 6.5, font: fontB, color: MUTED })
-  page.drawText("FOTO BUKTI SERAH TERIMA", { x: rx, y: y, size: 6.5, font: fontB, color: MUTED })
-  y -= 8
+  page.drawText("FOTO BARANG", { x: M, y: y, size: 10, font: fontB, color: MUTED })
+  page.drawText("FOTO BUKTI SERAH TERIMA", { x: rx, y: y, size: 10, font: fontB, color: MUTED })
+  y -= 14
 
   // Box kiri — foto barang
   page.drawRectangle({ x: M, y: y - PHOTO_H, width: PHOTO_W, height: PHOTO_H, color: XLIGHT })
@@ -166,49 +167,49 @@ async function generatePDF(h: any, supabase: ReturnType<typeof createClient>): P
     page.drawText("Foto tidak tersedia", { x: rx + PHOTO_W / 2 - 40, y: y - PHOTO_H / 2, size: 8, font: fontR, color: MUTED })
   }
 
-  y -= PHOTO_H + 16
+  y -= PHOTO_H + 28
 
   // ── DAFTAR BARANG ────────────────────────────────────────────────────────
-  page.drawText("DAFTAR BARANG", { x: M, y, size: 6.5, font: fontB, color: MUTED })
-  y -= 8
+  page.drawText("DAFTAR BARANG", { x: M, y, size: 10, font: fontB, color: MUTED })
+  y -= 12
   page.drawLine({ start: { x: M, y }, end: { x: M + FULL, y }, thickness: 0.5, color: LIGHT })
-  y -= 1
+  y -= 2
 
   items.forEach((it: any, idx: number) => {
-    y -= 13
-    page.drawText(`${idx + 1}.`, { x: M, y, size: 9, font: fontR, color: MUTED })
-    page.drawText(safeShort(it.description, 80), { x: M + 16, y, size: 9, font: fontR, color: INK })
-    page.drawLine({ start: { x: M, y: y - 4 }, end: { x: M + FULL, y: y - 4 }, thickness: 0.3, color: XLIGHT })
+    y -= 18
+    page.drawText(`${idx + 1}.`, { x: M, y, size: 13, font: fontR, color: MUTED })
+    page.drawText(safeShort(it.description, 70), { x: M + 22, y, size: 13, font: fontR, color: INK })
+    page.drawLine({ start: { x: M, y: y - 5 }, end: { x: M + FULL, y: y - 5 }, thickness: 0.3, color: XLIGHT })
   })
 
-  y -= 16
+  y -= 20
 
   // ── CATATAN ──────────────────────────────────────────────────────────────
   if (h.notes?.trim()) {
-    page.drawText("CATATAN", { x: M, y, size: 6.5, font: fontB, color: MUTED })
-    y -= 12
-    page.drawRectangle({ x: M, y: y - 20, width: FULL, height: 24, color: XLIGHT })
-    page.drawText(safeShort(h.notes, 100), { x: M + 8, y: y - 12, size: 9, font: fontR, color: INK })
-    y -= 32
+    page.drawText("CATATAN", { x: M, y, size: 10, font: fontB, color: MUTED })
+    y -= 14
+    page.drawRectangle({ x: M, y: y - 28, width: FULL, height: 32, color: XLIGHT })
+    page.drawText(safeShort(h.notes, 80), { x: M + 10, y: y - 18, size: 13, font: fontR, color: INK })
+    y -= 44
   }
 
   // ── DETAIL PENERIMAAN (2 kolom) ──────────────────────────────────────────
-  y -= 4
-  page.drawText("DETAIL PENERIMAAN", { x: M, y, size: 6.5, font: fontB, color: MUTED })
-  page.drawText("VERIFIKASI DIGITAL", { x: rx, y, size: 6.5, font: fontB, color: MUTED })
-  y -= 8
+  y -= 20
+  page.drawText("DETAIL PENERIMAAN", { x: M, y, size: 10, font: fontB, color: MUTED })
+  page.drawText("VERIFIKASI DIGITAL", { x: rx, y, size: 10, font: fontB, color: MUTED })
+  y -= 12
   page.drawLine({ start: { x: M, y }, end: { x: M + FULL, y }, thickness: 0.5, color: LIGHT })
 
   const detailLeft: [string, string][] = [
     ["Metode",    methodLabel(ev?.receive_method)],
     ["Waktu",     shortDate(ev?.received_at || h.received_at || h.created_at)],
   ]
-  if (ev?.receiver_name) detailLeft.push(["Diterima oleh", safeShort(ev.receiver_name, 32)])
-  if (ev?.receiver_relation) detailLeft.push(["Hubungan", safeShort(ev.receiver_relation, 32)])
+  if (ev?.receiver_name) detailLeft.push(["Diterima oleh", safeShort(ev.receiver_name, 28)])
+  if (ev?.receiver_relation) detailLeft.push(["Hubungan", safeShort(ev.receiver_relation, 28)])
 
   const detailRight: [string, string][] = [
-    ["TX ID", safe(h.id, "").substring(0, 18).toUpperCase()],
-    ["Device", safeShort(ev?.device_model || ev?.device_id || "System Verified", 30)],
+    ["TX ID", safe(h.id, "").substring(0, 16).toUpperCase()],
+    ["Device", safeShort(ev?.device_model || ev?.device_id || "System Verified", 26)],
     ["Status", "VERIFIED BY NEST-CORE"],
   ]
   if (ev?.gps_lat && ev?.gps_lng) {
@@ -218,32 +219,31 @@ async function generatePDF(h: any, supabase: ReturnType<typeof createClient>): P
 
   const maxRows = Math.max(detailLeft.length, detailRight.length)
   for (let i = 0; i < maxRows; i++) {
-    y -= 14
+    y -= 18
     if (detailLeft[i]) {
-      page.drawText(detailLeft[i][0] + ":", { x: M, y, size: 7.5, font: fontR, color: MUTED })
-      page.drawText(detailLeft[i][1], { x: M + 64, y, size: 8, font: fontB, color: INK })
+      page.drawText(detailLeft[i][0] + ":", { x: M, y, size: 9, font: fontR, color: MUTED })
+      page.drawText(detailLeft[i][1], { x: M + 80, y, size: 9, font: fontB, color: INK })
     }
     if (detailRight[i]) {
-      page.drawText(detailRight[i][0] + ":", { x: rx, y, size: 7.5, font: fontR, color: MUTED })
-      page.drawText(detailRight[i][1], { x: rx + 48, y, size: 8, font: fontB, color: INK })
+      page.drawText(detailRight[i][0] + ":", { x: rx, y, size: 9, font: fontR, color: MUTED })
+      page.drawText(detailRight[i][1], { x: rx + 52, y, size: 9, font: fontB, color: INK })
     }
   }
 
   // ── FOOTER ───────────────────────────────────────────────────────────────
-  const footerY = 32
-  page.drawLine({ start: { x: M, y: footerY + 20 }, end: { x: M + FULL, y: footerY + 20 }, thickness: 0.5, color: LIGHT })
-  page.drawText(
-    "Dokumen ini diterbitkan otomatis oleh NEST76 STUDIO dan berlaku sebagai bukti serah terima digital yang sah.",
-    { x: M, y: footerY + 8, size: 6.5, font: fontR, color: MUTED }
-  )
+  const footerY = 56
+  page.drawLine({ start: { x: M, y: footerY + 36 }, end: { x: M + FULL, y: footerY + 36 }, thickness: 0.5, color: LIGHT })
+  page.drawText("Dokumen ini diterbitkan otomatis oleh NEST76 STUDIO", { x: M, y: footerY + 22, size: 13, font: fontR, color: MUTED })
+  page.drawText("dan berlaku sebagai bukti serah terima digital yang sah.", { x: M, y: footerY + 6, size: 13, font: fontR, color: MUTED })
   page.drawText("© 2026 NEST76 STUDIO  |  nest76.com", {
-    x: M, y: footerY - 2, size: 6.5, font: fontR, color: MUTED
+    x: M, y: footerY - 10, size: 13, font: fontR, color: MUTED
   })
 
-  // Serial number + timestamp di kanan footer
+  // Timestamp di kanan footer
   const ts = shortDate(new Date().toISOString())
+  const tsW = fontR.widthOfTextAtSize(`Digenerate: ${ts}`, 13)
   page.drawText(`Digenerate: ${ts}`, {
-    x: A4_W - M - 160, y: footerY - 2, size: 6.5, font: fontR, color: MUTED
+    x: A4_W - M - tsW, y: footerY - 10, size: 13, font: fontR, color: MUTED
   })
 
   return await pdfDoc.save()
