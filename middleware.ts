@@ -2,6 +2,15 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function middleware(request: NextRequest) {
+  const host = request.headers.get('host') || ''
+  const url = request.nextUrl
+
+  // Redirect paket.nest76.com ke halaman NEST Paket
+  // Kalau akses root "/" → redirect ke /paket (landing) atau /dashboard
+  if (host.startsWith('paket.') && url.pathname === '/') {
+    return NextResponse.redirect(new URL('/paket', request.url))
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers
@@ -17,17 +26,12 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          // 1. Update request cookies (Tanpa Options - Biar Polisi Minggir)
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
-          
-          // 2. Refresh response object
           response = NextResponse.next({
             request,
           })
-
-          // 3. Update response cookies (Pakai Options - Biar Auth Jalan)
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           )
@@ -36,7 +40,6 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refresh session
   await supabase.auth.getUser()
 
   return response
