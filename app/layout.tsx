@@ -13,9 +13,28 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NEST76 STUDIO",
+  title: "NEST Paket — Tanda Terima Digital",
   description:
-    "NEST76 STUDIO — Tanda Terima Digital multi-pengguna untuk UMKM dan profesional.",
+    "Tanda Terima Digital yang rapi, cepat, dan 100% GRATIS. Bukti kirim jelas tanpa kertas.",
+  icons: {
+    icon: "/logo-nest-paket.png",
+    apple: "/logo-nest-paket.png",
+  },
+  openGraph: {
+    title: "NEST Paket — Tanda Terima Digital",
+    description: "Bukti kirim jelas, tanpa kertas. Rapi, cepat, dan 100% GRATIS.",
+    url: "https://paket.nest76.com",
+    siteName: "NEST Paket",
+    images: [
+      {
+        url: "/logo-nest-paket.png",
+        width: 512,
+        height: 512,
+      },
+    ],
+    locale: "id_ID",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -24,7 +43,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="id">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
       </body>
