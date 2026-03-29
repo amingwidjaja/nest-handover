@@ -172,6 +172,10 @@ export default function DashboardPage() {
     return null
   }
 
+  function daysOld(dateString: string): number {
+    return Math.floor((Date.now() - new Date(dateString).getTime()) / 86400000)
+  }
+
   function Row({ h }: { h: any }) {
     const today   = isToday(h.created_at)
     const date    = getDateLabel(h.created_at)
@@ -181,6 +185,8 @@ export default function DashboardPage() {
     const checked = selected.includes(h.id)
     const link    = receiptLink(h)
     const isAccepted = h.status === "accepted"
+    const age     = h.status === "created" ? daysOld(h.created_at) : 0
+    const expiring = age >= 5  // warning 2 hari sebelum dihapus (hari ke-7)
 
     return (
       <div
@@ -217,6 +223,14 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+        {expiring && (
+          <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-[#FFF8E7] border border-[#F5D87A]/60 px-2.5 py-1.5">
+            <span className="text-[10px]">⚠</span>
+            <span className="text-[11px] font-medium text-[#854F0B]">
+              {age >= 7 ? "Paket ini akan segera dihapus" : `Kedaluwarsa dalam ${7 - age} hari — selesaikan atau hapus`}
+            </span>
+          </div>
+        )}
         {(addr || link) && (
           <div className="flex items-center justify-between gap-2 mt-1.5">
             {addr ? <span className="text-[11px] text-[#A1887F] truncate flex-1">{addr}</span> : <span />}
