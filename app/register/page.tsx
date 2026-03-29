@@ -79,20 +79,20 @@ function RegisterInner() {
             const parts = await fetchReverseAddressParts(lat, lng, AZURE_MAPS_KEY)
             if (parts) {
               setStreetAddress(parts.streetLine || parts.fullPlaceName)
-              setDistrict(parts.district)
+              setDistrict(parts.district || "")
               setCity(parts.city)
               setPostalCode(parts.postalCode)
             }
           }
         } catch {
-          setFormError("Gagal mengambil alamat — isi manual.")
+          // GPS berhasil tapi alamat gagal — tidak masalah, user isi manual
         } finally {
           setPinning(false)
         }
       },
       () => {
         setPinning(false)
-        setFormError("Akses lokasi ditolak atau tidak tersedia.")
+        // GPS ditolak — tidak error, user isi manual
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     )
@@ -104,18 +104,16 @@ function RegisterInner() {
     const name = displayName.trim()
     const wa = sanitizeWhatsappDigits(whatsapp)
     const street = streetAddress.trim()
-    const dist = district.trim()
     const kota = city.trim()
-    const pos = postalCode.trim()
+
+    // Validasi yang benar-benar wajib
     if (!name) return setFormError("Nama tampilan wajib diisi.")
     if (!wa) return setFormError("Nomor WhatsApp wajib diisi.")
     if (!street) return setFormError("Alamat jalan wajib diisi.")
-    if (!dist) return setFormError("Kecamatan/Kelurahan wajib diisi.")
-    if (!kota) return setFormError("Kota/Kabupaten wajib diisi.")
-    if (!pos) return setFormError("Kode pos wajib diisi.")
-    if (latitude == null || longitude == null) {
-      return setFormError("Gunakan PIN LOKASI SEKARANG untuk menyimpan koordinat GPS.")
-    }
+    if (!kota) return setFormError("Kota / Kabupaten wajib diisi.")
+
+    // district, postalCode, dan GPS tidak wajib
+
     setLoading(true)
     const supabase = createBrowserSupabaseClient()
     try {
@@ -137,9 +135,9 @@ function RegisterInner() {
           display_name: name,
           whatsapp: wa,
           street_address: street,
-          district: dist,
+          district: district.trim() || null,
           city: kota,
-          postal_code: pos,
+          postal_code: postalCode.trim() || null,
           latitude,
           longitude
         })
@@ -231,7 +229,7 @@ function RegisterInner() {
 
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-transparent pb-1">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[#6D5D54]">
-              Alamat terstruktur
+              Alamat <span className="text-[#A1887F] normal-case font-normal">(opsional: PIN untuk isi otomatis)</span>
             </p>
             <button
               type="button"
@@ -239,7 +237,7 @@ function RegisterInner() {
               disabled={pinning}
               className="text-[10px] font-bold uppercase tracking-wider text-[#3E2723] underline-offset-4 hover:underline disabled:opacity-50"
             >
-              {pinning ? "Memuat lokasi…" : "📍 PIN LOKASI SEKARANG"}
+              {pinning ? "Memuat lokasi…" : "📍 PIN LOKASI"}
             </button>
           </div>
 
@@ -257,13 +255,15 @@ function RegisterInner() {
               }}
             />
           </div>
+
           <div>
             <label className={lbl}>
-              Kecamatan / Kelurahan <span className="text-[#8D6E63]">*</span>
+              Kecamatan / Kelurahan
+              <span className="ml-1 text-[#A1887F] normal-case font-normal">(opsional)</span>
             </label>
             <input
               className={inputClass}
-              placeholder="Kec. / Kel."
+              placeholder="Kec. Kebayoran Baru, Kel. Senayan, dst."
               value={district}
               onChange={(e) => {
                 setDistrict(e.target.value)
@@ -271,6 +271,7 @@ function RegisterInner() {
               }}
             />
           </div>
+
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
               <label className={lbl}>
@@ -278,7 +279,7 @@ function RegisterInner() {
               </label>
               <input
                 className={inputClass}
-                placeholder="Kota / Kab."
+                placeholder="Jakarta, Bandung, dst."
                 value={city}
                 onChange={(e) => {
                   setCity(e.target.value)
@@ -288,7 +289,8 @@ function RegisterInner() {
             </div>
             <div>
               <label className={lbl}>
-                Kode pos <span className="text-[#8D6E63]">*</span>
+                Kode pos
+                <span className="ml-1 text-[#A1887F] normal-case font-normal">(opsional)</span>
               </label>
               <input
                 className={inputClass}
@@ -311,16 +313,17 @@ function RegisterInner() {
               </p>
             </div>
             <p className="text-[11px] leading-relaxed text-[#5D4037]">
-              Nama, WhatsApp, alamat terstruktur, dan koordinat dipakai untuk
-              identitas pengirim pada tanda terima. Kami tidak menjual data ke
-              pihak ketiga.
+              Nama, WhatsApp, dan alamat dipakai untuk identitas pengirim pada
+              tanda terima. Kami tidak menjual data ke pihak ketiga.
             </p>
           </div>
+
           {formError && (
             <p className="text-center text-[11px] leading-snug text-[#5D4037]">
               {formError}
             </p>
           )}
+
           <button
             type="submit"
             disabled={loading}
