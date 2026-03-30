@@ -8,14 +8,14 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser"
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export function LoginForm() {
-  const router = useRouter()
+  const router       = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get("redirect") || "/paket"
+  const redirect     = searchParams.get("redirect") || "/paket"
 
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [msg, setMsg] = useState<string | null>(null)
+  const [email,         setEmail]         = useState("")
+  const [password,      setPassword]      = useState("")
+  const [loading,       setLoading]       = useState(false)
+  const [msg,           setMsg]           = useState<string | null>(null)
   const [profileExists, setProfileExists] = useState<boolean | null>(null)
   const [checkingEmail, setCheckingEmail] = useState(false)
 
@@ -35,15 +35,10 @@ export function LoginForm() {
 
     const id = window.setTimeout(async () => {
       try {
-        const res = await fetch(
-          `/api/profile/check-email?email=${encodeURIComponent(t)}`
-        )
+        const res  = await fetch(`/api/profile/check-email?email=${encodeURIComponent(t)}`)
         const json = (await res.json()) as { exists?: boolean; error?: string }
         if (mySeq !== seqRef.current) return
-        if (!res.ok) {
-          setProfileExists(null)
-          return
-        }
+        if (!res.ok) { setProfileExists(null); return }
         setProfileExists(Boolean(json.exists))
       } catch {
         if (mySeq !== seqRef.current) return
@@ -53,33 +48,20 @@ export function LoginForm() {
       }
     }, 800)
 
-    return () => {
-      window.clearTimeout(id)
-    }
+    return () => window.clearTimeout(id)
   }, [email])
 
   async function submit() {
     const em = email.trim()
-    if (!em || !password) {
-      setMsg("Email dan password wajib diisi")
-      return
-    }
-    if (password.length < 6) {
-      setMsg("Password minimal 6 digit ya, Bro! 🛡️")
-      return
-    }
+    if (!em || !password) { setMsg("Email dan password wajib diisi"); return }
+    if (password.length < 6) { setMsg("Password minimal 6 digit ya! 🛡️"); return }
 
     let exists = profileExists
     if (exists === null && EMAIL_RE.test(em)) {
       try {
-        const res = await fetch(
-          `/api/profile/check-email?email=${encodeURIComponent(em)}`
-        )
+        const res  = await fetch(`/api/profile/check-email?email=${encodeURIComponent(em)}`)
         const json = (await res.json()) as { exists?: boolean; error?: string }
-        if (!res.ok) {
-          setMsg(json.error || "Gagal memeriksa email. Coba lagi.")
-          return
-        }
+        if (!res.ok) { setMsg(json.error || "Gagal memeriksa email. Coba lagi."); return }
         exists = Boolean(json.exists)
         setProfileExists(exists)
       } catch {
@@ -88,10 +70,7 @@ export function LoginForm() {
       }
     }
 
-    if (exists === null) {
-      setMsg("Masukkan alamat email yang valid")
-      return
-    }
+    if (exists === null) { setMsg("Masukkan alamat email yang valid"); return }
 
     setLoading(true)
     setMsg(null)
@@ -99,10 +78,7 @@ export function LoginForm() {
 
     try {
       if (exists) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: em,
-          password
-        })
+        const { error } = await supabase.auth.signInWithPassword({ email: em, password })
         if (error) throw error
         router.replace(redirect)
         router.refresh()
@@ -110,64 +86,57 @@ export function LoginForm() {
       }
 
       const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect)}`
-
       const { error: signErr } = await supabase.auth.signUp({
         email: em,
         password,
-        options: {
-          emailRedirectTo
-        }
+        options: { emailRedirectTo }
       })
       if (signErr) throw signErr
 
-      await new Promise((r) => setTimeout(r, 400))
-      const {
-        data: { session }
-      } = await supabase.auth.getSession()
+      await new Promise(r => setTimeout(r, 400))
+      const { data: { session } } = await supabase.auth.getSession()
 
       if (session?.access_token) {
-        router.replace(
-          `/choose-type?redirect=${encodeURIComponent(redirect)}`
-        )
+        router.replace(`/choose-type?redirect=${encodeURIComponent(redirect)}`)
       } else {
         router.push(`/register/verify?email=${encodeURIComponent(em)}`)
       }
       router.refresh()
     } catch (e: unknown) {
       const err = e as { message?: string }
-      const m = (err.message || "").toLowerCase()
+      const m   = (err.message || "").toLowerCase()
       if (!exists && (m.includes("already registered") || m.includes("already been registered"))) {
         setMsg("Email ini sudah terdaftar. Silakan masuk.")
         setProfileExists(true)
       } else {
-        setMsg(
-          e instanceof Error ? e.message : "Gagal. Cek kembali email & password."
-        )
+        setMsg(e instanceof Error ? e.message : "Gagal. Cek kembali email & password.")
       }
     } finally {
       setLoading(false)
     }
   }
 
-  const em = email.trim()
+  const em        = email.trim()
   const emailValid = EMAIL_RE.test(em)
   let ctaLabel = "DAFTAR GRATIS"
-  if (checkingEmail && emailValid) {
-    ctaLabel = "MEMUAT…"
-  } else if (profileExists === true) {
-    ctaLabel = "MASUK NEST76 PAKET"
-  } else if (profileExists === false) {
-    ctaLabel = "DAFTAR GRATIS"
-  }
+  if (checkingEmail && emailValid)  ctaLabel = "MEMUAT…"
+  else if (profileExists === true)  ctaLabel = "MASUK NEST76 PAKET"
+  else if (profileExists === false) ctaLabel = "DAFTAR GRATIS"
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#3E2723] flex flex-col items-center justify-center p-6 md:p-12">
       <div className="w-full max-w-md space-y-10">
         <div className="text-center space-y-6">
+          {/*
+            mix-blend-mode: multiply → menghilangkan background putih dari PNG logo.
+            Bekerja karena background page cream (#FAF9F6) bukan hitam murni,
+            sehingga area putih logo menyatu dengan background.
+          */}
           <img
             src="/logo-nest-paket.png"
             alt="NEST76 Paket Logo"
-            className="mx-auto w-40 drop-shadow-sm"
+            className="mx-auto w-40"
+            style={{ mixBlendMode: "multiply" }}
           />
           <div className="space-y-2">
             <h1 className="text-2xl font-bold tracking-tighter uppercase text-[#3E2723]">
@@ -181,7 +150,12 @@ export function LoginForm() {
 
         <div className="bg-[#EFEBE9]/40 p-6 border-l-[3px] border-[#3E2723] space-y-3">
           <p className="text-sm text-[#5D4037] leading-relaxed">
-            <strong>NEST76 Paket</strong> adalah sistem serah terima digital profesional. Memastikan setiap paket tervalidasi secara <strong>GPS-Lock</strong> dan terkirim otomatis via <strong>WhatsApp</strong> tanpa resi kertas. Sistem ini dirancang untuk segala kebutuhan, mulai dari dokumentasi <strong>barang pribadi</strong> (titipan/kado), hingga <strong>operasional UMKM</strong> (kirim Laundry/Air Galon).
+            <strong>NEST76 Paket</strong> adalah sistem serah terima digital profesional.
+            Memastikan setiap paket tervalidasi secara <strong>GPS-Lock</strong> dan
+            terkirim otomatis via <strong>WhatsApp</strong> tanpa resi kertas. Sistem ini
+            dirancang untuk segala kebutuhan, mulai dari dokumentasi{" "}
+            <strong>barang pribadi</strong> (titipan/kado), hingga{" "}
+            <strong>operasional UMKM</strong> (kirim Laundry/Air Galon).
           </p>
         </div>
 
@@ -193,7 +167,7 @@ export function LoginForm() {
                 type="email"
                 placeholder="Alamat e-mail yg masih aktif"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
                 autoComplete="email"
               />
               {checkingEmail && emailValid && (
@@ -207,7 +181,7 @@ export function LoginForm() {
               type="password"
               placeholder="Password minimum 6 digit"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={e => setPassword(e.target.value)}
               autoComplete="current-password"
             />
           </div>
@@ -224,11 +198,7 @@ export function LoginForm() {
             disabled={loading}
             className="flex w-full items-center justify-center gap-2 bg-[#3E2723] text-white py-4 hover:bg-[#2D1B19] transition-all disabled:opacity-50 uppercase tracking-[0.2em] text-xs font-bold shadow-md"
           >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              ctaLabel
-            )}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : ctaLabel}
           </button>
         </div>
 

@@ -12,45 +12,36 @@ const ease = [0.22, 1, 0.36, 1] as const
 
 const container = {
   hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.06 }
-  }
+  show: { opacity: 1, transition: { staggerChildren: 0.06 } }
 }
 
 const item = {
   hidden: { opacity: 0, y: 10 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.4, ease }
-  }
+  show:   { opacity: 1, y: 0, transition: { duration: 0.4, ease } }
 }
 
 const btn =
   "transition-transform active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3E2723]/20"
 
 export default function PaketHomePage() {
-  const router = useRouter()
-  const [pending, setPending] = useState(0)
-  const [last, setLast] = useState<string | null>(null)
+  const router    = useRouter()
+  const [pending,   setPending]   = useState(0)
+  const [last,      setLast]      = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
-  const [userName, setUserName] = useState("User")
+  const [userName,  setUserName]  = useState("Sobat")
 
   useEffect(() => {
     async function gate() {
       const supabase = createBrowserSupabaseClient()
-      const {
-        data: { session }
-      } = await supabase.auth.getSession()
+      const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
         router.replace("/login?redirect=/paket")
         return
       }
 
-      const pr = await fetch("/api/profile")
-      const pj = await pr.json()
+      const pr      = await fetch("/api/profile")
+      const pj      = await pr.json()
       const profile = pj.profile
 
       if (!profile || !profile.onboarded_at) {
@@ -58,11 +49,16 @@ export default function PaketHomePage() {
         return
       }
 
-      setUserName(profile.display_name?.split(" ")[0] || "User")
+      // UMKM → company_name, Personal → display_name
+      const name =
+        profile.display_name?.split(" ")[0] ||
+        profile.company_name?.split(" ")[0] ||
+        "Sobat"
+      setUserName(name)
       setAuthReady(true)
 
       try {
-        const res = await fetch("/api/handover/list")
+        const res  = await fetch("/api/handover/list")
         const data = await res.json()
         if (!data.handovers) return
         const pendingList = data.handovers.filter(
@@ -72,14 +68,11 @@ export default function PaketHomePage() {
         if (data.handovers.length) {
           setLast(
             new Date(data.handovers[0].created_at).toLocaleDateString("id-ID", {
-              day: "2-digit",
-              month: "short"
+              day: "2-digit", month: "short"
             })
           )
         }
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
     }
     gate()
   }, [router])
@@ -108,7 +101,7 @@ export default function PaketHomePage() {
             Selamat datang,
           </p>
           <h1 className="text-3xl font-bold tracking-tight">
-            Halo, {userName}
+            Halo, {userName}!
           </h1>
         </motion.div>
 
@@ -147,21 +140,13 @@ export default function PaketHomePage() {
         >
           <div className="flex items-center justify-between gap-4">
             <div className="flex flex-col">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-[#5D4037]/80">
-                Paket aktif
-              </span>
-              <span className="mt-1 text-2xl font-black tabular-nums leading-none text-[#3E2723]">
-                {pending}
-              </span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-[#5D4037]/80">Paket aktif</span>
+              <span className="mt-1 text-2xl font-black tabular-nums leading-none text-[#3E2723]">{pending}</span>
             </div>
             <div className="h-10 w-px bg-[#3E2723]/20" aria-hidden />
             <div className="flex flex-col text-right">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-[#5D4037]/80">
-                Terakhir update
-              </span>
-              <span className="mt-1 text-xs font-bold uppercase tracking-tight text-[#3E2723]">
-                {last ?? "—"}
-              </span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-[#5D4037]/80">Terakhir update</span>
+              <span className="mt-1 text-xs font-bold uppercase tracking-tight text-[#3E2723]">{last ?? "—"}</span>
             </div>
           </div>
         </motion.div>
