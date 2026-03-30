@@ -112,16 +112,16 @@ export default function PaketHomePage() {
         </motion.div>
 
         {/* Greeting — 2 baris:
-            Baris 1: "Halo,"     (kecil, abu-abu, uppercase)
-            Baris 2: nama penuh  (besar, bold, auto-shrink) */}
+            Baris 1: "Selamat datang,"  (kecil, abu-abu, uppercase)
+            Baris 2: "Halo, [nama]"     (besar, bold, auto-shrink kalau nama panjang) */}
         <motion.div variants={item} className="space-y-0.5 text-center w-full px-2">
           <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[#9A8F88]">
-            Halo,
+            Selamat datang,
           </p>
           <h1
             className={`font-bold tracking-tight leading-snug break-words ${greetingFontClass(userName)}`}
           >
-            {userName}!
+            Halo, {userName}
           </h1>
         </motion.div>
 
