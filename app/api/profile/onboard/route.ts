@@ -29,20 +29,30 @@ export async function POST(req: Request) {
 
   const ct = (req.headers.get("content-type") || "").toLowerCase()
 
+  // ── UMKM via multipart/form-data ─────────────────────────
   if (ct.includes("multipart/form-data")) {
     const form = await req.formData()
     const type = String(form.get("type") ?? "").trim()
     if (type === "umkm") {
-      const company_name = String(form.get("company_name") ?? "").trim()
-      const company_address = String(form.get("company_address") ?? "").trim()
-      const whatsapp = String(form.get("whatsapp") ?? "").trim()
-      const file = form.get("logo")
-      if (!company_name || !company_address) {
-        return NextResponse.json(
-          { error: "Nama bisnis dan alamat wajib diisi" },
-          { status: 400 }
-        )
+      const company_name    = String(form.get("company_name") ?? "").trim()
+      const street_address  = String(form.get("street_address") ?? "").trim()
+      const district        = String(form.get("district") ?? "").trim()
+      const city            = String(form.get("city") ?? "").trim()
+      const postal_code     = String(form.get("postal_code") ?? "").trim()
+      const whatsapp        = String(form.get("whatsapp") ?? "").trim()
+      const file            = form.get("logo")
+
+      // Fallback: kalau pakai field lama company_address
+      const company_address_legacy = String(form.get("company_address") ?? "").trim()
+
+      if (!company_name) {
+        return NextResponse.json({ error: "Nama usaha wajib diisi" }, { status: 400 })
       }
+
+      // Susun alamat dari field terpisah, atau fallback ke legacy
+      const finalAddress = street_address
+        ? [street_address, district, city, postal_code].filter(Boolean).join(", ")
+        : company_address_legacy || "Lengkapi alamat di Profil."
 
       let company_logo_url: string | null = null
       const hasLogo =
@@ -72,7 +82,12 @@ export async function POST(req: Request) {
       const update: Record<string, unknown> = {
         user_type: "umkm",
         company_name,
-        company_address,
+        company_address: finalAddress,
+        // Simpan juga field terpisah kalau ada
+        ...(street_address && { street_address }),
+        ...(district        && { district }),
+        ...(city            && { city }),
+        ...(postal_code     && { postal_code }),
         company_logo_url,
         display_name: null,
         onboarded_at: new Date().toISOString(),
@@ -81,137 +96,99 @@ export async function POST(req: Request) {
       if (whatsapp) update.whatsapp = whatsapp
 
       const { error } = await admin.from("profiles").update(update).eq("id", user.id)
-
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
-      }
-
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       return NextResponse.json({ success: true, user_type: "umkm" })
     }
-
     return NextResponse.json({ error: "Tipe tidak valid" }, { status: 400 })
   }
 
+  // ── JSON body ─────────────────────────────────────────────
   const body = await req.json().catch(() => ({}))
   const type = typeof body.type === "string" ? body.type.trim() : ""
 
+  // ── UMKM via JSON ─────────────────────────────────────────
   if (type === "umkm") {
-    const display_name =
-      typeof body.display_name === "string" ? body.display_name.trim() : ""
-    const company_name =
-      typeof body.company_name === "string" ? body.company_name.trim() : ""
-    const company_address =
-      typeof body.company_address === "string" ? body.company_address.trim() : ""
+    const company_name    = typeof body.company_name    === "string" ? body.company_name.trim()    : ""
+    const display_name    = typeof body.display_name    === "string" ? body.display_name.trim()    : ""
+    const street_address  = typeof body.street_address  === "string" ? body.street_address.trim()  : ""
+    const district        = typeof body.district        === "string" ? body.district.trim()        : ""
+    const city            = typeof body.city            === "string" ? body.city.trim()            : ""
+    const postal_code     = typeof body.postal_code     === "string" ? body.postal_code.trim()     : ""
+    const company_address = typeof body.company_address === "string" ? body.company_address.trim() : ""
+    const whatsapp        = typeof body.whatsapp        === "string" ? body.whatsapp.trim()        : ""
 
-    const finalCompany = company_name || display_name
-    if (!finalCompany) {
-      return NextResponse.json(
-        { error: "Nama bisnis atau nama tampilan wajib diisi" },
-        { status: 400 }
-      )
+    const finalName    = company_name || display_name
+    const finalAddress = street_address
+      ? [street_address, district, city, postal_code].filter(Boolean).join(", ")
+      : company_address || "Lengkapi alamat di Profil."
+
+    if (!finalName) {
+      return NextResponse.json({ error: "Nama usaha wajib diisi" }, { status: 400 })
     }
 
-    const finalAddress =
-      company_address || "Lengkapi alamat bisnis di Profil."
-
-    const { error } = await admin
-      .from("profiles")
-      .update({
-        user_type: "umkm",
-        company_name: finalCompany,
-        company_address: finalAddress,
-        display_name: null,
-        onboarded_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", user.id)
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    const update: Record<string, unknown> = {
+      user_type: "umkm",
+      company_name: finalName,
+      company_address: finalAddress,
+      ...(street_address && { street_address }),
+      ...(district        && { district }),
+      ...(city            && { city }),
+      ...(postal_code     && { postal_code }),
+      display_name: null,
+      onboarded_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
+    if (whatsapp) update.whatsapp = whatsapp
 
+    const { error } = await admin.from("profiles").update(update).eq("id", user.id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ success: true, user_type: "umkm" })
   }
 
+  // ── Personal via JSON ─────────────────────────────────────
   if (type === "personal") {
-    const display_name =
-      typeof body.display_name === "string" ? body.display_name.trim() : ""
-    const whatsapp =
-      typeof body.whatsapp === "string" ? body.whatsapp.trim() : ""
-    const street_address =
-      typeof body.street_address === "string" ? body.street_address.trim() : ""
-    const district =
-      typeof body.district === "string" ? body.district.trim() : ""
-    const city = typeof body.city === "string" ? body.city.trim() : ""
-    const postal_code =
-      typeof body.postal_code === "string" ? body.postal_code.trim() : ""
+    const display_name   = typeof body.display_name   === "string" ? body.display_name.trim()   : ""
+    const whatsapp       = typeof body.whatsapp       === "string" ? body.whatsapp.trim()       : ""
+    const street_address = typeof body.street_address === "string" ? body.street_address.trim() : ""
+    const district       = typeof body.district       === "string" ? body.district.trim()       : ""
+    const city           = typeof body.city           === "string" ? body.city.trim()           : ""
+    const postal_code    = typeof body.postal_code    === "string" ? body.postal_code.trim()    : ""
 
-    const lat =
-      typeof body.latitude === "number"
-        ? body.latitude
-        : typeof body.latitude === "string"
-          ? Number(body.latitude)
-          : NaN
-    const lng =
-      typeof body.longitude === "number"
-        ? body.longitude
-        : typeof body.longitude === "string"
-          ? Number(body.longitude)
-          : NaN
+    const lat = typeof body.latitude  === "number" ? body.latitude
+              : typeof body.latitude  === "string" ? Number(body.latitude)  : NaN
+    const lng = typeof body.longitude === "number" ? body.longitude
+              : typeof body.longitude === "string" ? Number(body.longitude) : NaN
 
-    if (!display_name) {
-      return NextResponse.json({ error: "Nama wajib diisi" }, { status: 400 })
-    }
-    if (!whatsapp) {
-      return NextResponse.json({ error: "Nomor WhatsApp wajib diisi" }, { status: 400 })
-    }
-    if (!street_address) {
-      return NextResponse.json({ error: "Alamat jalan wajib diisi" }, { status: 400 })
-    }
-    if (!district) {
-      return NextResponse.json(
-        { error: "Kecamatan/Kelurahan wajib diisi" },
-        { status: 400 }
-      )
-    }
-    if (!city) {
-      return NextResponse.json({ error: "Kota/Kabupaten wajib diisi" }, { status: 400 })
-    }
-    if (!postal_code) {
-      return NextResponse.json({ error: "Kode pos wajib diisi" }, { status: 400 })
-    }
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      return NextResponse.json(
-        { error: "Koordinat GPS wajib — gunakan PIN LOKASI SEKARANG." },
-        { status: 400 }
-      )
+    // Validasi wajib — hanya nama, WA, alamat jalan, dan kota
+    if (!display_name)   return NextResponse.json({ error: "Nama wajib diisi" },              { status: 400 })
+    if (!whatsapp)       return NextResponse.json({ error: "Nomor WhatsApp wajib diisi" },     { status: 400 })
+    if (!street_address) return NextResponse.json({ error: "Alamat jalan wajib diisi" },       { status: 400 })
+    if (!city)           return NextResponse.json({ error: "Kota / Kabupaten wajib diisi" },   { status: 400 })
+
+    // district, postal_code, GPS → opsional
+    const addressLine = [street_address, district, city, postal_code].filter(Boolean).join(" · ")
+
+    const update: Record<string, unknown> = {
+      user_type: "personal",
+      display_name,
+      whatsapp,
+      street_address,
+      district: district || null,
+      city,
+      postal_code: postal_code || null,
+      address: addressLine,
+      onboarded_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
 
-    const addressLine =
-      [street_address, district, city, postal_code].filter(Boolean).join(" · ")
-
-    const { error } = await admin
-      .from("profiles")
-      .update({
-        user_type: "personal",
-        display_name,
-        whatsapp,
-        street_address,
-        district,
-        city,
-        postal_code,
-        address: addressLine,
-        latitude: lat,
-        longitude: lng,
-        onboarded_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", user.id)
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    // GPS opsional — simpan kalau ada, lewati kalau tidak ada
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      update.latitude  = lat
+      update.longitude = lng
     }
 
+    const { error } = await admin.from("profiles").update(update).eq("id", user.id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ success: true, user_type: "personal" })
   }
 
