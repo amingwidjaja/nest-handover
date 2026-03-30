@@ -23,12 +23,29 @@ const item = {
 const btn =
   "transition-transform active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3E2723]/20"
 
+/**
+ * Tentukan ukuran font greeting berdasarkan panjang nama.
+ * Auto-shrink biar tidak luber keluar container.
+ *
+ * "Laundry Murah"           (13 kar) → text-2xl
+ * "PT Technology Digital"   (22 kar) → text-xl
+ * "Koperasi Simpan Pinjam"  (23 kar) → text-xl
+ * "Budi"                     (4 kar) → text-3xl
+ */
+function greetingFontClass(name: string): string {
+  const len = name.length
+  if (len <= 10) return "text-3xl"
+  if (len <= 18) return "text-2xl"
+  if (len <= 26) return "text-xl"
+  return "text-lg"
+}
+
 export default function PaketHomePage() {
   const router    = useRouter()
   const [pending,   setPending]   = useState(0)
   const [last,      setLast]      = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
-  const [userName,  setUserName]  = useState("Sobat")
+  const [userName,  setUserName]  = useState("")
 
   useEffect(() => {
     async function gate() {
@@ -49,12 +66,10 @@ export default function PaketHomePage() {
         return
       }
 
-      // UMKM → company_name, Personal → display_name
-      const name =
-        profile.display_name?.split(" ")[0] ||
-        profile.company_name?.split(" ")[0] ||
-        "Sobat"
-      setUserName(name)
+      // Tampilkan nama lengkap — Personal: display_name, UMKM: company_name
+      // Tidak dipotong, biar greeting terasa personal dan tidak salah tebak
+      const fullName = profile.display_name || profile.company_name || "Sobat"
+      setUserName(fullName.trim())
       setAuthReady(true)
 
       try {
@@ -96,12 +111,17 @@ export default function PaketHomePage() {
           />
         </motion.div>
 
-        <motion.div variants={item} className="space-y-1 text-center">
+        {/* Greeting — 2 baris:
+            Baris 1: "Halo,"     (kecil, abu-abu, uppercase)
+            Baris 2: nama penuh  (besar, bold, auto-shrink) */}
+        <motion.div variants={item} className="space-y-0.5 text-center w-full px-2">
           <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[#9A8F88]">
-            Selamat datang,
+            Halo,
           </p>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Halo, {userName}!
+          <h1
+            className={`font-bold tracking-tight leading-snug break-words ${greetingFontClass(userName)}`}
+          >
+            {userName}!
           </h1>
         </motion.div>
 
