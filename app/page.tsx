@@ -2,16 +2,24 @@ import type { Metadata } from "next"
 import { AuthAwarePaketCta } from "@/components/auth-aware-paket-cta"
 
 export const metadata: Metadata = {
-  title: "NEST76 | Studio Sistem Digital",
+  title: "NEST76 | Smart Manufacturing & Retail OS",
   description:
-    "Operating System untuk Bisnis Indonesia — Serah Terima Digital, Factory OS, AI Accounting. Semua dalam satu ekosistem.",
+    "Sistem operasional bisnis real-time — Factory OS, AI Accounting, POS, School Management. Integrasi AI Gemini & Claude.",
+  keywords: "ERP Indonesia, Factory OS, AI Accounting, POS system, School Management, Garment ERP, UMKM software",
   openGraph: {
-    title: "NEST76 — Operating System untuk Bisnis Indonesia",
-    description: "3 produk, 1 ekosistem, 0 kertas. Serah terima, pabrik, dan akuntansi — semua digital.",
+    title: "NEST76 — Smart Manufacturing & Retail OS",
+    description: "Sistem operasional bisnis real-time dengan integrasi Akunting dan AI. Pabrik, Toko, Sekolah — semua terkoneksi.",
     url: "https://nest76.com",
     siteName: "NEST76 Studio",
+    images: [{ url: "/og-image-nest76.jpg", width: 1200, height: 630 }],
     locale: "id_ID",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NEST76 — Smart Manufacturing & Retail OS",
+    description: "Sistem operasional bisnis real-time dengan integrasi AI.",
+    images: ["/og-image-nest76.jpg"],
   },
 }
 
