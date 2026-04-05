@@ -259,7 +259,7 @@ export default function Home() {
               className="inline-flex items-center justify-center px-10 py-4 bg-[#EDEDED] text-[#0A0A0A] text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-white transition-colors">
               Minta Demo Gratis
             </a>
-            <a href="https://wa.me/6281234567890"
+            <a href="https://wa.me/62811181197"
               className="inline-flex items-center justify-center px-10 py-4 border border-[#333] text-[#888] text-xs font-bold uppercase tracking-widest rounded-sm hover:border-[#EDEDED] hover:text-white transition-colors">
               WhatsApp
             </a>
