@@ -105,9 +105,7 @@ export default function Home() {
             </div>
           </div>
 
-          <p className="text-[10px] tracking-[0.35em] uppercase opacity-50 font-mono mb-6 text-white">
-            NEST<span className="text-[#555]">76</span> STUDIO
-          </p>
+          <img src="/logo-nest76.png" alt="NEST76" className="h-16 mb-6 object-contain" style={{ mixBlendMode: 'lighten' }} />
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extralight tracking-tighter leading-[1.05] mb-10 text-white max-w-4xl">
             Sistem yang kerja untuk kamu, bukan sebaliknya.
