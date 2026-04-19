@@ -200,6 +200,17 @@ export function LoginForm() {
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : ctaLabel}
           </button>
+
+          {profileExists === true && (
+            <div className="text-center">
+              <a
+                href="/auth/forgot-password"
+                className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#A1887F] hover:text-[#3E2723] transition-colors"
+              >
+                Lupa Password?
+              </a>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-2 pt-6 border-t border-[#D7CCC8]/30">

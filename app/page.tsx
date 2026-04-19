@@ -1,280 +1,282 @@
-import type { Metadata } from "next"
-import { AuthAwarePaketCta } from "@/components/auth-aware-paket-cta"
+'use client'
 
-export const metadata: Metadata = {
-  title: "NEST76 | Smart Manufacturing & Retail OS",
-  description: "Sistem operasional bisnis real-time — Factory OS, AI Accounting, POS, School Management. Integrasi AI Gemini & Claude.",
-  keywords: "ERP Indonesia, Factory OS, AI Accounting, POS system, School Management, Garment ERP, UMKM software",
-  openGraph: {
-    title: "NEST76 — Smart Manufacturing & Retail OS",
-    description: "Sistem operasional bisnis real-time dengan integrasi Akunting dan AI. Pabrik, Toko, Sekolah — semua terkoneksi.",
-    url: "https://nest76.com",
-    siteName: "NEST76 Studio",
-    images: [{ url: "/og-image-nest76.jpg", width: 1200, height: 630 }],
-    locale: "id_ID",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "NEST76 — Smart Manufacturing & Retail OS",
-    description: "Sistem operasional bisnis real-time dengan integrasi AI.",
-    images: ["/og-image-nest76.jpg"],
-  },
+import { motion } from 'framer-motion'
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
 }
 
-const PRODUCTS = [
+const stagger = {
+  visible: { transition: { staggerChildren: 0.12 } },
+}
+
+const EGGS = [
   {
-    name: "NEST Factory",
-    tagline: "Factory Operating System",
-    desc: "Sistem operasi pabrik — dari design sampai packing. Setiap departemen punya node sendiri, semua terkoneksi real-time. Material tracking dari gudang sampai produk jadi.",
-    badge: "AKTIF",
-    features: ["Multi-Node", "Material Tracking", "Cross-Org", "Queue System", "Sample Management"],
-    icon: "🏭",
+    name: "Indomorph",
+    tagline: "Reptile & Exotic Pet Marketplace",
+    desc: "Marketplace khusus reptil & exotic pet pertama di Indonesia. Keeper tools, digital certificate, lelang, escrow — ekosistem lengkap untuk komunitas.",
+    status: "live",
+    url: "https://www.indomorph.id",
   },
   {
-    name: "NEST Accounting",
-    tagline: "AI-Powered Accounting + POS",
-    desc: "Foto nota, AI buat jurnal. POS kasir yang auto-masuk ke pembukuan. Hutang, piutang, aset, cash flow — boss baca laporan, AI yang kerjain sisanya.",
-    badge: "AKTIF",
-    features: ["Photo AI", "POS Kasir", "Cash Flow AI", "Rekonsiliasi Bank", "Budget Control"],
-    icon: "💰",
+    name: "NEST POS",
+    tagline: "Point of Sale + Accounting",
+    desc: "POS kasir yang langsung nyambung ke pembukuan. Foto nota → jurnal otomatis. Cash flow real-time, laporan yang boss bisa baca dari HP.",
+    status: "live",
   },
   {
     name: "NEST School",
     tagline: "School Management System",
-    desc: "Dari data murid sampai SPP, absensi, nilai, gaji guru — semua dalam satu sistem. Portal orang tua bisa cek SPP lewat HP. Pembukuan sekolah otomatis.",
-    badge: "AKTIF",
-    features: ["SPP Tracking", "Absensi", "HRD Gaji", "Portal Ortu", "Connected Accounting"],
-    icon: "🎓",
+    desc: "Data murid, SPP, absensi, nilai, gaji guru — satu sistem. Portal orang tua cek SPP dari HP. Pembukuan sekolah otomatis.",
+    status: "live",
+  },
+  {
+    name: "NEST Factory",
+    tagline: "Factory Operating System",
+    desc: "Sistem operasi pabrik — dari design sampai packing. Multi-node, material tracking, quality control. Setiap departemen terkoneksi real-time.",
+    status: "hatching",
   },
 ]
 
-const PROBLEMS = [
-  { icon: "📋", title: "Data di mana-mana", desc: "Excel, buku tulis, WhatsApp, kertas — setiap orang punya versi berbeda." },
-  { icon: "⏰", title: "Laporan telat", desc: "Boss minta laporan, staff perlu 3 hari compile dari berbagai sumber." },
-  { icon: "💸", title: "Uang bocor", desc: "Nggak tau HPP per produk, nggak tau margin per customer, nggak tau siapa yang nunggak." },
-  { icon: "😰", title: "Software ribet", desc: "ERP mahal, setup berbulan-bulan, training berhari-hari, menu dropdown ratusan — akhirnya balik ke Excel." },
-]
-
-const WHYNEST = [
+const PRINCIPLES = [
   {
-    num: "01", title: "AI-First, Bukan Afterthought",
-    desc: "Foto nota → jurnal otomatis. Scan KTP → data terisi. Upload bank statement → rekonsiliasi otomatis. AI bukan fitur tambahan — AI adalah cara kerja utama.",
+    title: "Built from experience",
+    desc: "Setiap produk lahir dari masalah yang pernah kami hadapi sendiri di lapangan. Bukan riset pasar — tapi pengalaman 25+ tahun lintas industri.",
   },
   {
-    num: "02", title: "5 Menit Setup, Bukan 5 Bulan",
-    desc: "Daftar hari ini, jalan besok. Nggak perlu konsultan, nggak perlu training seminggu. Kalau bisa pakai WhatsApp, bisa pakai NEST.",
+    title: "Indonesia-native",
+    desc: "SAK EMKM, PB1, faktur pajak, rekonsiliasi bank lokal. Bukan software luar yang diterjemahkan.",
   },
   {
-    num: "03", title: "Indonesia-Native",
-    desc: "SAK EMKM, PB1, SPP, NIS, BPJS — semua pakai standar dan istilah Indonesia. Bukan software luar yang diterjemahkan.",
+    title: "AI as workflow",
+    desc: "Foto nota → jurnal. Scan KTP → data terisi. AI bukan fitur tambahan — AI adalah cara kerja utama.",
   },
   {
-    num: "04", title: "Connected Ecosystem",
-    desc: "POS jual roti → jurnal accounting otomatis → laporan laba rugi update. Pabrik kirim barang → gudang update → HPP terhitung. Semua nyambung, tanpa copy-paste.",
-  },
-  {
-    num: "05", title: "Boss Tau Semua dari HP",
-    desc: "Real-time dashboard. Nggak perlu minta report ke staff. Buka HP, tau omzet hari ini, siapa yang nunggak, stok apa yang menipis.",
+    title: "Connected ecosystem",
+    desc: "Setiap produk bisa berdiri sendiri. Tapi saat digunakan bersama — datanya nyambung otomatis, tanpa copy-paste.",
   },
 ]
 
-const SECURITY = [
-  { icon: "🔒", title: "Data Terpisah 100%", desc: "Setiap client punya database terpisah. Data Anda tidak pernah tercampur dengan client lain." },
-  { icon: "🛡️", title: "Row Level Security", desc: "Setiap user hanya bisa akses data yang relevan. Guru lihat kelasnya sendiri, kasir lihat transaksinya sendiri." },
-  { icon: "☁️", title: "Cloud Backup", desc: "Data di-backup otomatis setiap hari. Laptop rusak? HP hilang? Data aman di cloud." },
-  { icon: "🔐", title: "Enkripsi", desc: "Semua data terenkripsi saat transit dan saat disimpan. Standar keamanan setara perbankan." },
-]
+const STATUS_LABEL: Record<string, { label: string; style: string }> = {
+  live: { label: "Live", style: "bg-stone-800 text-white" },
+  hatching: { label: "Hatching", style: "bg-stone-200 text-stone-600" },
+}
 
 export default function Home() {
   return (
-    <main className="bg-[#0A0A0A] text-[#EDEDED] min-h-screen selection:bg-[#EDEDED] selection:text-[#0A0A0A] font-sans relative overflow-hidden">
+    <main className="min-h-screen">
 
-      <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(30,30,30,1)_0%,rgba(10,10,10,1)_70%)]" />
-      </div>
+      {/* ═══ PAGE 1 — Hero ═══ */}
+      <section className="min-h-screen bg-[#FAFAF7] relative z-10 flex flex-col">
+        <nav className="max-w-6xl mx-auto w-full px-6 py-6 flex items-center justify-between">
+          <motion.span
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.2 }}
+            className="text-lg font-bold text-stone-800 tracking-tight">
+            NEST76
+          </motion.span>
+          <motion.a
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.4 }}
+            href="https://wa.me/62811181197" target="_blank" rel="noopener noreferrer"
+            className="text-sm font-medium text-stone-500 hover:text-stone-800 transition">
+            Contact →
+          </motion.a>
+        </nav>
 
-      <div className="max-w-6xl mx-auto px-6 py-20 md:py-32 relative z-10">
+        <div className="flex-1 flex items-center">
+          <div className="max-w-6xl mx-auto px-6 w-full">
+            <div className="max-w-3xl">
+              <motion.h1
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-light text-stone-800 leading-[1.05] tracking-tight mb-8">
+                Where ideas
+                <span className="block font-semibold text-stone-900">hatch.</span>
+              </motion.h1>
 
-        {/* HERO */}
-        <header className="mb-28 md:mb-36">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-            <div className="text-[10px] tracking-[0.4em] uppercase opacity-50 font-mono">
-              4 Systems Online / Jakarta, ID
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                className="text-lg md:text-xl text-stone-400 leading-relaxed max-w-xl">
+                Kami membangun teknologi dari pengalaman nyata di lapangan.
+                Setiap produk adalah telur yang menetas dari masalah yang pernah kami hadapi sendiri.
+              </motion.p>
             </div>
           </div>
+        </div>
 
-          <img src="/logo-nest76.png" alt="NEST76" className="h-16 mb-6 object-contain" style={{ mixBlendMode: 'lighten' }} />
-
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extralight tracking-tighter leading-[1.05] mb-10 text-white max-w-4xl">
-            Sistem yang kerja untuk kamu, bukan sebaliknya.
-          </h1>
-
-          <p className="text-xl md:text-2xl font-light text-[#A0A0A0] max-w-2xl leading-relaxed">
-            Pabrik, toko, sekolah — <span className="text-white">1 ekosistem, AI-powered, siap hari ini.</span>
-          </p>
-
-          <div className="mt-10 flex flex-wrap gap-4">
-            <a href="mailto:ming@nest76.com"
-              className="inline-flex items-center justify-center px-8 py-4 bg-[#EDEDED] text-[#0A0A0A] text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-white transition-colors">
-              Minta Demo Gratis
-            </a>
-            <a href="#produk"
-              className="inline-flex items-center justify-center px-8 py-4 border border-[#333] text-[#888] text-xs font-bold uppercase tracking-widest rounded-sm hover:border-[#EDEDED] hover:text-white transition-colors">
-              Lihat Produk
-            </a>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 1.2 }}
+          className="text-center pb-10">
+          <div className="inline-flex flex-col items-center gap-2 text-stone-300">
+            <span className="text-[10px] uppercase tracking-[0.3em]">Scroll</span>
+            <motion.svg
+              animate={{ y: [0, 6, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </motion.svg>
           </div>
-        </header>
+        </motion.div>
+      </section>
 
-        {/* MASALAH */}
-        <section className="mb-32 md:mb-40">
-          <div className="flex items-center gap-5 mb-16">
-            <h2 className="text-xs uppercase tracking-[0.4em] opacity-40 whitespace-nowrap font-mono text-white">Masalah</h2>
-            <div className="h-[1px] w-full bg-[#1A1A1A]" />
-          </div>
+      {/* ═══ PAGE 2 — The Nest ═══ */}
+      <section className="bg-[#F3F2EE] relative">
+        <div className="max-w-6xl mx-auto px-6 py-24 md:py-32">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={fadeUp}
+            className="mb-14">
+            <h2 className="text-xs font-semibold text-stone-400 uppercase tracking-[0.3em] mb-4">The Nest</h2>
+            <p className="text-2xl md:text-3xl font-light text-stone-700">
+              Setiap telur punya cerita.
+            </p>
+          </motion.div>
 
-          <p className="text-2xl md:text-3xl font-extralight text-white mb-12 max-w-3xl">
-            Bisnis kamu masih begini?
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {PROBLEMS.map(p => (
-              <div key={p.title} className="bg-[#111] border border-[#1A1A1A] rounded-xl p-6">
-                <span className="text-2xl mb-3 block">{p.icon}</span>
-                <h3 className="text-lg font-light text-white mb-2">{p.title}</h3>
-                <p className="text-[15px] text-[#888] font-light leading-relaxed">{p.desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* PRODUK */}
-        <section id="produk" className="mb-32 md:mb-40">
-          <div className="flex items-center gap-5 mb-16">
-            <h2 className="text-xs uppercase tracking-[0.4em] opacity-40 whitespace-nowrap font-mono text-white">Solusi</h2>
-            <div className="h-[1px] w-full bg-[#1A1A1A]" />
-          </div>
-
-          <p className="text-2xl md:text-3xl font-extralight text-white mb-4 max-w-3xl">
-            Satu ekosistem untuk semua kebutuhan bisnis.
-          </p>
-          <p className="text-lg text-[#666] font-light mb-12 max-w-2xl">
-            Setiap produk bisa berdiri sendiri, tapi saat digunakan bersama — datanya nyambung otomatis.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {PRODUCTS.map(product => (
-              <div key={product.name}
-                className="group bg-[#111] border border-[#1A1A1A] rounded-xl p-8 hover:border-[#EDEDED] transition-all duration-500 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                <div className="relative z-10">
-                  <span className="text-3xl mb-4 block">{product.icon}</span>
-
-                  <div className="flex items-center gap-3 mb-4">
-                    <h3 className="text-xl font-light text-white">{product.name}</h3>
-                    <span className="text-[9px] tracking-[0.15em] font-mono font-bold bg-[#EDEDED] text-[#0A0A0A] px-2 py-0.5 rounded">
-                      {product.badge}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={stagger}
+            className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {EGGS.map(egg => {
+              const st = STATUS_LABEL[egg.status] || STATUS_LABEL.hatching
+              return (
+                <motion.div key={egg.name} variants={fadeUp}
+                  className="group bg-white/70 backdrop-blur-sm border border-stone-200 rounded-2xl p-7 hover:bg-white hover:shadow-md hover:border-stone-300 transition-all duration-300">
+                  <div className="flex items-start justify-between mb-5">
+                    <div>
+                      <h3 className="text-xl font-semibold text-stone-800 mb-0.5">{egg.name}</h3>
+                      <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">{egg.tagline}</p>
+                    </div>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${st.style}`}>
+                      {st.label}
                     </span>
                   </div>
 
-                  <p className="text-[11px] tracking-[0.2em] uppercase text-[#555] font-mono mb-4">
-                    {product.tagline}
-                  </p>
+                  <p className="text-sm text-stone-500 leading-relaxed mb-5">{egg.desc}</p>
 
-                  <p className="text-[15px] text-[#888] font-light leading-relaxed mb-6">
-                    {product.desc}
-                  </p>
+                  {egg.url && (
+                    <a href={egg.url} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-700 hover:text-stone-900 transition group-hover:underline">
+                      Kunjungi
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  )}
+                </motion.div>
+              )
+            })}
+          </motion.div>
+        </div>
+      </section>
 
-                  <div className="flex flex-wrap gap-2">
-                    {product.features.map(f => (
-                      <span key={f} className="text-[10px] font-mono text-[#555] border border-[#2A2A2A] px-2 py-1 rounded group-hover:border-[#555] group-hover:text-[#888] transition-colors">
-                        {f}
-                      </span>
-                    ))}
-                  </div>
+      {/* ═══ PAGE 3 — Philosophy + Story ═══ */}
+      <section className="bg-[#FAFAF7]">
+        <div className="max-w-6xl mx-auto px-6 py-24 md:py-32">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={fadeUp}
+            className="mb-14">
+            <h2 className="text-xs font-semibold text-stone-400 uppercase tracking-[0.3em] mb-4">Philosophy</h2>
+            <p className="text-2xl md:text-3xl font-light text-stone-700">
+              Cara kami berpikir.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={stagger}
+            className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-20">
+            {PRINCIPLES.map((p, i) => (
+              <motion.div key={i} variants={fadeUp} className="flex gap-5">
+                <div className="text-3xl font-extralight text-stone-300 shrink-0 w-10 text-right leading-none pt-1">
+                  {String(i + 1).padStart(2, '0')}
                 </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* KENAPA NEST76 */}
-        <section className="mb-32 md:mb-40 py-24 border-t border-[#1A1A1A]">
-          <div className="flex items-center gap-5 mb-16">
-            <h2 className="text-xs uppercase tracking-[0.4em] opacity-40 whitespace-nowrap font-mono text-white">Kenapa NEST76</h2>
-            <div className="h-[1px] w-full bg-[#1A1A1A]" />
-          </div>
-
-          <p className="text-2xl md:text-3xl font-extralight text-white mb-12 max-w-3xl">
-            Bukan ERP biasa. Bukan software luar yang diterjemahkan.
-          </p>
-
-          <div className="space-y-10">
-            {WHYNEST.map(w => (
-              <div key={w.num} className="flex gap-6 items-start group">
-                <span className="text-2xl font-mono text-[#333] group-hover:text-white transition-colors shrink-0">{w.num}</span>
                 <div>
-                  <h3 className="text-lg font-light text-white mb-2">{w.title}</h3>
-                  <p className="text-[15px] text-[#888] font-light leading-relaxed max-w-2xl">{w.desc}</p>
+                  <h3 className="text-base font-semibold text-stone-800 mb-2">{p.title}</h3>
+                  <p className="text-sm text-stone-500 leading-relaxed">{p.desc}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
-        </section>
+          </motion.div>
 
-        {/* SECURITY */}
-        <section className="mb-32 md:mb-40 py-24 border-t border-[#1A1A1A]">
-          <div className="flex items-center gap-5 mb-16">
-            <h2 className="text-xs uppercase tracking-[0.4em] opacity-40 whitespace-nowrap font-mono text-white">Keamanan Data</h2>
-            <div className="h-[1px] w-full bg-[#1A1A1A]" />
-          </div>
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-80px" }}
+            variants={fadeUp}
+            className="max-w-2xl mx-auto text-center border-t border-stone-200 pt-16">
+            <p className="text-lg md:text-xl font-light text-stone-600 leading-relaxed mb-4">
+              25+ tahun lintas industri — hardware, distribusi, retail, manufaktur, keuangan.
+            </p>
+            <p className="text-sm text-stone-400 leading-relaxed">
+              Bukan dari ruang meeting atau slide deck, tapi dari lantai pabrik, meja kasir, dan gudang jam 6 pagi.
+              Solusi terbaik datang dari orang yang pernah frustrasi lalu memutuskan:
+              <span className="text-stone-600 font-medium italic"> &ldquo;ini harus lebih baik.&rdquo;</span>
+            </p>
+          </motion.div>
+        </div>
+      </section>
 
-          <p className="text-2xl md:text-3xl font-extralight text-white mb-12 max-w-3xl">
-            Data bisnis Anda adalah amanah kami.
+      {/* ═══ PAGE 4 — CTA + Footer ═══ */}
+      <section className="bg-stone-800">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px" }}
+          variants={fadeUp}
+          className="max-w-6xl mx-auto px-6 py-20 md:py-24 text-center">
+          <h2 className="text-2xl md:text-3xl font-light text-white mb-4">
+            Punya masalah bisnis yang belum ada solusinya?
+          </h2>
+          <p className="text-stone-400 text-sm mb-8 max-w-md mx-auto">
+            Kami senang bicara tentang masalah nyata.
           </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {SECURITY.map(s => (
-              <div key={s.title} className="bg-[#111] border border-[#1A1A1A] rounded-xl p-6">
-                <span className="text-2xl mb-3 block">{s.icon}</span>
-                <h3 className="text-lg font-light text-white mb-2">{s.title}</h3>
-                <p className="text-[15px] text-[#888] font-light leading-relaxed">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* CTA */}
-        <section className="py-24 border-t border-[#1A1A1A] text-center">
-          <p className="text-3xl md:text-4xl font-extralight text-white mb-4">Siap mencoba?</p>
-          <p className="text-lg text-[#888] font-light mb-8 max-w-lg mx-auto">
-            Demo gratis, tanpa komitmen. Kami tunjukkan bagaimana NEST76 bisa bantu bisnis Anda dalam 30 menit.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <a href="mailto:ming@nest76.com"
-              className="inline-flex items-center justify-center px-10 py-4 bg-[#EDEDED] text-[#0A0A0A] text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-white transition-colors">
-              Minta Demo Gratis
-            </a>
-            <a href="https://wa.me/62811181197"
-              className="inline-flex items-center justify-center px-10 py-4 border border-[#333] text-[#888] text-xs font-bold uppercase tracking-widest rounded-sm hover:border-[#EDEDED] hover:text-white transition-colors">
+          <div className="flex flex-wrap justify-center gap-3">
+            <a href="https://wa.me/62811181197" target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-7 py-3 bg-white text-stone-800 text-sm font-semibold rounded-full hover:bg-stone-100 transition">
               WhatsApp
             </a>
+            <a href="mailto:ming@nest76.com"
+              className="inline-flex items-center gap-2 px-7 py-3 border border-stone-600 text-stone-400 text-sm font-medium rounded-full hover:border-stone-400 hover:text-white transition">
+              ming@nest76.com
+            </a>
           </div>
-        </section>
+        </motion.div>
 
-        {/* FOOTER */}
-        <footer className="mt-16 flex flex-col md:flex-row justify-between items-center gap-10 border-t border-[#1A1A1A] pt-16 text-[#666]">
-          <div className="text-[11px] tracking-[0.3em] uppercase font-mono text-center md:text-left">
-            &copy; 2026 NEST76 STUDIO &middot; Born in &apos;76, Built for the Future.
+        <div className="border-t border-stone-700">
+          <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="text-center md:text-left flex items-center gap-4">
+              <img src="/logo-tdk-white.png" alt="TDK" className="h-8 opacity-60" />
+              <div>
+                <p className="text-xs font-semibold text-stone-400 tracking-wide">PT Technology Digital Kreasi</p>
+                <p className="text-[11px] text-stone-500 mt-0.5">&copy; 2026 NEST76 &middot; Jakarta, Indonesia</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-6 text-xs text-stone-500">
+              <a href="https://www.indomorph.id" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Indomorph</a>
+              <a href="mailto:ming@nest76.com" className="hover:text-white transition">Email</a>
+              <a href="https://wa.me/62811181197" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">WhatsApp</a>
+            </div>
           </div>
-          <div className="flex gap-10 text-[11px] tracking-[0.3em] uppercase font-mono">
-            <a href="mailto:ming@nest76.com" className="hover:text-white transition-colors">Email</a>
-            <a href="https://github.com/amingwidjaja" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Github</a>
-          </div>
-        </footer>
-      </div>
+        </div>
+      </section>
     </main>
   )
 }
